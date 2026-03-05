@@ -1,0 +1,249 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Mnemonic Lab</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="bg-shape bg-shape-a"></div>
+    <div class="bg-shape bg-shape-b"></div>
+    <main class="app">
+      <header class="hero reveal">
+        <p class="badge">Mnemonic Lab</p>
+        <h1>Тренажер мнемоники</h1>
+        <p class="subtitle">
+          Практикуй счет в уме, запоминание чисел и слов. Прогресс сохраняется
+          автоматически.
+        </p>
+      </header>
+
+      <section class="tabs reveal">
+        <button type="button" class="tab-btn active" data-tab="math">Счет в уме</button>
+        <button type="button" class="tab-btn" data-tab="numbers">Запоминание чисел</button>
+        <button type="button" class="tab-btn" data-tab="words">Запоминание слов</button>
+        <button type="button" class="tab-btn" data-tab="progress">Мой прогресс</button>
+      </section>
+
+      <section class="panel active" id="math-panel">
+        <div class="panel-head">
+          <h2>Счет в уме</h2>
+          <p>Решай примеры как можно быстрее и точнее.</p>
+        </div>
+        <div class="controls">
+          <label>
+            Числа
+            <select id="math-number-size">
+              <option value="one" selected>Однозначные</option>
+              <option value="two">Двузначные</option>
+            </select>
+          </label>
+          <label>
+            Операция
+            <select id="math-operation">
+              <option value="add" selected>Сложение</option>
+              <option value="sub">Вычитание</option>
+              <option value="mul">Умножение</option>
+            </select>
+          </label>
+          <label id="math-mul-limit-wrap" hidden>
+            Диапазон
+            <select id="math-mul-limit">
+              <option value="20">Числа до 20</option>
+              <option value="30">Числа до 30</option>
+              <option value="40">Числа до 40</option>
+              <option value="50">Числа до 50</option>
+              <option value="60">Числа до 60</option>
+              <option value="70">Числа до 70</option>
+              <option value="80">Числа до 80</option>
+              <option value="90">Числа до 90</option>
+              <option value="100">Числа до 100</option>
+            </select>
+          </label>
+          <button type="button" id="math-new" class="btn">Новый пример</button>
+        </div>
+        <div class="metrics-row">
+          <span id="math-timer" class="meta-chip">Таймер: 0.0с</span>
+          <span id="math-best-time" class="meta-chip">Рекорд: --</span>
+        </div>
+        <div class="challenge" id="math-task">Нажми «Новый пример»</div>
+        <form id="math-form" class="answer-form">
+          <input
+            id="math-answer"
+            type="number"
+            step="1"
+            placeholder="Твой ответ"
+            autocomplete="off"
+            required
+          />
+          <button class="btn" type="submit">Проверить</button>
+        </form>
+        <p id="math-feedback" class="feedback"></p>
+      </section>
+
+      <section class="panel" id="numbers-panel">
+        <div class="panel-head">
+          <h2>Запоминание чисел</h2>
+          <p>Серия из 6 рядов: в каждом ряду нужно запомнить цифры и ввести их по памяти.</p>
+        </div>
+        <div class="controls">
+          <label>
+            Кол-во рядов
+            <select id="num-total-rounds">
+              <option value="1">1</option>
+              <option value="2">2</option>
+              <option value="3">3</option>
+              <option value="4">4</option>
+              <option value="5">5</option>
+              <option value="6" selected>6</option>
+              <option value="7">7</option>
+              <option value="8">8</option>
+              <option value="9">9</option>
+            </select>
+          </label>
+          <label>
+            Длина ряда
+            <select id="num-digits-count">
+              <option value="1">1</option>
+              <option value="2">2</option>
+              <option value="3">3</option>
+              <option value="4">4</option>
+              <option value="5">5</option>
+              <option value="6" selected>6</option>
+            </select>
+          </label>
+          <label>
+            Показ (сек)
+            <select id="num-show-seconds">
+              <option value="1">1</option>
+              <option value="2">2</option>
+              <option value="3" selected>3</option>
+              <option value="4">4</option>
+              <option value="5">5</option>
+              <option value="6">6</option>
+              <option value="7">7</option>
+              <option value="8">8</option>
+              <option value="9">9</option>
+            </select>
+          </label>
+          <button type="button" id="num-start" class="btn">Начать серию</button>
+          <button type="button" id="num-next" class="btn btn-ghost" disabled>Следующий ряд</button>
+        </div>
+        <fieldset class="digit-pool" id="num-digit-pool">
+          <legend>Цифры в выборке</legend>
+          <label><input type="checkbox" value="0" checked />0</label>
+          <label><input type="checkbox" value="1" checked />1</label>
+          <label><input type="checkbox" value="2" checked />2</label>
+          <label><input type="checkbox" value="3" checked />3</label>
+          <label><input type="checkbox" value="4" checked />4</label>
+          <label><input type="checkbox" value="5" checked />5</label>
+          <label><input type="checkbox" value="6" checked />6</label>
+          <label><input type="checkbox" value="7" checked />7</label>
+          <label><input type="checkbox" value="8" checked />8</label>
+          <label><input type="checkbox" value="9" checked />9</label>
+        </fieldset>
+        <div class="metrics-row">
+          <span id="num-series-progress" class="meta-chip">Ряд: 0/6</span>
+          <span id="num-timer" class="meta-chip">Таймер: 0.0с</span>
+          <span id="num-best-time" class="meta-chip">Рекорд: --</span>
+        </div>
+        <div class="challenge mono" id="num-task">---</div>
+        <form id="num-form" class="answer-form">
+          <input
+            id="num-answer"
+            type="text"
+            inputmode="numeric"
+            pattern="[0-9]*"
+            placeholder="Введи запомненный ряд"
+            autocomplete="off"
+            required
+          />
+          <button class="btn" type="submit">Проверить</button>
+        </form>
+        <p id="num-feedback" class="feedback"></p>
+      </section>
+
+      <section class="panel" id="words-panel">
+        <div class="panel-head">
+          <h2>Запоминание слов</h2>
+          <p>Показывай слова по одному, запомни 20 и затем воспроизведи их по порядку.</p>
+        </div>
+        <div class="controls">
+          <label>
+            Тип слов
+            <select id="word-difficulty">
+              <option value="simple" selected>Простые</option>
+              <option value="complex">Сложные</option>
+            </select>
+          </label>
+          <label>
+            Кол-во слов
+            <select id="word-target-count">
+              <option value="10">10</option>
+              <option value="20" selected>20</option>
+            </select>
+          </label>
+          <button type="button" id="word-start" class="btn">Начать раунд</button>
+          <button type="button" id="word-next" class="btn btn-ghost" disabled>
+            Добавить слово
+          </button>
+          <button type="button" id="word-ready" class="btn btn-ghost" disabled>
+            Готов
+          </button>
+        </div>
+        <div class="metrics-row">
+          <span id="word-timer" class="meta-chip">Таймер: 0.0с</span>
+          <span id="word-best-time" class="meta-chip">Рекорд: --</span>
+        </div>
+        <div class="challenge words" id="word-task">---</div>
+        <form id="word-form" class="answer-form">
+          <textarea
+            id="word-answer"
+            rows="4"
+            placeholder="Введи слова по порядку: через запятую или пробел"
+            required
+          ></textarea>
+          <button class="btn" type="submit">Проверить</button>
+        </form>
+        <p id="word-feedback" class="feedback"></p>
+      </section>
+
+      <section class="panel" id="progress-panel">
+        <div class="panel-head">
+          <h2>Мой прогресс</h2>
+          <p>Статистика обновляется после каждого раунда.</p>
+        </div>
+        <div class="stats-grid">
+          <article class="stat">
+            <h3>Счет в уме</h3>
+            <p id="stat-math">0 / 0</p>
+          </article>
+          <article class="stat">
+            <h3>Числа</h3>
+            <p id="stat-num">0 / 0</p>
+          </article>
+          <article class="stat">
+            <h3>Слова</h3>
+            <p id="stat-word">0 / 0</p>
+          </article>
+          <article class="stat">
+            <h3>Общая точность</h3>
+            <p id="stat-total">0%</p>
+          </article>
+        </div>
+        <h3 class="recent-title">Последние попытки</h3>
+        <ul id="recent-list" class="recent-list"></ul>
+        <button type="button" id="reset-progress" class="btn btn-ghost">Сбросить прогресс</button>
+      </section>
+    </main>
+
+    <script src="app.js"></script>
+  </body>
+</html>
