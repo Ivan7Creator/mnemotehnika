@@ -86,6 +86,7 @@
           <button class="btn" type="submit">Проверить</button>
         </form>
         <p id="math-feedback" class="feedback"></p>
+        <button type="button" id="math-stop" class="btn btn-stop">Стоп</button>
       </section>
 
       <section class="panel" id="numbers-panel">
@@ -168,6 +169,7 @@
           <button class="btn" type="submit">Проверить</button>
         </form>
         <p id="num-feedback" class="feedback"></p>
+        <button type="button" id="num-stop" class="btn btn-stop">Стоп</button>
       </section>
 
       <section class="panel" id="words-panel">
@@ -176,6 +178,13 @@
           <p>Показывай слова по одному, запомни 20 и затем воспроизведи их по порядку.</p>
         </div>
         <div class="controls">
+          <label>
+            Язык слов
+            <select id="word-language">
+              <option value="ru" selected>Русские</option>
+              <option value="en">Английские</option>
+            </select>
+          </label>
           <label>
             Тип слов
             <select id="word-difficulty">
@@ -213,6 +222,7 @@
           <button class="btn" type="submit">Проверить</button>
         </form>
         <p id="word-feedback" class="feedback"></p>
+        <button type="button" id="word-stop" class="btn btn-stop">Стоп</button>
       </section>
 
       <section class="panel" id="progress-panel">

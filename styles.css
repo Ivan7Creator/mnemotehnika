@@ -235,6 +235,13 @@ textarea {
   color: var(--ink);
 }
 
+.btn-stop {
+  margin-top: 0.45rem;
+  width: 100%;
+  background: #dfd5c5;
+  color: var(--ink);
+}
+
 .challenge {
   margin: 1rem 0;
   min-height: 60px;

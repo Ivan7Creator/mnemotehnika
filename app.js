@@ -36,7 +36,7 @@ const state = {
   },
 };
 
-const wordPoolSimple = [
+const wordPoolRuSimple = [
   "солнце", "ручка", "река", "книга", "кофе", "мост", "парус", "яблоко",
   "огонь", "дверь", "зебра", "океан", "память", "часы", "камень", "птица",
   "карандаш", "город", "весна", "снег", "груша", "чашка", "лес", "волна",
@@ -44,7 +44,7 @@ const wordPoolSimple = [
   "хлеб", "свеча", "цветок", "дорога", "письмо", "звезда", "щит", "метро",
   "сыр", "космос", "клавиша", "фонарь", "озеро", "радуга", "сахар", "школа",
 ];
-const wordPoolComplex = [
+const wordPoolRuComplex = [
   "абстракция", "алгоритм", "архипелаг", "великолепие", "гипотеза", "гравитация",
   "диаграмма", "интеграция", "комбинаторика", "концентрация", "лаборатория",
   "метафора", "многоугольник", "наблюдательность", "непрерывность", "ориентация",
@@ -55,6 +55,24 @@ const wordPoolComplex = [
   "эффективность", "эксперимент", "взаимосвязь", "симметрия", "композиция",
   "логистика", "продуктивность", "дисциплина", "мотивация", "сосредоточенность",
   "конфигурация", "кристаллизация", "классификация", "интерпретация", "унификация",
+];
+const wordPoolEnSimple = [
+  "sun", "pen", "river", "book", "coffee", "bridge", "apple", "fire",
+  "door", "ocean", "memory", "clock", "stone", "bird", "city", "spring",
+  "snow", "cup", "forest", "wave", "map", "leaf", "lamp", "wind",
+  "music", "flower", "road", "letter", "star", "shield", "metro", "lake",
+  "rainbow", "sugar", "school", "bread", "candle", "planet", "window", "garden",
+  "smile", "voice", "pencil", "table", "mountain", "cloud", "beach", "island",
+];
+const wordPoolEnComplex = [
+  "abstraction", "algorithm", "archipelago", "hypothesis", "gravity", "diagram",
+  "integration", "combinatorics", "concentration", "laboratory", "metaphor", "observer",
+  "continuity", "orientation", "perspective", "sequence", "assumption", "contradiction",
+  "equilibrium", "reflection", "synchronization", "strategy", "transformation", "triangle",
+  "acceleration", "imagination", "characteristic", "consistency", "evolution", "efficiency",
+  "experiment", "symmetry", "composition", "logistics", "productivity", "discipline",
+  "motivation", "focus", "configuration", "crystallization", "classification", "interpretation",
+  "unification", "adaptability", "optimization", "analysis", "innovation", "resilience",
 ];
 
 const tabs = [...document.querySelectorAll(".tab-btn")];
@@ -86,7 +104,9 @@ const mathNumberSizeEl = document.getElementById("math-number-size");
 const mathOperationEl = document.getElementById("math-operation");
 const mathMulLimitWrap = document.getElementById("math-mul-limit-wrap");
 const mathMulLimitEl = document.getElementById("math-mul-limit");
+const mathStopBtn = document.getElementById("math-stop");
 document.getElementById("math-new").addEventListener("click", generateMathTask);
+mathStopBtn.addEventListener("click", stopMathExercise);
 mathNumberSizeEl.addEventListener("change", updateMathControls);
 mathOperationEl.addEventListener("change", updateMathControls);
 
@@ -169,6 +189,18 @@ function stopMathTimer() {
   return elapsedSec;
 }
 
+function stopMathExercise() {
+  const hadActive = state.math.answer !== null || Boolean(state.math.startedAt);
+  stopMathTimer();
+  state.math.answer = null;
+  mathTaskEl.textContent = "Нажми «Новый пример»";
+  mathForm.reset();
+  if (hadActive) {
+    mathFeedback.textContent = "Упражнение остановлено.";
+    mathFeedback.className = "feedback";
+  }
+}
+
 const numTaskEl = document.getElementById("num-task");
 const numForm = document.getElementById("num-form");
 const numFeedback = document.getElementById("num-feedback");
@@ -182,8 +214,10 @@ const numTimerEl = document.getElementById("num-timer");
 const numBestTimeEl = document.getElementById("num-best-time");
 const numStartBtn = document.getElementById("num-start");
 const numNextBtn = document.getElementById("num-next");
+const numStopBtn = document.getElementById("num-stop");
 numStartBtn.addEventListener("click", startNumberSeries);
 numNextBtn.addEventListener("click", runNextNumberRound);
+numStopBtn.addEventListener("click", stopNumberExercise);
 numTotalRoundsEl.addEventListener("change", () => {
   state.numbers.totalRounds = Number(numTotalRoundsEl.value) || 6;
   if (!state.numbers.seriesActive) {
@@ -312,7 +346,28 @@ function finishNumberSeries() {
   numNextBtn.disabled = true;
 }
 
+function stopNumberExercise() {
+  const hadActive = state.numbers.seriesActive || Boolean(state.numbers.startedAt);
+  stopNumberTimer();
+  state.numbers.seriesActive = false;
+  state.numbers.awaitingAnswer = false;
+  state.numbers.value = "";
+  state.numbers.seriesIndex = 0;
+  state.numbers.correctInSeries = 0;
+  state.numbers.totalRounds = Number(numTotalRoundsEl.value) || 6;
+  numSeriesProgressEl.textContent = `Ряд: 0/${state.numbers.totalRounds}`;
+  numTaskEl.textContent = "---";
+  numStartBtn.disabled = false;
+  numNextBtn.disabled = true;
+  numForm.reset();
+  if (hadActive) {
+    numFeedback.textContent = "Упражнение остановлено.";
+    numFeedback.className = "feedback";
+  }
+}
+
 const wordDifficulty = document.getElementById("word-difficulty");
+const wordLanguageEl = document.getElementById("word-language");
 const wordTargetCountEl = document.getElementById("word-target-count");
 const wordTaskEl = document.getElementById("word-task");
 const wordForm = document.getElementById("word-form");
@@ -321,11 +376,13 @@ const wordAnswer = document.getElementById("word-answer");
 const wordStartBtn = document.getElementById("word-start");
 const wordNextBtn = document.getElementById("word-next");
 const wordReadyBtn = document.getElementById("word-ready");
+const wordStopBtn = document.getElementById("word-stop");
 const wordTimerEl = document.getElementById("word-timer");
 const wordBestTimeEl = document.getElementById("word-best-time");
 wordStartBtn.addEventListener("click", startWordRound);
 wordNextBtn.addEventListener("click", revealNextWord);
 wordReadyBtn.addEventListener("click", finishWordMemorizing);
+wordStopBtn.addEventListener("click", stopWordExercise);
 
 wordForm.addEventListener("submit", (event) => {
   event.preventDefault();
@@ -363,7 +420,11 @@ wordForm.addEventListener("submit", (event) => {
 function startWordRound() {
   stopWordTimer();
   state.words.targetCount = Number(wordTargetCountEl.value) || 20;
-  const pool = wordDifficulty.value === "complex" ? wordPoolComplex : wordPoolSimple;
+  const isRu = wordLanguageEl.value !== "en";
+  const isComplex = wordDifficulty.value === "complex";
+  const pool = isRu
+    ? (isComplex ? wordPoolRuComplex : wordPoolRuSimple)
+    : (isComplex ? wordPoolEnComplex : wordPoolEnSimple);
   const chosen = shuffle(pool).slice(0, state.words.targetCount);
   state.words.running = true;
   state.words.phase = "memorize";
@@ -424,6 +485,23 @@ function stopWordTimer() {
   state.words.startedAt = null;
   wordTimerEl.textContent = `Таймер: ${elapsedSec.toFixed(1)}с`;
   return elapsedSec;
+}
+
+function stopWordExercise() {
+  const hadActive = state.words.running || Boolean(state.words.startedAt);
+  stopWordTimer();
+  state.words.running = false;
+  state.words.phase = "idle";
+  state.words.value = [];
+  state.words.revealedCount = 0;
+  wordTaskEl.textContent = "---";
+  wordNextBtn.disabled = true;
+  wordReadyBtn.disabled = true;
+  wordForm.reset();
+  if (hadActive) {
+    wordFeedback.textContent = "Упражнение остановлено.";
+    wordFeedback.className = "feedback";
+  }
 }
 
 document.getElementById("reset-progress").addEventListener("click", () => {
