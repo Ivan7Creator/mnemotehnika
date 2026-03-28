@@ -19,16 +19,19 @@
       <header class="hero reveal">
         <h1>Тренажер мнемотехника</h1>
         <p class="subtitle">
-          Практикуй счет в уме, запоминание чисел и слов. Прогресс сохраняется
-          автоматически.
+          Практикуй счет в уме, запоминание чисел и слов, внимание и наблюдательность, а теперь еще и Таблицы Шульте.
+          Прогресс сохраняется автоматически.
         </p>
         <p class="hero-quote"><em>"нейроны - основы всего" - Иван Трофимов</em></p>
       </header>
 
       <section class="tabs reveal">
         <button type="button" class="tab-btn active" data-tab="math">Счет в уме</button>
+        <button type="button" class="tab-btn" data-tab="number-series">Числовой ряд</button>
         <button type="button" class="tab-btn" data-tab="numbers">Запоминание чисел</button>
         <button type="button" class="tab-btn" data-tab="words">Запоминание слов</button>
+        <button type="button" class="tab-btn" data-tab="attention">Внимание и Наблюдательность</button>
+        <button type="button" class="tab-btn" data-tab="schulte">Таблицы Шульте</button>
         <button type="button" class="tab-btn" data-tab="progress">Мой прогресс</button>
       </section>
 
@@ -77,11 +80,13 @@
         <form id="math-form" class="answer-form">
           <input
             id="math-answer"
-            type="number"
-            step="1"
+            type="text"
+            inputmode="numeric"
+            pattern="-?[0-9]*"
             placeholder="Твой ответ"
             autocomplete="off"
             required
+            disabled
           />
           <button class="btn" type="submit">Проверить</button>
         </form>
@@ -89,10 +94,10 @@
         <button type="button" id="math-stop" class="btn btn-stop">Стоп</button>
       </section>
 
-      <section class="panel" id="numbers-panel">
+      <section class="panel" id="number-series-panel">
         <div class="panel-head">
-          <h2>Запоминание чисел</h2>
-          <p>Серия из 6 рядов: в каждом ряду нужно запомнить цифры и ввести их по памяти.</p>
+          <h2>Числовой ряд</h2>
+          <p>Запоминай последовательность чисел в рядах и далее выводи их по памяти.</p>
         </div>
         <div class="controls">
           <label>
@@ -134,8 +139,8 @@
               <option value="9">9</option>
             </select>
           </label>
-          <button type="button" id="num-start" class="btn">Начать серию</button>
-          <button type="button" id="num-next" class="btn btn-ghost" disabled>Следующий ряд</button>
+          <button type="button" id="num-start" class="btn">Новый пример</button>
+          <button type="button" id="num-next" class="btn btn-ghost" disabled hidden>Следующий ряд</button>
         </div>
         <fieldset class="digit-pool" id="num-digit-pool">
           <legend>Цифры в выборке</legend>
@@ -151,7 +156,7 @@
           <label><input type="checkbox" value="9" checked />9</label>
         </fieldset>
         <div class="metrics-row">
-          <span id="num-series-progress" class="meta-chip">Ряд: 0/6</span>
+          <span id="num-series-progress" class="meta-chip num-series-progress-chip">Ряд: 0/6</span>
           <span id="num-timer" class="meta-chip">Таймер: 0.0с</span>
           <span id="num-best-time" class="meta-chip">Рекорд: --</span>
         </div>
@@ -169,13 +174,148 @@
           <button class="btn" type="submit">Проверить</button>
         </form>
         <p id="num-feedback" class="feedback"></p>
+        <div id="num-review" class="num-review" hidden></div>
         <button type="button" id="num-stop" class="btn btn-stop">Стоп</button>
+      </section>
+
+      <section class="panel" id="numbers-panel">
+        <div class="panel-head">
+          <h2>Запоминание чисел</h2>
+          <p>Карточки образов для чисел, тренировка по рядам и проверка ассоциаций.</p>
+        </div>
+        <div class="memory-stats">
+          <div class="memory-stat-pill">
+            Количество текущих ассоциаций: <span id="memory-card-count">0</span>
+          </div>
+        </div>
+        <div class="memory-layout">
+          <section class="memory-subpanel">
+            <div class="panel-head">
+              <h3>Новая ассоциация</h3>
+              <p>Добавляй персонажа, действие и предмет для двузначного числа.</p>
+            </div>
+            <form id="memory-card-form" class="answer-form memory-form">
+              <div id="memory-edit-banner" class="memory-edit-banner" hidden>
+                <span>Сейчас редактируется сохраненная ассоциация</span>
+                <button type="button" id="memory-cancel-edit" class="btn btn-ghost">Отмена</button>
+              </div>
+              <label class="memory-field memory-file-field">
+                <span>Фото</span>
+                <input id="memory-image-input" type="file" accept="image/*" />
+              </label>
+              <label class="memory-field">
+                <span>Число</span>
+                <input
+                  id="memory-number-input"
+                  type="text"
+                  inputmode="numeric"
+                  maxlength="2"
+                  placeholder="Введите двузначное число"
+                  required
+                />
+              </label>
+              <label class="memory-field">
+                <span>Персонаж</span>
+                <input id="memory-text1-input" type="text" placeholder="Введите имя" required />
+              </label>
+              <label class="memory-field">
+                <span>Действие</span>
+                <input id="memory-text2-input" type="text" placeholder="Введите действие" required />
+              </label>
+              <label class="memory-field">
+                <span>Предмет</span>
+                <input id="memory-text3-input" type="text" placeholder="Введите предмет" required />
+              </label>
+              <div class="memory-actions">
+                <button id="memory-submit-btn" type="submit" class="btn">Добавить ассоциацию</button>
+                <button type="button" id="memory-clear-all-btn" class="btn btn-ghost">Очистить все</button>
+              </div>
+            </form>
+          </section>
+
+          <section class="memory-subpanel">
+            <div class="panel-head">
+              <h3>Тренировка</h3>
+              <p>Ряды по 3 числа.</p>
+            </div>
+            <div class="memory-trainer">
+              <label class="memory-field memory-trainer-config">
+                <span>Сколько рядов показать</span>
+                <select id="memory-row-count-select">
+                  <option value="1">1 ряд</option>
+                  <option value="2">2 ряда</option>
+                  <option value="3">3 ряда</option>
+                  <option value="4">4 ряда</option>
+                  <option value="5">5 рядов</option>
+                  <option value="6">6 рядов</option>
+                  <option value="7">7 рядов</option>
+                  <option value="8">8 рядов</option>
+                  <option value="9">9 рядов</option>
+                  <option value="10">10 рядов</option>
+                </select>
+              </label>
+
+              <div class="memory-trainer-progress" id="memory-trainer-progress">Ряд 1 из 1</div>
+
+              <div class="memory-trainer-rows" id="memory-random-rows">
+                <div class="memory-trainer-numbers">
+                  <div class="memory-trainer-number">—</div>
+                  <div class="memory-trainer-number">—</div>
+                  <div class="memory-trainer-number">—</div>
+                </div>
+              </div>
+
+              <div class="memory-actions">
+                <button id="memory-random-btn" class="btn" type="button">Начать запоминание</button>
+                <button id="memory-next-row-btn" class="btn btn-ghost" type="button">Дальше</button>
+                <button id="memory-toggle-answer-btn" class="btn btn-ghost" type="button">Готов</button>
+              </div>
+
+              <div class="memory-check-panel">
+                <label class="memory-field">
+                  <span>Проверка</span>
+                  <textarea
+                    id="memory-check-input"
+                    class="memory-check-input"
+                    placeholder="Введите числа по порядку через пробел или с новой строки"
+                  ></textarea>
+                </label>
+                <div class="memory-actions">
+                  <button id="memory-check-btn" class="btn" type="button">Проверить</button>
+                  <button id="memory-show-associations-btn" class="btn btn-ghost" type="button">Показать ассоциации</button>
+                  <button id="memory-restart-btn" class="btn btn-ghost" type="button">Начать заново</button>
+                </div>
+                <div id="memory-check-result" class="memory-check-result" hidden></div>
+                <div id="memory-answer-cards" class="memory-answer-cards" hidden></div>
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <section class="memory-subpanel memory-collection-panel">
+          <div class="panel-head">
+            <div>
+              <h3>Мои ассоциации</h3>
+              <p>Все сохраненные карточки персонажей.</p>
+            </div>
+            <label class="memory-filter">
+              <span>Фильтр по числу</span>
+              <select id="memory-card-filter">
+                <option value="all">Все</option>
+              </select>
+            </label>
+          </div>
+          <div id="memory-empty-state" class="memory-empty-state">
+            Пока нет ассоциаций. Добавь первую карточку и сразу можно будет тренироваться.
+          </div>
+          <div id="memory-card-grid" class="memory-card-grid"></div>
+        </section>
       </section>
 
       <section class="panel" id="words-panel">
         <div class="panel-head">
           <h2>Запоминание слов</h2>
-          <p>Показывай слова по одному, запомни 20 и затем воспроизведи их по порядку.</p>
+          <p>Выбери язык, тип и кол-во слов, нажми "Начать" и добавляй слова по одному, как будешь готов, нажми - "Готов"</p>
         </div>
         <div class="controls">
           <label>
@@ -222,7 +362,90 @@
           <button class="btn" type="submit">Проверить</button>
         </form>
         <p id="word-feedback" class="feedback"></p>
-        <button type="button" id="word-stop" class="btn btn-stop">Стоп</button>
+        <div id="word-review" class="word-review" hidden></div>
+        <button type="button" id="word-stop" class="btn btn-stop">Начать заново</button>
+      </section>
+
+      <section class="panel" id="attention-panel">
+        <div class="panel-head">
+          <h2>Внимание и Наблюдательность</h2>
+          <p>Загрузи фотографию, внимательно изучи ее, а затем опиши детали по памяти.</p>
+        </div>
+        <div class="controls">
+          <label class="file-label">
+            Фото
+            <input id="attention-image-input" type="file" accept="image/*" />
+          </label>
+          <label>
+            Показ (сек)
+            <select id="attention-show-seconds">
+              <option value="5">5</option>
+              <option value="10" selected>10</option>
+              <option value="15">15</option>
+              <option value="20">20</option>
+              <option value="30">30</option>
+            </select>
+          </label>
+          <button type="button" id="attention-start" class="btn">Начать просмотр</button>
+          <button type="button" id="attention-describe" class="btn btn-ghost">Что на фото</button>
+          <button type="button" id="attention-reset" class="btn btn-ghost">Сбросить</button>
+        </div>
+        <div class="metrics-row">
+          <span id="attention-timer" class="meta-chip">Таймер: 0с</span>
+        </div>
+        <div class="attention-stage" id="attention-stage">
+          <div class="attention-placeholder" id="attention-placeholder">
+            Выбери фотографию, чтобы начать упражнение.
+          </div>
+          <img id="attention-preview" class="attention-preview" alt="Загруженная фотография для тренировки наблюдательности" hidden />
+        </div>
+        <div class="attention-output">
+          <label for="attention-description">Что видно на фото</label>
+          <textarea
+            id="attention-description"
+            rows="4"
+            placeholder="Здесь будет выводиться описание изображения"
+            readonly
+          ></textarea>
+        </div>
+        <p class="helper-text" id="attention-helper-text">Описание запрашивается у AI через backend и появляется здесь после нажатия кнопки «Что на фото».</p>
+        <form id="attention-form" class="answer-form">
+          <textarea
+            id="attention-answer"
+            rows="5"
+            placeholder="После просмотра опиши, что ты заметил: предметы, цвета, людей, расположение деталей"
+          ></textarea>
+          <button class="btn" type="submit">Сохранить наблюдения</button>
+        </form>
+        <p id="attention-feedback" class="feedback"></p>
+      </section>
+
+      <section class="panel" id="schulte-panel">
+        <div class="panel-head">
+          <h2>Таблицы Шульте</h2>
+          <p>Находи числа по порядку от 1 до максимума. Тренировка внимания, периферического зрения и скорости поиска.</p>
+        </div>
+        <div class="controls">
+          <label>
+            Размер
+            <select id="schulte-size">
+              <option value="3">3 x 3</option>
+              <option value="4">4 x 4</option>
+              <option value="5" selected>5 x 5</option>
+            </select>
+          </label>
+          <button type="button" id="schulte-start" class="btn">Новый пример</button>
+        </div>
+        <div class="metrics-row">
+          <span id="schulte-next" class="meta-chip schulte-next-chip">Следующее число: --</span>
+          <span id="schulte-timer" class="meta-chip">Таймер: 0.0с</span>
+          <span id="schulte-best-time" class="meta-chip">Рекорд: --</span>
+        </div>
+        <div class="schulte-board-wrap">
+          <div id="schulte-board" class="schulte-board" data-size="5" role="grid" aria-label="Таблица Шульте"></div>
+        </div>
+        <p id="schulte-feedback" class="feedback"></p>
+        <button type="button" id="schulte-stop" class="btn btn-stop">Стоп</button>
       </section>
 
       <section class="panel" id="progress-panel">
@@ -236,12 +459,16 @@
             <p id="stat-math">0 / 0</p>
           </article>
           <article class="stat">
-            <h3>Числа</h3>
+            <h3>Числовой ряд</h3>
             <p id="stat-num">0 / 0</p>
           </article>
           <article class="stat">
             <h3>Слова</h3>
             <p id="stat-word">0 / 0</p>
+          </article>
+          <article class="stat">
+            <h3>Таблицы Шульте</h3>
+            <p id="stat-schulte">0</p>
           </article>
           <article class="stat">
             <h3>Общая точность</h3>
@@ -253,6 +480,27 @@
         <button type="button" id="reset-progress" class="btn btn-ghost">Сбросить прогресс</button>
       </section>
     </main>
+
+    <template id="memory-card-template">
+      <article class="memory-card-item">
+        <img class="memory-card-image" alt="Изображение карточки" />
+        <div class="memory-card-content">
+          <div class="memory-card-number"></div>
+          <ul class="memory-card-texts"></ul>
+          <button type="button" class="btn btn-ghost memory-edit-btn">Редактировать</button>
+        </div>
+      </article>
+    </template>
+
+    <template id="memory-answer-template">
+      <article class="memory-answer-card">
+        <img class="memory-answer-image" alt="Ассоциация" />
+        <div class="memory-answer-body">
+          <strong class="memory-answer-number"></strong>
+          <ul class="memory-answer-texts"></ul>
+        </div>
+      </article>
+    </template>
 
     <script src="app.js"></script>
   </body>
