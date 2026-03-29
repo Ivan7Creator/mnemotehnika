@@ -38,6 +38,7 @@ const state = {
     phase: "idle",
     startedAt: null,
     timerId: null,
+    revealTimerId: null,
   },
   attention: {
     fileName: "",
@@ -48,6 +49,11 @@ const state = {
     visible: false,
     notes: "",
     loadingDescription: false,
+    comparing: false,
+    randomLoading: false,
+    sourceLabel: "",
+    completed: false,
+    descriptionReady: false,
   },
   schulte: {
     values: [],
@@ -147,7 +153,7 @@ mathForm.addEventListener("submit", (event) => {
   applyModeResult("math", correct, { timeSec: tookSec });
 
   if (correct) {
-    mathFeedback.textContent = `Верно. Время: ${tookSec.toFixed(1)} сек`;
+    mathFeedback.textContent = "Верно!";
     mathFeedback.className = "feedback ok";
   } else {
     mathFeedback.textContent = `Ошибка. Правильный ответ: ${state.math.answer}`;
@@ -285,10 +291,8 @@ numForm.addEventListener("submit", async (event) => {
     correct,
   });
 
-  numFeedback.textContent = correct
-    ? `Ряд ${state.numbers.seriesIndex}/${state.numbers.totalRounds}: верно`
-    : `Ряд ${state.numbers.seriesIndex}/${state.numbers.totalRounds}: ошибка, было ${expectedValue}`;
-  numFeedback.className = correct ? "feedback ok" : "feedback bad";
+  numFeedback.textContent = `Ряд ${state.numbers.seriesIndex}/${state.numbers.totalRounds} введен`;
+  numFeedback.className = "feedback";
   numReviewEl.hidden = true;
   numReviewEl.innerHTML = "";
 
@@ -972,13 +976,11 @@ const wordAnswer = document.getElementById("word-answer");
 const wordSubmitBtn = wordForm.querySelector('button[type="submit"]');
 const wordReviewEl = document.getElementById("word-review");
 const wordStartBtn = document.getElementById("word-start");
-const wordNextBtn = document.getElementById("word-next");
 const wordReadyBtn = document.getElementById("word-ready");
 const wordStopBtn = document.getElementById("word-stop");
 const wordTimerEl = document.getElementById("word-timer");
 const wordBestTimeEl = document.getElementById("word-best-time");
 wordStartBtn.addEventListener("click", startWordRound);
-wordNextBtn.addEventListener("click", revealNextWord);
 wordReadyBtn.addEventListener("click", finishWordMemorizing);
 wordStopBtn.addEventListener("click", stopWordExercise);
 wordAnswer.addEventListener("input", syncWordControls);
@@ -1007,19 +1009,20 @@ wordForm.addEventListener("submit", (event) => {
     ? `Идеально, все ${state.words.targetCount} слов по порядку. Время: ${elapsedSec.toFixed(1)}с`
     : `Верные позиции: ${hitByPosition}/${expected.length}. Время: ${elapsedSec.toFixed(1)}с`;
   wordFeedback.className = perfect ? "feedback ok" : "feedback bad";
+  clearWordRevealTimer();
   state.words.running = false;
   state.words.phase = "idle";
   state.words.value = [];
   state.words.revealedCount = 0;
-  wordNextBtn.disabled = true;
   wordReadyBtn.disabled = true;
-  wordTaskEl.textContent = "---";
+  wordTaskEl.textContent = "Нажми «Новый пример»";
   wordTaskEl.classList.add("challenge-hint");
   wordForm.reset();
   syncWordControls();
 });
 
 function startWordRound() {
+  clearWordRevealTimer();
   stopWordTimer();
   state.words.targetCount = Number(wordTargetCountEl.value) || 20;
   const isRu = wordLanguageEl.value !== "en";
@@ -1035,12 +1038,12 @@ function startWordRound() {
   wordFeedback.textContent = "";
   wordReviewEl.hidden = true;
   wordReviewEl.innerHTML = "";
-  wordTaskEl.textContent = "Нажми «Добавить слово», чтобы показать первое слово.";
+  wordTaskEl.textContent = "Слова появляются автоматически каждые 3 секунды.";
   wordTaskEl.classList.add("challenge-hint");
-  wordNextBtn.disabled = false;
-  wordReadyBtn.disabled = false;
   startWordTimer();
   wordForm.reset();
+  revealNextWord();
+  startWordRevealSequence();
   syncWordControls();
 }
 
@@ -1051,8 +1054,37 @@ function revealNextWord() {
   const visibleWords = state.words.value.slice(0, state.words.revealedCount);
   wordTaskEl.textContent = visibleWords.join(" • ");
   wordTaskEl.classList.remove("challenge-hint");
+}
+
+function startWordRevealSequence() {
+  clearWordRevealTimer();
   if (state.words.revealedCount >= state.words.targetCount) {
-    wordNextBtn.disabled = true;
+    wordFeedback.textContent = "Все слова показаны. Нажми «Готов».";
+    wordFeedback.className = "feedback";
+    syncWordControls();
+    return;
+  }
+
+  state.words.revealTimerId = setInterval(() => {
+    if (!state.words.running || state.words.phase !== "memorize") {
+      clearWordRevealTimer();
+      return;
+    }
+
+    revealNextWord();
+    if (state.words.revealedCount >= state.words.targetCount) {
+      clearWordRevealTimer();
+      wordFeedback.textContent = "Все слова показаны. Нажми «Готов».";
+      wordFeedback.className = "feedback";
+    }
+    syncWordControls();
+  }, 3000);
+}
+
+function clearWordRevealTimer() {
+  if (state.words.revealTimerId) {
+    clearInterval(state.words.revealTimerId);
+    state.words.revealTimerId = null;
   }
 }
 
@@ -1063,8 +1095,8 @@ function finishWordMemorizing() {
     wordFeedback.className = "feedback bad";
     return;
   }
+  clearWordRevealTimer();
   state.words.phase = "recall";
-  wordNextBtn.disabled = true;
   wordReadyBtn.disabled = true;
   wordTaskEl.textContent = "Слова скрыты. Вводи ответ ниже.";
   wordTaskEl.classList.add("challenge-hint");
@@ -1098,14 +1130,14 @@ function stopWordTimer() {
 
 function stopWordExercise() {
   const hadActive = state.words.running || Boolean(state.words.startedAt);
+  clearWordRevealTimer();
   stopWordTimer();
   state.words.running = false;
   state.words.phase = "idle";
   state.words.value = [];
   state.words.revealedCount = 0;
-  wordTaskEl.textContent = "---";
+  wordTaskEl.textContent = "Нажми «Новый пример»";
   wordTaskEl.classList.add("challenge-hint");
-  wordNextBtn.disabled = true;
   wordReadyBtn.disabled = true;
   wordForm.reset();
   wordReviewEl.hidden = true;
@@ -1173,90 +1205,160 @@ function renderWordReview(inputWords, originalWords) {
 
 function syncWordControls() {
   wordStartBtn.disabled = state.words.running;
+  wordReadyBtn.disabled =
+    !state.words.running
+    || state.words.phase !== "memorize"
+    || state.words.revealedCount < state.words.targetCount;
   wordSubmitBtn.disabled = state.words.phase !== "recall" || !wordAnswer.value.trim();
   wordStopBtn.disabled = !state.words.running && !state.words.startedAt;
 }
 
 const attentionImageInput = document.getElementById("attention-image-input");
+const attentionUploadTriggerBtn = document.getElementById("attention-upload-trigger");
 const attentionShowSecondsEl = document.getElementById("attention-show-seconds");
-const attentionStartBtn = document.getElementById("attention-start");
+const attentionRandomBtn = document.getElementById("attention-random");
 const attentionDescribeBtn = document.getElementById("attention-describe");
-const attentionResetBtn = document.getElementById("attention-reset");
+const attentionStopBtn = document.getElementById("attention-stop");
+const attentionCompareBtn = document.getElementById("attention-compare");
 const attentionTimerEl = document.getElementById("attention-timer");
+const attentionSourceEl = document.getElementById("attention-source");
+const attentionStageEl = document.getElementById("attention-stage");
 const attentionPreviewEl = document.getElementById("attention-preview");
 const attentionPlaceholderEl = document.getElementById("attention-placeholder");
 const attentionDescriptionEl = document.getElementById("attention-description");
-const attentionHelperTextEl = document.getElementById("attention-helper-text");
-const attentionForm = document.getElementById("attention-form");
 const attentionAnswerEl = document.getElementById("attention-answer");
 const attentionFeedbackEl = document.getElementById("attention-feedback");
+const attentionCompareResultEl = document.getElementById("attention-compare-result");
+const attentionDescribeDefaultLabel = attentionDescribeBtn.textContent;
+const attentionCompareDefaultLabel = attentionCompareBtn.textContent;
+const attentionRandomDefaultLabel = attentionRandomBtn.textContent;
 
 attentionImageInput.addEventListener("change", handleAttentionImageUpload);
-attentionStartBtn.addEventListener("click", startAttentionRound);
+attentionUploadTriggerBtn.addEventListener("click", () => attentionImageInput.click());
+attentionRandomBtn.addEventListener("click", loadRandomAttentionImage);
 attentionDescribeBtn.addEventListener("click", describeAttentionImage);
-attentionResetBtn.addEventListener("click", resetAttentionExercise);
-
-attentionForm.addEventListener("submit", (event) => {
-  event.preventDefault();
-  const notes = attentionAnswerEl.value.trim();
-  state.attention.notes = notes;
-  attentionFeedbackEl.textContent = notes
-    ? "Наблюдения сохранены. Можно загрузить следующее фото."
-    : "Текст не введен, но блок готов к новому упражнению.";
-  attentionFeedbackEl.className = "feedback ok";
-  syncAttentionDescribeAvailability();
-});
+attentionStopBtn.addEventListener("click", stopAttentionExercise);
+attentionCompareBtn.addEventListener("click", compareAttentionAnswer);
+attentionAnswerEl.addEventListener("input", syncAttentionDescribeAvailability);
 
 function handleAttentionImageUpload(event) {
   const [file] = event.target.files || [];
-  resetAttentionTimer();
-  if (state.attention.imageUrl) {
-    URL.revokeObjectURL(state.attention.imageUrl);
-  }
-
-  state.attention.fileName = "";
-  state.attention.imageUrl = "";
-  state.attention.file = null;
-  state.attention.visible = false;
-  state.attention.timeLeft = 0;
-
   if (!file) {
-    attentionPreviewEl.hidden = true;
-    attentionPreviewEl.removeAttribute("src");
-    attentionPlaceholderEl.hidden = false;
-    attentionPlaceholderEl.textContent = "Выбери фотографию, чтобы начать упражнение.";
-    attentionTimerEl.textContent = "Таймер: 0с";
-    attentionDescriptionEl.value = "";
+    clearAttentionMedia();
+    syncAttentionDescribeAvailability();
     return;
   }
 
-  const imageUrl = URL.createObjectURL(file);
-  state.attention.fileName = file.name;
+  applyAttentionFile(file, URL.createObjectURL(file), "Загруженное фото");
+}
+
+async function loadRandomAttentionImage() {
+  if (state.attention.randomLoading) return;
+
+  state.attention.randomLoading = true;
+  attentionRandomBtn.textContent = "Подбираю...";
+  attentionFeedbackEl.textContent = "";
+  attentionFeedbackEl.className = "feedback";
+  syncAttentionDescribeAvailability();
+
+  try {
+    const response = await fetch("/api/random-attention-image");
+    const payload = await parseJsonSafely(response);
+    if (!response.ok) {
+      throw new Error(payload?.error || "Не удалось получить случайное фото.");
+    }
+
+    if (!payload?.imageDataUrl) {
+      throw new Error("Сервер не вернул случайное фото.");
+    }
+
+    const randomFile = dataUrlToFile(
+      payload.imageDataUrl,
+      `${payload.themeKey || "attention-random"}.jpg`,
+    );
+    applyAttentionFile(
+      randomFile,
+      payload.imageDataUrl,
+      payload.themeLabel ? `Случайное фото: ${payload.themeLabel}` : "Случайное фото",
+    );
+    attentionFeedbackEl.textContent = "Случайное фото загружено.";
+    attentionFeedbackEl.className = "feedback ok";
+  } catch (error) {
+    attentionFeedbackEl.textContent = toAttentionErrorMessage(error);
+    attentionFeedbackEl.className = "feedback bad";
+  } finally {
+    state.attention.randomLoading = false;
+    attentionRandomBtn.textContent = attentionRandomDefaultLabel;
+    syncAttentionDescribeAvailability();
+  }
+}
+
+function applyAttentionFile(file, imageUrl, sourceLabel) {
+  clearAttentionMedia();
+  state.attention.fileName = file.name || "";
   state.attention.imageUrl = imageUrl;
   state.attention.file = file;
+  state.attention.sourceLabel = sourceLabel || "Загруженное фото";
+  state.attention.notes = "";
+  state.attention.completed = false;
+  state.attention.descriptionReady = false;
   attentionPreviewEl.src = imageUrl;
   attentionPreviewEl.hidden = false;
   attentionPlaceholderEl.hidden = true;
-  attentionTimerEl.textContent = "Таймер: 0с";
-  attentionFeedbackEl.textContent = "";
   attentionDescriptionEl.value = "";
+  attentionAnswerEl.value = "";
+  attentionFeedbackEl.textContent = "";
+  attentionFeedbackEl.className = "feedback";
+  attentionCompareResultEl.hidden = true;
+  attentionCompareResultEl.innerHTML = "";
+  startAttentionRound();
   syncAttentionDescribeAvailability();
 }
 
+function showAttentionPlaceholder(text) {
+  attentionStageEl.classList.add("is-empty");
+  attentionPreviewEl.hidden = true;
+  attentionPreviewEl.removeAttribute("src");
+  attentionPlaceholderEl.hidden = false;
+  attentionPlaceholderEl.textContent = text;
+}
+
+function showAttentionImage() {
+  attentionStageEl.classList.remove("is-empty");
+  attentionPreviewEl.hidden = false;
+  attentionPlaceholderEl.hidden = true;
+}
+
+function clearAttentionMedia() {
+  resetAttentionTimer();
+  revokeAttentionImageUrl();
+  state.attention.fileName = "";
+  state.attention.imageUrl = "";
+  state.attention.file = null;
+  state.attention.timeLeft = 0;
+  state.attention.visible = false;
+  state.attention.sourceLabel = "";
+  state.attention.completed = false;
+  state.attention.descriptionReady = false;
+  showAttentionPlaceholder("Нажми «Выбери файл» или «Случайное фото».");
+  attentionTimerEl.textContent = "Таймер: 0с";
+  attentionSourceEl.textContent = "Источник: --";
+  attentionDescriptionEl.value = "";
+  attentionAnswerEl.value = "";
+  attentionCompareResultEl.hidden = true;
+  attentionCompareResultEl.innerHTML = "";
+}
+
 function startAttentionRound() {
-  if (!state.attention.imageUrl) {
-    attentionFeedbackEl.textContent = "Сначала загрузи фотографию.";
-    attentionFeedbackEl.className = "feedback bad";
-    return;
-  }
+  if (!state.attention.imageUrl) return;
 
   resetAttentionTimer();
   state.attention.timeLeft = Number(attentionShowSecondsEl.value) || 10;
   state.attention.visible = true;
-  attentionPreviewEl.hidden = false;
-  attentionPlaceholderEl.hidden = true;
+  showAttentionImage();
   attentionTimerEl.textContent = `Таймер: ${state.attention.timeLeft}с`;
-  attentionFeedbackEl.textContent = "Смотри на фото и запоминай детали.";
+  attentionSourceEl.textContent = `Источник: ${state.attention.sourceLabel || "Фото"}`;
+  attentionFeedbackEl.textContent = "Фото загружено. Время пошло автоматически.";
   attentionFeedbackEl.className = "feedback";
   syncAttentionDescribeAvailability();
 
@@ -1264,18 +1366,16 @@ function startAttentionRound() {
     state.attention.timeLeft -= 1;
     attentionTimerEl.textContent = `Таймер: ${Math.max(state.attention.timeLeft, 0)}с`;
     if (state.attention.timeLeft <= 0) {
-      hideAttentionImage(true);
+      hideAttentionImage();
     }
   }, 1000);
 }
 
-function hideAttentionImage(fromTimer) {
+function hideAttentionImage() {
   if (!state.attention.imageUrl) return;
   resetAttentionTimer();
   state.attention.visible = false;
-  attentionPreviewEl.hidden = true;
-  attentionPlaceholderEl.hidden = false;
-  attentionPlaceholderEl.textContent = "Фото скрыто. Опиши увиденные детали по памяти.";
+  showAttentionPlaceholder("Фото скрыто. Опиши увиденные детали по памяти.");
   attentionAnswerEl.focus();
   syncAttentionDescribeAvailability();
 }
@@ -1293,51 +1393,149 @@ async function describeAttentionImage() {
     attentionFeedbackEl.className = "feedback bad";
     return;
   }
-  if (location.protocol === "file:") {
-    attentionFeedbackEl.textContent = "Открой сайт через локальный сервер: кнопка не работает из файла напрямую.";
-    attentionFeedbackEl.className = "feedback bad";
-    return;
-  }
   if (state.attention.loadingDescription) return;
 
   state.attention.loadingDescription = true;
+  state.attention.descriptionReady = false;
   syncAttentionDescribeAvailability();
-  attentionDescriptionEl.value = "Анализирую изображение...";
+  attentionDescriptionEl.value = "";
   attentionFeedbackEl.textContent = "";
+  attentionDescribeBtn.textContent = "Анализ...";
 
   try {
-    const imageDataUrl = await fileToDataUrl(state.attention.file);
+    const formData = new FormData();
+    formData.append("image", state.attention.file);
+
     const response = await fetch("/api/describe-image", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ imageDataUrl }),
+      body: formData,
     });
 
-    const payload = await response.json();
+    const payload = await parseJsonSafely(response);
     if (!response.ok) {
       throw new Error(payload?.error || "Не удалось получить описание изображения.");
     }
 
+    if (!payload?.description || payload.description === "Не удалось получить описание изображения.") {
+      throw new Error("Сервер не вернул корректное описание изображения.");
+    }
+
     attentionDescriptionEl.value = payload.description || "";
+    state.attention.descriptionReady = true;
     attentionFeedbackEl.textContent = "Описание получено.";
     attentionFeedbackEl.className = "feedback ok";
   } catch (error) {
     attentionDescriptionEl.value = "";
+    state.attention.descriptionReady = false;
     attentionFeedbackEl.textContent = toAttentionErrorMessage(error);
     attentionFeedbackEl.className = "feedback bad";
   } finally {
     state.attention.loadingDescription = false;
+    attentionDescribeBtn.textContent = attentionDescribeDefaultLabel;
     syncAttentionDescribeAvailability();
   }
 }
 
-function resetAttentionExercise() {
-  resetAttentionTimer();
-  if (state.attention.imageUrl) {
-    URL.revokeObjectURL(state.attention.imageUrl);
+async function compareAttentionAnswer() {
+  const notes = attentionAnswerEl.value.trim();
+  if (!state.attention.file) {
+    attentionFeedbackEl.textContent = "Сначала загрузи фотографию.";
+    attentionFeedbackEl.className = "feedback bad";
+    return;
   }
+  if (!notes) {
+    attentionFeedbackEl.textContent = "Сначала опиши, что ты заметил.";
+    attentionFeedbackEl.className = "feedback bad";
+    return;
+  }
+  if (state.attention.comparing) return;
+
+  state.attention.comparing = true;
+  state.attention.notes = notes;
+  attentionCompareBtn.textContent = "Сравниваю...";
+  attentionFeedbackEl.textContent = "";
+  attentionCompareResultEl.hidden = true;
+  attentionCompareResultEl.innerHTML = "";
+  syncAttentionDescribeAvailability();
+
+  try {
+    const formData = new FormData();
+    formData.append("image", state.attention.file);
+    formData.append("notes", notes);
+
+    const response = await fetch("/api/compare-attention", {
+      method: "POST",
+      body: formData,
+    });
+
+    const payload = await parseJsonSafely(response);
+    if (!response.ok) {
+      throw new Error(payload?.error || "Не удалось сравнить ответ с фото.");
+    }
+
+    renderAttentionComparison(payload);
+    state.attention.completed = true;
+    attentionFeedbackEl.textContent = "Сравнение готово.";
+    attentionFeedbackEl.className = "feedback ok";
+  } catch (error) {
+    attentionCompareResultEl.hidden = true;
+    attentionCompareResultEl.innerHTML = "";
+    attentionFeedbackEl.textContent = toAttentionErrorMessage(error);
+    attentionFeedbackEl.className = "feedback bad";
+  } finally {
+    state.attention.comparing = false;
+    attentionCompareBtn.textContent = attentionCompareDefaultLabel;
+    syncAttentionDescribeAvailability();
+  }
+}
+
+function renderAttentionComparison(result) {
+  const totalDetails = Number(result?.totalDetails) || 0;
+  const rememberedDetails = Number(result?.rememberedDetails) || 0;
+  const matchedDetails = normalizeAttentionList(result?.matchedDetails);
+  const missedDetails = normalizeAttentionList(result?.missedDetails);
+  const extraDetails = normalizeAttentionList(result?.extraDetails);
+  const summary = String(result?.summary || "").trim();
+
+  attentionCompareResultEl.innerHTML = `
+    <div class="attention-compare-head">
+      <strong>Сравнение с твоим ответом</strong>
+      <span class="attention-score">Внимательность: ${rememberedDetails} из ${totalDetails || Math.max(rememberedDetails, 1)} деталей</span>
+    </div>
+    ${summary ? `<p class="attention-compare-summary">${escapeHtml(summary)}</p>` : ""}
+    <div class="attention-compare-grid">
+      <section class="attention-compare-col">
+        <h4>Ты заметил</h4>
+        ${renderAttentionList(matchedDetails, "AI не выделил совпадающих деталей.")}
+      </section>
+      <section class="attention-compare-col">
+        <h4>Ты пропустил</h4>
+        ${renderAttentionList(missedDetails, "Серьезных пропусков нет.")}
+      </section>
+      <section class="attention-compare-col">
+        <h4>Лишнее или спорное</h4>
+        ${renderAttentionList(extraDetails, "Лишних деталей нет.")}
+      </section>
+    </div>
+  `;
+  attentionCompareResultEl.hidden = false;
+}
+
+function renderAttentionList(items, emptyText) {
+  if (!items.length) return `<p class="attention-compare-empty">${escapeHtml(emptyText)}</p>`;
+  return `<ul class="attention-compare-list">${items.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>`;
+}
+
+function normalizeAttentionList(items) {
+  if (!Array.isArray(items)) return [];
+  return items
+    .map((item) => String(item || "").trim())
+    .filter(Boolean);
+}
+
+function stopAttentionExercise() {
+  resetAttentionTimer();
+  revokeAttentionImageUrl();
   state.attention.fileName = "";
   state.attention.imageUrl = "";
   state.attention.file = null;
@@ -1345,16 +1543,30 @@ function resetAttentionExercise() {
   state.attention.visible = false;
   state.attention.notes = "";
   state.attention.loadingDescription = false;
+  state.attention.comparing = false;
+  state.attention.randomLoading = false;
+  state.attention.sourceLabel = "";
+  state.attention.completed = false;
+  state.attention.descriptionReady = false;
   attentionImageInput.value = "";
-  attentionPreviewEl.hidden = true;
-  attentionPreviewEl.removeAttribute("src");
-  attentionPlaceholderEl.hidden = false;
-  attentionPlaceholderEl.textContent = "Выбери фотографию, чтобы начать упражнение.";
+  showAttentionPlaceholder("Нажми «Выбери файл» или «Случайное фото».");
   attentionTimerEl.textContent = "Таймер: 0с";
+  attentionSourceEl.textContent = "Источник: --";
   attentionDescriptionEl.value = "";
   attentionFeedbackEl.textContent = "";
   attentionAnswerEl.value = "";
+  attentionCompareResultEl.hidden = true;
+  attentionCompareResultEl.innerHTML = "";
+  attentionDescribeBtn.textContent = attentionDescribeDefaultLabel;
+  attentionCompareBtn.textContent = attentionCompareDefaultLabel;
+  attentionRandomBtn.textContent = attentionRandomDefaultLabel;
   syncAttentionDescribeAvailability();
+}
+
+function revokeAttentionImageUrl() {
+  if (state.attention.imageUrl?.startsWith("blob:")) {
+    URL.revokeObjectURL(state.attention.imageUrl);
+  }
 }
 
 const schulteSizeEl = document.getElementById("schulte-size");
@@ -1487,7 +1699,7 @@ function stopSchulteTimer() {
 
 function updateSchulteProgress(isCompleted = false) {
   schulteNextEl.textContent = isCompleted
-    ? "Следующее число: Готово"
+    ? "Следующее число: --"
     : `Следующее число: ${state.schulte.values.length ? state.schulte.nextValue : "--"}`;
 }
 
@@ -1533,7 +1745,7 @@ document.getElementById("reset-progress").addEventListener("click", () => {
   stopMathTimer();
   stopNumberTimer();
   stopWordTimer();
-  resetAttentionExercise();
+  stopAttentionExercise();
   resetSchulteExercise();
   mathTimerEl.textContent = "Таймер: 0.0с";
   numTimerEl.textContent = "Таймер: 0.0с";
@@ -1763,15 +1975,23 @@ function fileToDataUrl(file) {
 }
 
 function syncAttentionDescribeAvailability() {
-  attentionStartBtn.disabled = !state.attention.file || state.attention.visible;
-  attentionDescribeBtn.disabled = !state.attention.file || state.attention.loadingDescription;
-  if (location.protocol === "file:") {
-    attentionHelperTextEl.textContent =
-      "Сейчас страница открыта как файл. Для распознавания запусти локальный сервер и открой сайт через http://localhost:3000.";
-    return;
-  }
-  attentionHelperTextEl.textContent =
-    "Описание запрашивается у AI через backend и появляется здесь после нажатия кнопки «Что на фото».";
+  const attentionLocked = state.attention.completed;
+  const attentionSourceLocked = Boolean(state.attention.file) || attentionLocked;
+  attentionUploadTriggerBtn.disabled =
+    attentionSourceLocked || state.attention.randomLoading || state.attention.loadingDescription || state.attention.comparing;
+  attentionImageInput.disabled = attentionUploadTriggerBtn.disabled;
+  attentionDescribeBtn.disabled =
+    !attentionLocked || !state.attention.file || state.attention.loadingDescription || state.attention.randomLoading || state.attention.descriptionReady;
+  attentionCompareBtn.disabled =
+    attentionLocked || !state.attention.file || !attentionAnswerEl.value.trim() || state.attention.comparing || state.attention.randomLoading;
+  attentionRandomBtn.disabled =
+    attentionSourceLocked || state.attention.randomLoading || state.attention.loadingDescription || state.attention.comparing;
+  attentionStopBtn.disabled =
+    !state.attention.file
+    && !state.attention.imageUrl
+    && !state.attention.loadingDescription
+    && !state.attention.randomLoading
+    && !state.attention.completed;
 }
 
 function toAttentionErrorMessage(error) {
@@ -1779,7 +1999,45 @@ function toAttentionErrorMessage(error) {
   if (message.includes("Failed to fetch")) {
     return "Не удалось связаться с backend. Запусти сервер и открой сайт через http://localhost:3000.";
   }
+  if (message.includes("quota")) {
+    return "У API-ключа закончилась квота или не настроен биллинг.";
+  }
   return message || "Ошибка при анализе изображения.";
+}
+
+async function parseJsonSafely(response) {
+  const raw = await response.text();
+  if (!raw) return {};
+  try {
+    return JSON.parse(raw);
+  } catch {
+    throw new Error("Сервер вернул некорректный ответ.");
+  }
+}
+
+function dataUrlToFile(dataUrl, fileName) {
+  const [header, body] = dataUrl.split(",", 2);
+  const mimeMatch = header?.match(/data:(.*?);base64/);
+  if (!mimeMatch || !body) {
+    throw new Error("Некорректный data URL для изображения.");
+  }
+
+  const binary = atob(body);
+  const bytes = new Uint8Array(binary.length);
+  for (let index = 0; index < binary.length; index += 1) {
+    bytes[index] = binary.charCodeAt(index);
+  }
+
+  return new File([bytes], fileName, { type: mimeMatch[1] });
+}
+
+function escapeHtml(value) {
+  return String(value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
 }
 
 updateMathControls();

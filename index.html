@@ -315,7 +315,7 @@
       <section class="panel" id="words-panel">
         <div class="panel-head">
           <h2>Запоминание слов</h2>
-          <p>Выбери язык, тип и кол-во слов, нажми "Начать" и добавляй слова по одному, как будешь готов, нажми - "Готов"</p>
+          <p>Выбери язык, тип и кол-во слов, нажми «Новый пример», затем слова будут появляться автоматически каждые 3 секунды. Когда откроются все слова, нажми «Готов».</p>
         </div>
         <div class="controls">
           <label>
@@ -339,10 +339,7 @@
               <option value="20" selected>20</option>
             </select>
           </label>
-          <button type="button" id="word-start" class="btn">Начать раунд</button>
-          <button type="button" id="word-next" class="btn btn-ghost" disabled>
-            Добавить слово
-          </button>
+          <button type="button" id="word-start" class="btn">Новый пример</button>
           <button type="button" id="word-ready" class="btn btn-ghost" disabled>
             Готов
           </button>
@@ -351,7 +348,7 @@
           <span id="word-timer" class="meta-chip">Таймер: 0.0с</span>
           <span id="word-best-time" class="meta-chip">Рекорд: --</span>
         </div>
-        <div class="challenge words" id="word-task">---</div>
+        <div class="challenge words challenge-hint" id="word-task">Нажми «Новый пример»</div>
         <form id="word-form" class="answer-form">
           <textarea
             id="word-answer"
@@ -363,19 +360,19 @@
         </form>
         <p id="word-feedback" class="feedback"></p>
         <div id="word-review" class="word-review" hidden></div>
-        <button type="button" id="word-stop" class="btn btn-stop">Начать заново</button>
+        <button type="button" id="word-stop" class="btn btn-stop">Стоп</button>
       </section>
 
       <section class="panel" id="attention-panel">
         <div class="panel-head">
           <h2>Внимание и Наблюдательность</h2>
-          <p>Загрузи фотографию, внимательно изучи ее, а затем опиши детали по памяти.</p>
+          <p>Загрузи фотографию или сгенирируй случайную, после запомни как можно больше деталей и напиши их, сравни с тем, что видит ИИ.</p>
         </div>
         <div class="controls">
-          <label class="file-label">
-            Фото
-            <input id="attention-image-input" type="file" accept="image/*" />
-          </label>
+          <button type="button" id="attention-upload-trigger" class="btn btn-ghost">Выбери файл</button>
+          <input id="attention-image-input" class="hidden-file-input" type="file" accept="image/*" />
+          <span class="controls-divider">или</span>
+          <button type="button" id="attention-random" class="btn btn-ghost">Случайное фото</button>
           <label>
             Показ (сек)
             <select id="attention-show-seconds">
@@ -386,21 +383,29 @@
               <option value="30">30</option>
             </select>
           </label>
-          <button type="button" id="attention-start" class="btn">Начать просмотр</button>
-          <button type="button" id="attention-describe" class="btn btn-ghost">Что на фото</button>
-          <button type="button" id="attention-reset" class="btn btn-ghost">Сбросить</button>
         </div>
         <div class="metrics-row">
           <span id="attention-timer" class="meta-chip">Таймер: 0с</span>
+          <span id="attention-source" class="meta-chip attention-source-chip">Источник: --</span>
         </div>
-        <div class="attention-stage" id="attention-stage">
+        <div class="attention-stage is-empty" id="attention-stage">
           <div class="attention-placeholder" id="attention-placeholder">
-            Выбери фотографию, чтобы начать упражнение.
+            Нажми «Выбери файл» или «Случайное фото».
           </div>
           <img id="attention-preview" class="attention-preview" alt="Загруженная фотография для тренировки наблюдательности" hidden />
         </div>
+        <form id="attention-form" class="answer-form">
+          <textarea
+            id="attention-answer"
+            rows="5"
+            placeholder="После просмотра опиши через запятую или в ряд, что ты заметил: предметы, цвета, людей, расположение деталей"
+          ></textarea>
+          <div class="attention-actions">
+            <button type="button" id="attention-compare" class="btn btn-ghost">Сравнить с моим ответом</button>
+            <button type="button" id="attention-describe" class="btn btn-ghost">Что на фото</button>
+          </div>
+        </form>
         <div class="attention-output">
-          <label for="attention-description">Что видно на фото</label>
           <textarea
             id="attention-description"
             rows="4"
@@ -408,16 +413,9 @@
             readonly
           ></textarea>
         </div>
-        <p class="helper-text" id="attention-helper-text">Описание запрашивается у AI через backend и появляется здесь после нажатия кнопки «Что на фото».</p>
-        <form id="attention-form" class="answer-form">
-          <textarea
-            id="attention-answer"
-            rows="5"
-            placeholder="После просмотра опиши, что ты заметил: предметы, цвета, людей, расположение деталей"
-          ></textarea>
-          <button class="btn" type="submit">Сохранить наблюдения</button>
-        </form>
+        <div id="attention-compare-result" class="attention-compare" hidden></div>
         <p id="attention-feedback" class="feedback"></p>
+        <button type="button" id="attention-stop" class="btn btn-stop">Стоп</button>
       </section>
 
       <section class="panel" id="schulte-panel">
