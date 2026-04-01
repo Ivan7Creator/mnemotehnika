@@ -33,6 +33,7 @@
         <button type="button" class="tab-btn" data-tab="attention">Внимание и Наблюдательность</button>
         <button type="button" class="tab-btn" data-tab="schulte">Таблицы Шульте</button>
         <button type="button" class="tab-btn" data-tab="progress">Мой прогресс</button>
+        <button type="button" class="tab-btn" data-tab="exam">Экзамен</button>
       </section>
 
       <section class="panel active" id="math-panel">
@@ -71,6 +72,7 @@
             </select>
           </label>
           <button type="button" id="math-new" class="btn">Новый пример</button>
+          <button type="button" id="math-random" class="btn btn-ghost">Рандом</button>
         </div>
         <div class="metrics-row">
           <span id="math-timer" class="meta-chip">Таймер: 0.0с</span>
@@ -83,7 +85,7 @@
             type="text"
             inputmode="numeric"
             pattern="-?[0-9]*"
-            placeholder="Твой ответ"
+            placeholder="Введи ответ"
             autocomplete="off"
             required
             disabled
@@ -140,6 +142,7 @@
             </select>
           </label>
           <button type="button" id="num-start" class="btn">Новый пример</button>
+          <button type="button" id="num-random" class="btn btn-ghost">Рандом</button>
           <button type="button" id="num-next" class="btn btn-ghost" disabled hidden>Следующий ряд</button>
         </div>
         <fieldset class="digit-pool" id="num-digit-pool">
@@ -315,7 +318,7 @@
       <section class="panel" id="words-panel">
         <div class="panel-head">
           <h2>Запоминание слов</h2>
-          <p>Выбери язык, тип и кол-во слов, нажми «Новый пример», затем слова будут появляться автоматически каждые 3 секунды. Когда откроются все слова, нажми «Готов».</p>
+          <p>Запоминай последовательность слов и далее выводи их по памяти по порядку.</p>
         </div>
         <div class="controls">
           <label>
@@ -335,14 +338,26 @@
           <label>
             Кол-во слов
             <select id="word-target-count">
+              <option value="2">2</option>
               <option value="10">10</option>
               <option value="20" selected>20</option>
             </select>
           </label>
+          <label>
+            Показ (сек)
+            <select id="word-show-seconds">
+              <option value="1">1</option>
+              <option value="2">2</option>
+              <option value="3" selected>3</option>
+              <option value="4">4</option>
+              <option value="5">5</option>
+              <option value="6">6</option>
+              <option value="7">7</option>
+              <option value="8">8</option>
+              <option value="9">9</option>
+            </select>
+          </label>
           <button type="button" id="word-start" class="btn">Новый пример</button>
-          <button type="button" id="word-ready" class="btn btn-ghost" disabled>
-            Готов
-          </button>
         </div>
         <div class="metrics-row">
           <span id="word-timer" class="meta-chip">Таймер: 0.0с</span>
@@ -353,7 +368,7 @@
           <textarea
             id="word-answer"
             rows="4"
-            placeholder="Введи слова по порядку: через запятую или пробел"
+            placeholder="Введи слова по порядку через пробел или с новой строки"
             required
           ></textarea>
           <button class="btn" type="submit">Проверить</button>
@@ -444,6 +459,37 @@
         </div>
         <p id="schulte-feedback" class="feedback"></p>
         <button type="button" id="schulte-stop" class="btn btn-stop">Стоп</button>
+      </section>
+
+      <section class="panel" id="exam-panel">
+        <div class="panel-head">
+          <h2>Экзамен</h2>
+          <p>Смешанный режим: 3 задания из «Счета в уме» и 2 задания из «Числового ряда» в случайном порядке.</p>
+        </div>
+        <div class="controls">
+          <button type="button" id="exam-start" class="btn">Начать экзамен</button>
+        </div>
+        <div class="metrics-row">
+          <span id="exam-progress" class="meta-chip">Задание: 0/5</span>
+          <span id="exam-timer" class="meta-chip">Таймер: 0.0с</span>
+        </div>
+        <div class="challenge challenge-hint exam-task" id="exam-task">Нажми «Начать экзамен»</div>
+        <form id="exam-form" class="answer-form">
+          <input
+            id="exam-answer"
+            type="text"
+            inputmode="numeric"
+            pattern="-?[0-9]*"
+            placeholder="Ответ появится после старта"
+            autocomplete="off"
+            required
+            disabled
+          />
+          <button class="btn" type="submit">Проверить</button>
+        </form>
+        <p id="exam-feedback" class="feedback"></p>
+        <div id="exam-summary" class="challenge challenge-hint exam-summary" hidden></div>
+        <button type="button" id="exam-stop" class="btn btn-stop">Стоп</button>
       </section>
 
       <section class="panel" id="progress-panel">

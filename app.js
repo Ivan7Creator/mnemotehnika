@@ -34,6 +34,7 @@ const state = {
     value: [],
     revealedCount: 0,
     targetCount: 20,
+    revealSeconds: 3,
     running: false,
     phase: "idle",
     startedAt: null,
@@ -45,6 +46,8 @@ const state = {
     imageUrl: "",
     file: null,
     timerId: null,
+    hideTimerId: null,
+    startedAt: null,
     timeLeft: 0,
     visible: false,
     notes: "",
@@ -54,6 +57,7 @@ const state = {
     sourceLabel: "",
     completed: false,
     descriptionReady: false,
+    loadToken: 0,
   },
   schulte: {
     values: [],
@@ -62,6 +66,18 @@ const state = {
     startedAt: null,
     timerId: null,
     active: false,
+  },
+  exam: {
+    active: false,
+    startedAt: null,
+    timerId: null,
+    queue: [],
+    currentIndex: -1,
+    currentTask: null,
+    phase: "idle",
+    revealToken: 0,
+    correctCount: 0,
+    results: [],
   },
 };
 
@@ -112,6 +128,7 @@ const panels = {
   words: document.getElementById("words-panel"),
   attention: document.getElementById("attention-panel"),
   schulte: document.getElementById("schulte-panel"),
+  exam: document.getElementById("exam-panel"),
   progress: document.getElementById("progress-panel"),
 };
 
@@ -137,8 +154,11 @@ const mathNumberSizeEl = document.getElementById("math-number-size");
 const mathOperationEl = document.getElementById("math-operation");
 const mathMulLimitWrap = document.getElementById("math-mul-limit-wrap");
 const mathMulLimitEl = document.getElementById("math-mul-limit");
+const mathNewBtn = document.getElementById("math-new");
+const mathRandomBtn = document.getElementById("math-random");
 const mathStopBtn = document.getElementById("math-stop");
-document.getElementById("math-new").addEventListener("click", generateMathTask);
+mathNewBtn.addEventListener("click", generateMathTask);
+mathRandomBtn.addEventListener("click", generateRandomMathTask);
 mathStopBtn.addEventListener("click", stopMathExercise);
 mathNumberSizeEl.addEventListener("change", updateMathControls);
 mathOperationEl.addEventListener("change", updateMathControls);
@@ -165,8 +185,7 @@ mathForm.addEventListener("submit", (event) => {
   syncMathControls();
 });
 
-function generateMathTask() {
-  stopMathTimer();
+function getMathTaskConfig() {
   const numberSize = mathNumberSizeEl.value;
   const operation = mathOperationEl.value;
   let bounds = numberSize === "two" ? { min: 10, max: 99 } : { min: 1, max: 9 };
@@ -174,28 +193,47 @@ function generateMathTask() {
   if (numberSize === "two") {
     bounds = { min: 10, max: Number(mathMulLimitEl.value) || 20 };
   }
-  let a = 0;
-  let b = 0;
-  let op = "+";
 
-  a = randomInt(bounds.min, bounds.max);
-  b = randomInt(bounds.min, bounds.max);
-  op = operation === "sub" ? "-" : operation === "mul" ? "*" : "+";
+  return { numberSize, operation, bounds };
+}
+
+function buildMathTask(config = getMathTaskConfig()) {
+  let a = randomInt(config.bounds.min, config.bounds.max);
+  let b = randomInt(config.bounds.min, config.bounds.max);
+  const op = config.operation === "sub" ? "-" : config.operation === "mul" ? "*" : "+";
   if (op === "-" && b > a) [a, b] = [b, a];
 
-  let expression = `${a} ${op} ${b}`;
+  const expression = `${a} ${op} ${b}`;
   let answer = 0;
   if (op === "+") answer = a + b;
   if (op === "-") answer = a - b;
   if (op === "*") answer = a * b;
 
-  state.math.answer = answer;
+  return { kind: "math", expression, answer };
+}
+
+function generateMathTask() {
+  stopMathTimer();
+  const task = buildMathTask();
+  state.math.answer = task.answer;
   startMathTimer();
-  mathTaskEl.textContent = expression;
+  mathTaskEl.textContent = task.expression;
   mathTaskEl.classList.remove("challenge-hint");
   mathFeedback.textContent = "";
   mathAnswer.focus();
   syncMathControls();
+}
+
+function generateRandomMathTask() {
+  const numberSizes = ["one", "two"];
+  const operations = ["add", "sub", "mul"];
+  const mulLimits = [...mathMulLimitEl.options].map((option) => option.value);
+
+  mathNumberSizeEl.value = numberSizes[randomInt(0, numberSizes.length - 1)];
+  mathOperationEl.value = operations[randomInt(0, operations.length - 1)];
+  mathMulLimitEl.value = mulLimits[randomInt(0, mulLimits.length - 1)];
+  updateMathControls();
+  generateMathTask();
 }
 
 function updateMathControls() {
@@ -240,6 +278,9 @@ function stopMathExercise() {
 }
 
 function syncMathControls() {
+  const hasActiveTask = state.math.answer !== null;
+  mathNewBtn.disabled = hasActiveTask;
+  mathRandomBtn.disabled = hasActiveTask;
   mathSubmitBtn.disabled = state.math.answer === null || !mathAnswer.value.trim();
   mathStopBtn.disabled = state.math.answer === null && !state.math.startedAt;
   mathAnswer.disabled = state.math.answer === null;
@@ -264,9 +305,11 @@ const numTimerEl = document.getElementById("num-timer");
 const numBestTimeEl = document.getElementById("num-best-time");
 const numReviewEl = document.getElementById("num-review");
 const numStartBtn = document.getElementById("num-start");
+const numRandomBtn = document.getElementById("num-random");
 const numNextBtn = document.getElementById("num-next");
 const numStopBtn = document.getElementById("num-stop");
 numStartBtn.addEventListener("click", startNumberSeries);
+numRandomBtn.addEventListener("click", startRandomNumberSeries);
 numNextBtn.addEventListener("click", runNextNumberRound);
 numStopBtn.addEventListener("click", stopNumberExercise);
 numAnswer.addEventListener("input", syncNumberControls);
@@ -291,7 +334,7 @@ numForm.addEventListener("submit", async (event) => {
     correct,
   });
 
-  numFeedback.textContent = `Ряд ${state.numbers.seriesIndex}/${state.numbers.totalRounds} введен`;
+  numFeedback.textContent = "";
   numFeedback.className = "feedback";
   numReviewEl.hidden = true;
   numReviewEl.innerHTML = "";
@@ -342,6 +385,28 @@ function startNumberSeries() {
   startNumberTimer();
   runNextNumberRound();
   syncNumberControls();
+}
+
+function startRandomNumberSeries() {
+  const totalRoundsOptions = [...numTotalRoundsEl.options].map((option) => option.value);
+  const digitsCountOptions = [...numDigitsCountEl.options].map((option) => option.value);
+  const showSecondsOptions = [...numShowSecondsEl.options].map((option) => option.value);
+  const digitCheckboxes = [...numDigitPoolEl.querySelectorAll('input[type="checkbox"]')];
+  const targetDigitCount = randomInt(2, digitCheckboxes.length);
+  const digitIndexes = shuffle(Array.from({ length: digitCheckboxes.length }, (_, index) => index))
+    .slice(0, targetDigitCount);
+
+  numTotalRoundsEl.value = totalRoundsOptions[randomInt(0, totalRoundsOptions.length - 1)];
+  numDigitsCountEl.value = digitsCountOptions[randomInt(0, digitsCountOptions.length - 1)];
+  numShowSecondsEl.value = showSecondsOptions[randomInt(0, showSecondsOptions.length - 1)];
+
+  digitCheckboxes.forEach((checkbox, index) => {
+    checkbox.checked = digitIndexes.includes(index);
+  });
+
+  state.numbers.totalRounds = Number(numTotalRoundsEl.value) || 6;
+  numSeriesProgressEl.textContent = `Ряд: 0/${state.numbers.totalRounds}`;
+  startNumberSeries();
 }
 
 async function runNextNumberRound() {
@@ -476,6 +541,8 @@ function renderNumberReview(reviewRows) {
 }
 
 function syncNumberControls() {
+  numStartBtn.disabled = state.numbers.seriesActive;
+  numRandomBtn.disabled = state.numbers.seriesActive;
   numSubmitBtn.disabled =
     !state.numbers.seriesActive || !state.numbers.awaitingAnswer || !state.numbers.value || !numAnswer.value.trim();
   numStopBtn.disabled = !state.numbers.seriesActive && !state.numbers.startedAt;
@@ -495,6 +562,271 @@ function formatOrdinalRow(index) {
   if (mod10 === 1) return `${index}-й`;
   if (mod10 >= 2 && mod10 <= 4) return `${index}-й`;
   return `${index}-й`;
+}
+
+function getNumberSeriesTaskConfig() {
+  const selectedDigits = getSelectedNumberDigits();
+  return {
+    digitsPerRound: Number(numDigitsCountEl.value) || 6,
+    showSeconds: Number(numShowSecondsEl.value) || 3,
+    allowedDigits: selectedDigits.length ? selectedDigits : [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
+  };
+}
+
+function buildNumberSeriesTask(config = getNumberSeriesTaskConfig()) {
+  return {
+    kind: "numbers",
+    value: generateDigits(config.digitsPerRound, config.allowedDigits),
+    showSeconds: config.showSeconds,
+  };
+}
+
+const examTaskEl = document.getElementById("exam-task");
+const examForm = document.getElementById("exam-form");
+const examAnswer = document.getElementById("exam-answer");
+const examFeedback = document.getElementById("exam-feedback");
+const examSummaryEl = document.getElementById("exam-summary");
+const examSubmitBtn = examForm.querySelector('button[type="submit"]');
+const examStartBtn = document.getElementById("exam-start");
+const examStopBtn = document.getElementById("exam-stop");
+const examProgressEl = document.getElementById("exam-progress");
+const examTimerEl = document.getElementById("exam-timer");
+
+examStartBtn.addEventListener("click", startExam);
+examStopBtn.addEventListener("click", stopExamExercise);
+examAnswer.addEventListener("input", syncExamControls);
+
+examForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  if (!state.exam.active || state.exam.phase !== "answering" || !state.exam.currentTask) return;
+
+  const task = state.exam.currentTask;
+  const rawValue = (examAnswer.value || "").trim();
+  let correct = false;
+  let expected = "";
+
+  if (task.kind === "math") {
+    correct = Number(rawValue) === task.answer;
+    expected = String(task.answer);
+  } else {
+    const cleanInput = rawValue.replace(/\D/g, "");
+    correct = cleanInput === task.value;
+    expected = task.value;
+  }
+
+  state.exam.results.push({ kind: task.kind, correct });
+  if (correct) state.exam.correctCount += 1;
+
+  examFeedback.textContent = correct ? "Верно!" : `Ошибка. Правильный ответ: ${expected}`;
+  examFeedback.className = correct ? "feedback ok" : "feedback bad";
+  examForm.reset();
+  state.exam.phase = "transition";
+  updateExamStats();
+  syncExamControls();
+
+  await sleep(800);
+  if (!state.exam.active || state.exam.currentTask !== task) return;
+  runNextExamTask();
+});
+
+function buildExamQueue() {
+  const mathConfig = getMathTaskConfig();
+  const numberConfig = getNumberSeriesTaskConfig();
+  return shuffle([
+    buildMathTask(mathConfig),
+    buildMathTask(mathConfig),
+    buildMathTask(mathConfig),
+    buildNumberSeriesTask(numberConfig),
+    buildNumberSeriesTask(numberConfig),
+  ]);
+}
+
+function startExam() {
+  stopExamTimer();
+  state.exam.queue = buildExamQueue();
+  state.exam.active = true;
+  state.exam.currentIndex = -1;
+  state.exam.currentTask = null;
+  state.exam.phase = "idle";
+  state.exam.revealToken += 1;
+  state.exam.correctCount = 0;
+  state.exam.results = [];
+  examSummaryEl.hidden = true;
+  examSummaryEl.innerHTML = "";
+  examFeedback.textContent = "";
+  examFeedback.className = "feedback";
+  examForm.reset();
+  examTimerEl.textContent = "Таймер: 0.0с";
+  startExamTimer();
+  updateExamStats();
+  syncExamControls();
+  runNextExamTask();
+}
+
+function runNextExamTask() {
+  state.exam.revealToken += 1;
+  state.exam.currentIndex += 1;
+
+  if (state.exam.currentIndex >= state.exam.queue.length) {
+    finishExam();
+    return;
+  }
+
+  const task = state.exam.queue[state.exam.currentIndex];
+  state.exam.currentTask = task;
+  state.exam.phase = task.kind === "math" ? "answering" : "showing";
+  examFeedback.textContent = "";
+  examFeedback.className = "feedback";
+  examForm.reset();
+  examSummaryEl.hidden = true;
+  updateExamStats();
+
+  if (task.kind === "math") {
+    presentExamMathTask(task);
+  } else {
+    presentExamNumberTask(task);
+  }
+
+  syncExamControls();
+}
+
+function presentExamMathTask(task) {
+  examTaskEl.textContent = task.expression;
+  examTaskEl.classList.remove("challenge-hint", "mono");
+  examAnswer.focus();
+}
+
+async function presentExamNumberTask(task) {
+  const revealToken = state.exam.revealToken;
+  examTaskEl.classList.remove("challenge-hint");
+  examTaskEl.classList.add("mono");
+  syncExamControls();
+
+  for (let secondsLeft = task.showSeconds; secondsLeft > 0; secondsLeft -= 1) {
+    if (!state.exam.active || state.exam.currentTask !== task || state.exam.revealToken !== revealToken) return;
+    examTaskEl.textContent = `${task.value}  •  ${secondsLeft}`;
+    await sleep(1000);
+  }
+
+  if (!state.exam.active || state.exam.currentTask !== task || state.exam.revealToken !== revealToken) return;
+  state.exam.phase = "answering";
+  examTaskEl.textContent = "Введи показанный ряд";
+  examTaskEl.classList.add("challenge-hint");
+  examTaskEl.classList.remove("mono");
+  examAnswer.focus();
+  syncExamControls();
+}
+
+function startExamTimer() {
+  state.exam.startedAt = Date.now();
+  examTimerEl.textContent = "Таймер: 0.0с";
+  if (state.exam.timerId) clearInterval(state.exam.timerId);
+  state.exam.timerId = setInterval(() => {
+    if (!state.exam.startedAt) return;
+    const elapsedSec = (Date.now() - state.exam.startedAt) / 1000;
+    examTimerEl.textContent = `Таймер: ${elapsedSec.toFixed(1)}с`;
+  }, 100);
+}
+
+function stopExamTimer() {
+  if (state.exam.timerId) {
+    clearInterval(state.exam.timerId);
+    state.exam.timerId = null;
+  }
+  if (!state.exam.startedAt) return 0;
+  const elapsedSec = (Date.now() - state.exam.startedAt) / 1000;
+  state.exam.startedAt = null;
+  examTimerEl.textContent = `Таймер: ${elapsedSec.toFixed(1)}с`;
+  return elapsedSec;
+}
+
+function finishExam() {
+  const tookSec = stopExamTimer();
+  const mathCorrect = state.exam.results.filter((entry) => entry.kind === "math" && entry.correct).length;
+  const numberCorrect = state.exam.results.filter((entry) => entry.kind === "numbers" && entry.correct).length;
+
+  state.exam.active = false;
+  state.exam.currentTask = null;
+  state.exam.phase = "done";
+  examTaskEl.textContent = "Экзамен завершен";
+  examTaskEl.classList.add("challenge-hint");
+  examTaskEl.classList.remove("mono");
+  examSummaryEl.innerHTML = `
+    <strong>Итог: ${state.exam.correctCount}/5</strong><br />
+    Счет в уме: ${mathCorrect}/3<br />
+    Числовой ряд: ${numberCorrect}/2<br />
+    Время: ${tookSec.toFixed(1)}с
+  `;
+  examSummaryEl.hidden = false;
+  examFeedback.textContent = "Экзамен завершен.";
+  examFeedback.className = "feedback ok";
+  updateExamStats();
+  syncExamControls();
+}
+
+function stopExamExercise(options = {}) {
+  const { silent = false } = options;
+  const hadActive = state.exam.active || Boolean(state.exam.startedAt);
+  state.exam.revealToken += 1;
+  stopExamTimer();
+  state.exam.active = false;
+  state.exam.queue = [];
+  state.exam.currentIndex = -1;
+  state.exam.currentTask = null;
+  state.exam.phase = "idle";
+  state.exam.correctCount = 0;
+  state.exam.results = [];
+  examForm.reset();
+  examSummaryEl.hidden = true;
+  examSummaryEl.innerHTML = "";
+  examFeedback.textContent = "";
+  examFeedback.className = "feedback";
+  setExamTaskPlaceholder("Нажми «Начать экзамен»");
+  if (hadActive && !silent) {
+    examFeedback.textContent = "Экзамен остановлен.";
+    examFeedback.className = "feedback";
+  }
+  updateExamStats();
+  syncExamControls();
+}
+
+function updateExamStats() {
+  const totalTasks = state.exam.queue.length || 5;
+  const currentTaskNumber = state.exam.currentTask
+    ? state.exam.currentIndex + 1
+    : state.exam.phase === "done"
+      ? totalTasks
+      : 0;
+  examProgressEl.textContent = `Задание: ${currentTaskNumber}/${totalTasks}`;
+}
+
+function syncExamControls() {
+  const readyForAnswer =
+    state.exam.active
+    && state.exam.phase === "answering"
+    && Boolean(state.exam.currentTask);
+  examStartBtn.disabled = state.exam.active;
+  examSubmitBtn.disabled = !readyForAnswer || !examAnswer.value.trim();
+  examStopBtn.disabled = !state.exam.active && !state.exam.startedAt;
+  examAnswer.disabled = !readyForAnswer;
+
+  if (!state.exam.active && state.exam.phase !== "done") {
+    examAnswer.placeholder = "Ответ появится после старта";
+  } else if (state.exam.phase === "done") {
+    examAnswer.placeholder = "Экзамен завершен, можно начать заново";
+  } else if (!readyForAnswer) {
+    examAnswer.placeholder = "Подожди, идет показ задания";
+  } else if (state.exam.currentTask?.kind === "math") {
+    examAnswer.placeholder = "Введи ответ";
+  } else {
+    examAnswer.placeholder = "Введи показанный ряд";
+  }
+}
+
+function setExamTaskPlaceholder(text) {
+  examTaskEl.textContent = text;
+  examTaskEl.classList.add("challenge-hint");
+  examTaskEl.classList.remove("mono");
 }
 
 const memoryCardForm = document.getElementById("memory-card-form");
@@ -969,6 +1301,7 @@ function normalizeMemoryCards(cards) {
 const wordDifficulty = document.getElementById("word-difficulty");
 const wordLanguageEl = document.getElementById("word-language");
 const wordTargetCountEl = document.getElementById("word-target-count");
+const wordShowSecondsEl = document.getElementById("word-show-seconds");
 const wordTaskEl = document.getElementById("word-task");
 const wordForm = document.getElementById("word-form");
 const wordFeedback = document.getElementById("word-feedback");
@@ -976,12 +1309,10 @@ const wordAnswer = document.getElementById("word-answer");
 const wordSubmitBtn = wordForm.querySelector('button[type="submit"]');
 const wordReviewEl = document.getElementById("word-review");
 const wordStartBtn = document.getElementById("word-start");
-const wordReadyBtn = document.getElementById("word-ready");
 const wordStopBtn = document.getElementById("word-stop");
 const wordTimerEl = document.getElementById("word-timer");
 const wordBestTimeEl = document.getElementById("word-best-time");
 wordStartBtn.addEventListener("click", startWordRound);
-wordReadyBtn.addEventListener("click", finishWordMemorizing);
 wordStopBtn.addEventListener("click", stopWordExercise);
 wordAnswer.addEventListener("input", syncWordControls);
 
@@ -989,7 +1320,7 @@ wordForm.addEventListener("submit", (event) => {
   event.preventDefault();
   if (!state.words.running || !state.words.value.length) return;
   if (state.words.phase !== "recall") {
-    wordFeedback.textContent = "Нажми «Готов», чтобы скрыть слова и начать проверку.";
+    wordFeedback.textContent = "Дождись окончания показа слов.";
     wordFeedback.className = "feedback bad";
     return;
   }
@@ -1005,16 +1336,13 @@ wordForm.addEventListener("submit", (event) => {
   applyModeResult("words", perfect, { count: expected.length, timeSec: elapsedSec });
   renderWordReview(inputWords, state.words.value);
 
-  wordFeedback.textContent = perfect
-    ? `Идеально, все ${state.words.targetCount} слов по порядку. Время: ${elapsedSec.toFixed(1)}с`
-    : `Верные позиции: ${hitByPosition}/${expected.length}. Время: ${elapsedSec.toFixed(1)}с`;
+  wordFeedback.textContent = `Совпадений по порядку: ${hitByPosition}/${expected.length}`;
   wordFeedback.className = perfect ? "feedback ok" : "feedback bad";
   clearWordRevealTimer();
   state.words.running = false;
   state.words.phase = "idle";
   state.words.value = [];
   state.words.revealedCount = 0;
-  wordReadyBtn.disabled = true;
   wordTaskEl.textContent = "Нажми «Новый пример»";
   wordTaskEl.classList.add("challenge-hint");
   wordForm.reset();
@@ -1025,6 +1353,7 @@ function startWordRound() {
   clearWordRevealTimer();
   stopWordTimer();
   state.words.targetCount = Number(wordTargetCountEl.value) || 20;
+  state.words.revealSeconds = Number(wordShowSecondsEl.value) || 3;
   const isRu = wordLanguageEl.value !== "en";
   const isComplex = wordDifficulty.value === "complex";
   const pool = isRu
@@ -1038,7 +1367,7 @@ function startWordRound() {
   wordFeedback.textContent = "";
   wordReviewEl.hidden = true;
   wordReviewEl.innerHTML = "";
-  wordTaskEl.textContent = "Слова появляются автоматически каждые 3 секунды.";
+  wordTaskEl.textContent = `Слова появляются автоматически каждые ${state.words.revealSeconds} сек.`;
   wordTaskEl.classList.add("challenge-hint");
   startWordTimer();
   wordForm.reset();
@@ -1059,9 +1388,7 @@ function revealNextWord() {
 function startWordRevealSequence() {
   clearWordRevealTimer();
   if (state.words.revealedCount >= state.words.targetCount) {
-    wordFeedback.textContent = "Все слова показаны. Нажми «Готов».";
-    wordFeedback.className = "feedback";
-    syncWordControls();
+    scheduleWordRecallTransition();
     return;
   }
 
@@ -1074,11 +1401,11 @@ function startWordRevealSequence() {
     revealNextWord();
     if (state.words.revealedCount >= state.words.targetCount) {
       clearWordRevealTimer();
-      wordFeedback.textContent = "Все слова показаны. Нажми «Готов».";
-      wordFeedback.className = "feedback";
+      scheduleWordRecallTransition();
+      return;
     }
     syncWordControls();
-  }, 3000);
+  }, state.words.revealSeconds * 1000);
 }
 
 function clearWordRevealTimer() {
@@ -1088,17 +1415,27 @@ function clearWordRevealTimer() {
   }
 }
 
+function scheduleWordRecallTransition() {
+  wordFeedback.textContent = "";
+  wordFeedback.className = "feedback";
+  syncWordControls();
+
+  state.words.revealTimerId = setTimeout(() => {
+    state.words.revealTimerId = null;
+    finishWordMemorizing();
+  }, state.words.revealSeconds * 1000);
+}
+
 function finishWordMemorizing() {
   if (!state.words.running || !state.words.value.length) return;
   if (state.words.revealedCount < state.words.targetCount) {
-    wordFeedback.textContent = `Открой все слова (${state.words.targetCount}/${state.words.targetCount}), затем нажми «Готов».`;
+    wordFeedback.textContent = "Дождись окончания показа слов.";
     wordFeedback.className = "feedback bad";
     return;
   }
   clearWordRevealTimer();
   state.words.phase = "recall";
-  wordReadyBtn.disabled = true;
-  wordTaskEl.textContent = "Слова скрыты. Вводи ответ ниже.";
+  wordTaskEl.textContent = "Все слова показаны, выведи теперь их по памяти по порядку.";
   wordTaskEl.classList.add("challenge-hint");
   wordFeedback.textContent = "";
   wordAnswer.focus();
@@ -1138,7 +1475,6 @@ function stopWordExercise() {
   state.words.revealedCount = 0;
   wordTaskEl.textContent = "Нажми «Новый пример»";
   wordTaskEl.classList.add("challenge-hint");
-  wordReadyBtn.disabled = true;
   wordForm.reset();
   wordReviewEl.hidden = true;
   wordReviewEl.innerHTML = "";
@@ -1205,12 +1541,9 @@ function renderWordReview(inputWords, originalWords) {
 
 function syncWordControls() {
   wordStartBtn.disabled = state.words.running;
-  wordReadyBtn.disabled =
-    !state.words.running
-    || state.words.phase !== "memorize"
-    || state.words.revealedCount < state.words.targetCount;
   wordSubmitBtn.disabled = state.words.phase !== "recall" || !wordAnswer.value.trim();
   wordStopBtn.disabled = !state.words.running && !state.words.startedAt;
+  wordAnswer.disabled = state.words.phase !== "recall";
 }
 
 const attentionImageInput = document.getElementById("attention-image-input");
@@ -1302,6 +1635,12 @@ function applyAttentionFile(file, imageUrl, sourceLabel) {
   state.attention.notes = "";
   state.attention.completed = false;
   state.attention.descriptionReady = false;
+  state.attention.loadToken += 1;
+  const currentLoadToken = state.attention.loadToken;
+  attentionPreviewEl.onload = () => {
+    if (state.attention.loadToken !== currentLoadToken) return;
+    startAttentionRound();
+  };
   attentionPreviewEl.src = imageUrl;
   attentionPreviewEl.hidden = false;
   attentionPlaceholderEl.hidden = true;
@@ -1311,7 +1650,6 @@ function applyAttentionFile(file, imageUrl, sourceLabel) {
   attentionFeedbackEl.className = "feedback";
   attentionCompareResultEl.hidden = true;
   attentionCompareResultEl.innerHTML = "";
-  startAttentionRound();
   syncAttentionDescribeAvailability();
 }
 
@@ -1330,7 +1668,8 @@ function showAttentionImage() {
 }
 
 function clearAttentionMedia() {
-  resetAttentionTimer();
+  stopAttentionTimer();
+  clearAttentionHideTimer();
   revokeAttentionImageUrl();
   state.attention.fileName = "";
   state.attention.imageUrl = "";
@@ -1340,6 +1679,7 @@ function clearAttentionMedia() {
   state.attention.sourceLabel = "";
   state.attention.completed = false;
   state.attention.descriptionReady = false;
+  state.attention.startedAt = null;
   showAttentionPlaceholder("Нажми «Выбери файл» или «Случайное фото».");
   attentionTimerEl.textContent = "Таймер: 0с";
   attentionSourceEl.textContent = "Источник: --";
@@ -1352,38 +1692,58 @@ function clearAttentionMedia() {
 function startAttentionRound() {
   if (!state.attention.imageUrl) return;
 
-  resetAttentionTimer();
+  stopAttentionTimer();
+  clearAttentionHideTimer();
   state.attention.timeLeft = Number(attentionShowSecondsEl.value) || 10;
   state.attention.visible = true;
   showAttentionImage();
-  attentionTimerEl.textContent = `Таймер: ${state.attention.timeLeft}с`;
+  startAttentionTimer();
   attentionSourceEl.textContent = `Источник: ${state.attention.sourceLabel || "Фото"}`;
-  attentionFeedbackEl.textContent = "Фото загружено. Время пошло автоматически.";
+  attentionFeedbackEl.textContent = "Фото загружено. Начинай запоминать детали.";
   attentionFeedbackEl.className = "feedback";
   syncAttentionDescribeAvailability();
 
-  state.attention.timerId = setInterval(() => {
-    state.attention.timeLeft -= 1;
-    attentionTimerEl.textContent = `Таймер: ${Math.max(state.attention.timeLeft, 0)}с`;
-    if (state.attention.timeLeft <= 0) {
-      hideAttentionImage();
-    }
-  }, 1000);
+  state.attention.hideTimerId = setTimeout(() => {
+    hideAttentionImage();
+  }, state.attention.timeLeft * 1000);
 }
 
 function hideAttentionImage() {
   if (!state.attention.imageUrl) return;
-  resetAttentionTimer();
+  clearAttentionHideTimer();
   state.attention.visible = false;
   showAttentionPlaceholder("Фото скрыто. Опиши увиденные детали по памяти.");
   attentionAnswerEl.focus();
   syncAttentionDescribeAvailability();
 }
 
-function resetAttentionTimer() {
+function startAttentionTimer() {
+  state.attention.startedAt = Date.now();
+  attentionTimerEl.textContent = "Таймер: 0.0с";
+  if (state.attention.timerId) clearInterval(state.attention.timerId);
+  state.attention.timerId = setInterval(() => {
+    if (!state.attention.startedAt) return;
+    const elapsedSec = (Date.now() - state.attention.startedAt) / 1000;
+    attentionTimerEl.textContent = `Таймер: ${elapsedSec.toFixed(1)}с`;
+  }, 100);
+}
+
+function stopAttentionTimer() {
   if (state.attention.timerId) {
     clearInterval(state.attention.timerId);
     state.attention.timerId = null;
+  }
+  if (!state.attention.startedAt) return 0;
+  const elapsedSec = (Date.now() - state.attention.startedAt) / 1000;
+  state.attention.startedAt = null;
+  attentionTimerEl.textContent = `Таймер: ${elapsedSec.toFixed(1)}с`;
+  return elapsedSec;
+}
+
+function clearAttentionHideTimer() {
+  if (state.attention.hideTimerId) {
+    clearTimeout(state.attention.hideTimerId);
+    state.attention.hideTimerId = null;
   }
 }
 
@@ -1450,6 +1810,8 @@ async function compareAttentionAnswer() {
   }
   if (state.attention.comparing) return;
 
+  stopAttentionTimer();
+  clearAttentionHideTimer();
   state.attention.comparing = true;
   state.attention.notes = notes;
   attentionCompareBtn.textContent = "Сравниваю...";
@@ -1534,13 +1896,24 @@ function normalizeAttentionList(items) {
 }
 
 function stopAttentionExercise() {
-  resetAttentionTimer();
+  const hadActive =
+    Boolean(state.attention.file)
+    || Boolean(state.attention.imageUrl)
+    || Boolean(state.attention.startedAt)
+    || state.attention.visible
+    || state.attention.loadingDescription
+    || state.attention.comparing
+    || state.attention.randomLoading
+    || state.attention.completed;
+  stopAttentionTimer();
+  clearAttentionHideTimer();
   revokeAttentionImageUrl();
   state.attention.fileName = "";
   state.attention.imageUrl = "";
   state.attention.file = null;
   state.attention.timeLeft = 0;
   state.attention.visible = false;
+  state.attention.startedAt = null;
   state.attention.notes = "";
   state.attention.loadingDescription = false;
   state.attention.comparing = false;
@@ -1548,6 +1921,7 @@ function stopAttentionExercise() {
   state.attention.sourceLabel = "";
   state.attention.completed = false;
   state.attention.descriptionReady = false;
+  state.attention.loadToken += 1;
   attentionImageInput.value = "";
   showAttentionPlaceholder("Нажми «Выбери файл» или «Случайное фото».");
   attentionTimerEl.textContent = "Таймер: 0с";
@@ -1560,6 +1934,10 @@ function stopAttentionExercise() {
   attentionDescribeBtn.textContent = attentionDescribeDefaultLabel;
   attentionCompareBtn.textContent = attentionCompareDefaultLabel;
   attentionRandomBtn.textContent = attentionRandomDefaultLabel;
+  if (hadActive) {
+    attentionFeedbackEl.textContent = "Упражнение остановлено.";
+    attentionFeedbackEl.className = "feedback";
+  }
   syncAttentionDescribeAvailability();
 }
 
@@ -1746,9 +2124,11 @@ document.getElementById("reset-progress").addEventListener("click", () => {
   stopNumberTimer();
   stopWordTimer();
   stopAttentionExercise();
+  stopExamExercise({ silent: true });
   resetSchulteExercise();
   mathTimerEl.textContent = "Таймер: 0.0с";
   numTimerEl.textContent = "Таймер: 0.0с";
+  examTimerEl.textContent = "Таймер: 0.0с";
   state.numbers.totalRounds = Number(numTotalRoundsEl.value) || 6;
   numSeriesProgressEl.textContent = `Ряд: 0/${state.numbers.totalRounds}`;
   wordTimerEl.textContent = "Таймер: 0.0с";
@@ -2045,12 +2425,14 @@ setMathTaskPlaceholder("Нажми «Новый пример»");
 state.numbers.totalRounds = Number(numTotalRoundsEl.value) || state.numbers.totalRounds;
 numSeriesProgressEl.textContent = `Ряд: 0/${state.numbers.totalRounds}`;
 setNumberTaskPlaceholder("Нажми «Новый пример»");
+setExamTaskPlaceholder("Нажми «Начать экзамен»");
 updateMathBestTime();
 updateNumberBestTime();
 updateWordBestTime();
 updateSchulteBestTime();
 syncMathControls();
 syncNumberControls();
+syncExamControls();
 syncWordControls();
 syncAttentionDescribeAvailability();
 resetSchulteExercise();
