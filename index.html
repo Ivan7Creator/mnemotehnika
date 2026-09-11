@@ -470,8 +470,9 @@
           <button type="button" id="exam-start" class="btn">Начать экзамен</button>
         </div>
         <div class="metrics-row">
-          <span id="exam-progress" class="meta-chip">Задание: 0/5</span>
+          <span id="exam-progress" class="meta-chip exam-progress-chip">Задание: 0/5</span>
           <span id="exam-timer" class="meta-chip">Таймер: 0.0с</span>
+          <span id="exam-best-time" class="meta-chip">Рекорд: --</span>
         </div>
         <div class="challenge challenge-hint exam-task" id="exam-task">Нажми «Начать экзамен»</div>
         <form id="exam-form" class="answer-form">
@@ -489,38 +490,62 @@
         </form>
         <p id="exam-feedback" class="feedback"></p>
         <div id="exam-summary" class="challenge challenge-hint exam-summary" hidden></div>
+        <div id="exam-review" class="num-review" hidden></div>
         <button type="button" id="exam-stop" class="btn btn-stop">Стоп</button>
       </section>
 
       <section class="panel" id="progress-panel">
-        <div class="panel-head">
-          <h2>Мой прогресс</h2>
-          <p>Статистика обновляется после каждого раунда.</p>
+        <div class="panel-head progress-head">
+          <div>
+            <h2>Мой прогресс</h2>
+            <p>Статистика обновляется после каждого раунда.</p>
+          </div>
+          <label class="progress-filter">
+            Упражнение
+            <select id="progress-mode">
+              <option value="all" selected>Все упражнения</option>
+              <option value="math">Счет в уме</option>
+              <option value="numbers">Числовой ряд</option>
+              <option value="words">Запоминание слов</option>
+              <option value="schulte">Таблицы Шульте</option>
+            </select>
+          </label>
         </div>
-        <div class="stats-grid">
-          <article class="stat">
-            <h3>Счет в уме</h3>
-            <p id="stat-math">0 / 0</p>
-          </article>
-          <article class="stat">
-            <h3>Числовой ряд</h3>
-            <p id="stat-num">0 / 0</p>
-          </article>
-          <article class="stat">
-            <h3>Слова</h3>
-            <p id="stat-word">0 / 0</p>
-          </article>
-          <article class="stat">
-            <h3>Таблицы Шульте</h3>
-            <p id="stat-schulte">0</p>
-          </article>
-          <article class="stat">
-            <h3>Общая точность</h3>
-            <p id="stat-total">0%</p>
-          </article>
+        <div class="progress-dashboard">
+          <section class="progress-hero-card">
+            <div>
+              <p id="progress-kicker" class="progress-kicker">Все упражнения</p>
+              <div id="progress-main-value" class="progress-main-value">0%</div>
+              <p id="progress-main-label" class="progress-main-label">общая точность</p>
+            </div>
+            <div class="progress-ring" aria-hidden="true">
+              <div id="progress-ring-fill" class="progress-ring-fill">
+                <span id="progress-ring-value">0%</span>
+              </div>
+            </div>
+          </section>
+
+          <section class="progress-detail-card">
+            <div class="progress-bar-head">
+              <span id="progress-bar-label">Верные ответы</span>
+              <strong id="progress-bar-value">0 из 0</strong>
+            </div>
+            <div class="progress-bar" aria-hidden="true">
+              <span id="progress-bar-fill"></span>
+            </div>
+            <div class="progress-metrics" id="progress-metrics"></div>
+          </section>
         </div>
-        <h3 class="recent-title">Последние попытки</h3>
-        <ul id="recent-list" class="recent-list"></ul>
+
+        <div class="exercise-compare" id="exercise-compare"></div>
+
+        <div class="recent-panel">
+          <div class="recent-head">
+            <h3 class="recent-title">Последние попытки</h3>
+            <span id="recent-count" class="recent-count">0</span>
+          </div>
+          <ul id="recent-list" class="recent-list"></ul>
+        </div>
         <button type="button" id="reset-progress" class="btn btn-ghost">Сбросить прогресс</button>
       </section>
     </main>

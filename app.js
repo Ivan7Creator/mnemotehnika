@@ -8,6 +8,7 @@ const defaults = {
   numbers: { attempts: 0, correct: 0, bestLength: 0, streak: 0, bestTimeSec: null },
   words: { attempts: 0, correct: 0, bestCount: 0, streak: 0, bestTimeSec: null },
   schulte: { attempts: 0, correct: 0, bestStreak: 0, streak: 0, bestTimeSec: null, bestSize: 0 },
+  exam: { bestTimeSec: null },
   sessions: [],
 };
 
@@ -586,11 +587,13 @@ const examForm = document.getElementById("exam-form");
 const examAnswer = document.getElementById("exam-answer");
 const examFeedback = document.getElementById("exam-feedback");
 const examSummaryEl = document.getElementById("exam-summary");
+const examReviewEl = document.getElementById("exam-review");
 const examSubmitBtn = examForm.querySelector('button[type="submit"]');
 const examStartBtn = document.getElementById("exam-start");
 const examStopBtn = document.getElementById("exam-stop");
 const examProgressEl = document.getElementById("exam-progress");
 const examTimerEl = document.getElementById("exam-timer");
+const examBestTimeEl = document.getElementById("exam-best-time");
 
 examStartBtn.addEventListener("click", startExam);
 examStopBtn.addEventListener("click", stopExamExercise);
@@ -604,21 +607,29 @@ examForm.addEventListener("submit", async (event) => {
   const rawValue = (examAnswer.value || "").trim();
   let correct = false;
   let expected = "";
+  let actual = rawValue;
 
   if (task.kind === "math") {
     correct = Number(rawValue) === task.answer;
     expected = String(task.answer);
   } else {
-    const cleanInput = rawValue.replace(/\D/g, "");
-    correct = cleanInput === task.value;
+    actual = rawValue.replace(/\D/g, "");
+    correct = actual === task.value;
     expected = task.value;
   }
 
-  state.exam.results.push({ kind: task.kind, correct });
+  state.exam.results.push({
+    index: state.exam.currentIndex + 1,
+    kind: task.kind,
+    prompt: task.kind === "math" ? task.expression : task.value,
+    expected,
+    actual,
+    correct,
+  });
   if (correct) state.exam.correctCount += 1;
 
-  examFeedback.textContent = correct ? "Верно!" : `Ошибка. Правильный ответ: ${expected}`;
-  examFeedback.className = correct ? "feedback ok" : "feedback bad";
+  examFeedback.textContent = "";
+  examFeedback.className = "feedback";
   examForm.reset();
   state.exam.phase = "transition";
   updateExamStats();
@@ -653,6 +664,8 @@ function startExam() {
   state.exam.results = [];
   examSummaryEl.hidden = true;
   examSummaryEl.innerHTML = "";
+  examReviewEl.hidden = true;
+  examReviewEl.innerHTML = "";
   examFeedback.textContent = "";
   examFeedback.className = "feedback";
   examForm.reset();
@@ -679,6 +692,7 @@ function runNextExamTask() {
   examFeedback.className = "feedback";
   examForm.reset();
   examSummaryEl.hidden = true;
+  examReviewEl.hidden = true;
   updateExamStats();
 
   if (task.kind === "math") {
@@ -745,6 +759,11 @@ function finishExam() {
   const mathCorrect = state.exam.results.filter((entry) => entry.kind === "math" && entry.correct).length;
   const numberCorrect = state.exam.results.filter((entry) => entry.kind === "numbers" && entry.correct).length;
 
+  const prevBest = state.progress.exam.bestTimeSec ?? Number.POSITIVE_INFINITY;
+  state.progress.exam.bestTimeSec = Math.min(prevBest, tookSec);
+  persist();
+  updateExamBestTime();
+
   state.exam.active = false;
   state.exam.currentTask = null;
   state.exam.phase = "done";
@@ -758,8 +777,9 @@ function finishExam() {
     Время: ${tookSec.toFixed(1)}с
   `;
   examSummaryEl.hidden = false;
-  examFeedback.textContent = "Экзамен завершен.";
-  examFeedback.className = "feedback ok";
+  renderExamReview(state.exam.results);
+  examFeedback.textContent = "";
+  examFeedback.className = "feedback";
   updateExamStats();
   syncExamControls();
 }
@@ -779,6 +799,8 @@ function stopExamExercise(options = {}) {
   examForm.reset();
   examSummaryEl.hidden = true;
   examSummaryEl.innerHTML = "";
+  examReviewEl.hidden = true;
+  examReviewEl.innerHTML = "";
   examFeedback.textContent = "";
   examFeedback.className = "feedback";
   setExamTaskPlaceholder("Нажми «Начать экзамен»");
@@ -809,24 +831,52 @@ function syncExamControls() {
   examSubmitBtn.disabled = !readyForAnswer || !examAnswer.value.trim();
   examStopBtn.disabled = !state.exam.active && !state.exam.startedAt;
   examAnswer.disabled = !readyForAnswer;
-
-  if (!state.exam.active && state.exam.phase !== "done") {
-    examAnswer.placeholder = "Ответ появится после старта";
-  } else if (state.exam.phase === "done") {
-    examAnswer.placeholder = "Экзамен завершен, можно начать заново";
-  } else if (!readyForAnswer) {
-    examAnswer.placeholder = "Подожди, идет показ задания";
-  } else if (state.exam.currentTask?.kind === "math") {
-    examAnswer.placeholder = "Введи ответ";
-  } else {
-    examAnswer.placeholder = "Введи показанный ряд";
-  }
+  examAnswer.placeholder = "Введи ответ";
 }
 
 function setExamTaskPlaceholder(text) {
   examTaskEl.textContent = text;
   examTaskEl.classList.add("challenge-hint");
   examTaskEl.classList.remove("mono");
+}
+
+function updateExamBestTime() {
+  const best = state.progress.exam.bestTimeSec;
+  examBestTimeEl.textContent = Number.isFinite(best)
+    ? `Рекорд: ${best.toFixed(1)}с`
+    : "Рекорд: --";
+}
+
+function renderExamReview(results) {
+  const rows = [];
+  for (const row of results) {
+    const actual = row.actual || "Пропуск";
+    const modeLabel = row.kind === "math" ? "Счет в уме" : "Числовой ряд";
+    rows.push(`
+      <div class="num-review-row ${row.correct ? "is-ok" : "is-bad"}">
+        <div class="num-review-row-title">Задание ${row.index} • ${modeLabel} • ${row.prompt}</div>
+        <div class="num-review-columns">
+          <div class="num-review-col">
+            <span class="num-review-label">Правильно</span>
+            <span class="num-chip expected">${row.expected}</span>
+          </div>
+          <div class="num-review-col">
+            <span class="num-review-label">Твой ответ</span>
+            <span class="num-chip actual ${row.correct ? "ok" : "bad"}">${actual}</span>
+          </div>
+        </div>
+      </div>
+    `);
+  }
+
+  examReviewEl.innerHTML = `
+    <div class="num-review-head">
+      <strong>Разбор экзамена</strong>
+      <span>Сравнение твоих ответов с правильными по каждому заданию.</span>
+    </div>
+    <div class="num-review-grid">${rows.join("")}</div>
+  `;
+  examReviewEl.hidden = false;
 }
 
 const memoryCardForm = document.getElementById("memory-card-form");
@@ -2138,8 +2188,11 @@ document.getElementById("reset-progress").addEventListener("click", () => {
   updateNumberBestTime();
   updateWordBestTime();
   updateSchulteBestTime();
+  updateExamBestTime();
   renderProgress();
 });
+
+document.getElementById("progress-mode").addEventListener("change", renderProgress);
 
 function applyModeResult(mode, success, extra = {}) {
   const bucket = state.progress[mode];
@@ -2202,44 +2255,169 @@ function renderProgress() {
   const words = state.progress.words;
   const schulte = state.progress.schulte;
 
-  const mathAcc = percentage(math.correct, math.attempts);
-  const numAcc = percentage(numbers.correct, numbers.attempts);
-  const wordAcc = percentage(words.correct, words.attempts);
+  const modeMap = {
+    math: {
+      label: "Счет в уме",
+      shortLabel: "Счет",
+      correct: math.correct,
+      attempts: math.attempts,
+      best: formatSeconds(math.bestTimeSec),
+      metrics: [
+        ["Серия", math.streak || 0],
+        ["Лучшая серия", math.bestStreak || 0],
+        ["Рекорд", formatSeconds(math.bestTimeSec)],
+        ["Попытки", math.attempts],
+      ],
+    },
+    numbers: {
+      label: "Числовой ряд",
+      shortLabel: "Ряд",
+      correct: numbers.correct,
+      attempts: numbers.attempts,
+      best: formatSeconds(numbers.bestTimeSec),
+      metrics: [
+        ["Серия", numbers.streak || 0],
+        ["Лучший ряд", numbers.bestLength || 0],
+        ["Рекорд", formatSeconds(numbers.bestTimeSec)],
+        ["Попытки", numbers.attempts],
+      ],
+    },
+    words: {
+      label: "Запоминание слов",
+      shortLabel: "Слова",
+      correct: words.correct,
+      attempts: words.attempts,
+      best: formatSeconds(words.bestTimeSec),
+      metrics: [
+        ["Серия", words.streak || 0],
+        ["Лучший объем", words.bestCount || 0],
+        ["Рекорд", formatSeconds(words.bestTimeSec)],
+        ["Попытки", words.attempts],
+      ],
+    },
+    schulte: {
+      label: "Таблицы Шульте",
+      shortLabel: "Шульте",
+      correct: schulte.correct,
+      attempts: schulte.attempts,
+      best: formatSeconds(schulte.bestTimeSec),
+      metrics: [
+        ["Пройдено", schulte.correct || 0],
+        ["Лучшая серия", schulte.bestStreak || 0],
+        ["Размер", schulte.bestSize ? `${schulte.bestSize}x${schulte.bestSize}` : "--"],
+        ["Рекорд", formatSeconds(schulte.bestTimeSec)],
+      ],
+    },
+  };
+  const modeOrder = ["math", "numbers", "words", "schulte"];
+  const allAttempts = modeOrder.reduce((sum, mode) => sum + modeMap[mode].attempts, 0);
+  const allCorrect = modeOrder.reduce((sum, mode) => sum + modeMap[mode].correct, 0);
+  const selectedMode = document.getElementById("progress-mode").value;
+  const recentEntries = selectedMode === "all"
+    ? state.progress.sessions
+    : state.progress.sessions.filter((entry) => entry.mode === selectedMode);
+  const lastAttempt = recentEntries[0];
+  const selected = selectedMode === "all"
+    ? {
+        label: "Все упражнения",
+        shortLabel: "Все",
+        correct: allCorrect,
+        attempts: allAttempts,
+        metrics: [
+          ["Всего попыток", allAttempts],
+          ["Успешных", allCorrect],
+          ["Активная серия", modeOrder.reduce((sum, mode) => sum + (state.progress[mode].streak || 0), 0)],
+          ["Последняя", lastAttempt ? formatShortDate(lastAttempt.at) : "--"],
+        ],
+      }
+    : modeMap[selectedMode];
+  const selectedAcc = percentage(selected.correct, selected.attempts);
 
-  const allAttempts = math.attempts + numbers.attempts + words.attempts;
-  const allCorrect = math.correct + numbers.correct + words.correct;
+  document.getElementById("progress-kicker").textContent = selected.label;
+  document.getElementById("progress-main-value").textContent = `${selectedAcc}%`;
+  document.getElementById("progress-main-label").textContent =
+    selectedMode === "all" ? "общая точность" : "точность упражнения";
+  document.getElementById("progress-ring-value").textContent = `${selectedAcc}%`;
+  document.getElementById("progress-ring-fill").parentElement.style.setProperty("--progress-angle", `${selectedAcc * 3.6}deg`);
+  document.getElementById("progress-bar-label").textContent =
+    selectedMode === "schulte" ? "Пройденные раунды" : "Верные ответы";
+  document.getElementById("progress-bar-value").textContent = `${selected.correct} из ${selected.attempts}`;
+  document.getElementById("progress-bar-fill").style.width = `${selectedAcc}%`;
 
-  document.getElementById("stat-math").textContent =
-    `${math.correct}/${math.attempts} (${mathAcc}%), серия: ${math.streak}, рекорд: ${Number.isFinite(math.bestTimeSec) ? `${math.bestTimeSec.toFixed(1)}с` : "--"}`;
-  document.getElementById("stat-num").textContent =
-    `${numbers.correct}/${numbers.attempts} (${numAcc}%), лучший результат: ${numbers.bestLength || 0}, рекорд: ${Number.isFinite(numbers.bestTimeSec) ? `${numbers.bestTimeSec.toFixed(1)}с` : "--"}`;
-  document.getElementById("stat-word").textContent =
-    `${words.correct}/${words.attempts} (${wordAcc}%), объем: ${words.bestCount || 0}, рекорд: ${Number.isFinite(words.bestTimeSec) ? `${words.bestTimeSec.toFixed(1)}с` : "--"}`;
-  document.getElementById("stat-schulte").textContent =
-    `Пройдено: ${schulte.correct}, размер: ${schulte.bestSize ? `${schulte.bestSize}x${schulte.bestSize}` : "--"}, рекорд: ${Number.isFinite(schulte.bestTimeSec) ? `${schulte.bestTimeSec.toFixed(1)}с` : "--"}`;
-  document.getElementById("stat-total").textContent = `${percentage(allCorrect, allAttempts)}%`;
+  const metricsEl = document.getElementById("progress-metrics");
+  metricsEl.innerHTML = "";
+  selected.metrics.forEach(([label, value]) => {
+    const item = document.createElement("div");
+    item.className = "progress-metric";
+    const labelEl = document.createElement("span");
+    labelEl.textContent = label;
+    const valueEl = document.createElement("strong");
+    valueEl.textContent = value;
+    item.append(labelEl, valueEl);
+    metricsEl.appendChild(item);
+  });
+
+  const compareEl = document.getElementById("exercise-compare");
+  compareEl.innerHTML = "";
+  compareEl.hidden = selectedMode !== "all";
+  if (selectedMode === "all") {
+    modeOrder.forEach((mode) => {
+      const item = modeMap[mode];
+      const acc = percentage(item.correct, item.attempts);
+      const row = document.createElement("div");
+      row.className = "exercise-row";
+      const title = document.createElement("strong");
+      title.textContent = item.label;
+      const bar = document.createElement("div");
+      bar.className = "exercise-row-bar";
+      const fill = document.createElement("span");
+      fill.style.width = `${acc}%`;
+      bar.appendChild(fill);
+      const value = document.createElement("span");
+      value.className = "exercise-row-value";
+      value.textContent = `${acc}%`;
+      row.append(title, bar, value);
+      compareEl.appendChild(row);
+    });
+  }
 
   const recentList = document.getElementById("recent-list");
   recentList.innerHTML = "";
-  if (!state.progress.sessions.length) {
+  document.getElementById("recent-count").textContent = recentEntries.length;
+  if (!recentEntries.length) {
     const li = document.createElement("li");
     li.textContent = "Пока нет попыток.";
     recentList.appendChild(li);
     return;
   }
 
-  state.progress.sessions.slice(0, 8).forEach((entry) => {
+  recentEntries.slice(0, 8).forEach((entry) => {
     const li = document.createElement("li");
-    const modeLabel = {
-      math: "Счет",
-      numbers: "Числовой ряд",
-      words: "Слова",
-      schulte: "Таблицы Шульте",
-    }[entry.mode];
-    const timeLabel = new Date(entry.at).toLocaleString("ru-RU");
-    li.textContent =
-      `${modeLabel}: ${entry.success ? "успех" : "ошибка"} • ${timeLabel}`;
+    const dot = document.createElement("span");
+    dot.className = `attempt-dot${entry.success ? " ok" : ""}`;
+    const name = document.createElement("span");
+    name.className = "attempt-name";
+    name.textContent = `${modeMap[entry.mode]?.shortLabel || "Раунд"}: ${entry.success ? "успех" : "ошибка"}`;
+    const time = document.createElement("span");
+    time.className = "attempt-time";
+    time.textContent = formatShortDate(entry.at);
+    li.append(dot, name, time);
     recentList.appendChild(li);
+  });
+}
+
+function formatSeconds(value) {
+  return Number.isFinite(value) ? `${value.toFixed(1)}с` : "--";
+}
+
+function formatShortDate(value) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "--";
+  return date.toLocaleString("ru-RU", {
+    day: "2-digit",
+    month: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
   });
 }
 
@@ -2254,6 +2432,7 @@ function loadProgress() {
       numbers: { ...defaults.numbers, ...(parsed.numbers || {}) },
       words: { ...defaults.words, ...(parsed.words || {}) },
       schulte: { ...defaults.schulte, ...(parsed.schulte || {}) },
+      exam: { ...defaults.exam, ...(parsed.exam || {}) },
       sessions: Array.isArray(parsed.sessions) ? parsed.sessions : [],
     };
   } catch {
@@ -2430,6 +2609,7 @@ updateMathBestTime();
 updateNumberBestTime();
 updateWordBestTime();
 updateSchulteBestTime();
+updateExamBestTime();
 syncMathControls();
 syncNumberControls();
 syncExamControls();
