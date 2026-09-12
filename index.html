@@ -28,12 +28,21 @@
       <section class="tabs reveal">
         <button type="button" class="tab-btn active" data-tab="math">Счет в уме</button>
         <button type="button" class="tab-btn" data-tab="number-series">Числовой ряд</button>
-        <button type="button" class="tab-btn" data-tab="numbers">Запоминание чисел</button>
+        <button type="button" class="tab-btn" data-tab="numbers">
+          <span>Запоминание чисел</span>
+          <span class="tab-beta">Бета</span>
+        </button>
         <button type="button" class="tab-btn" data-tab="words">Запоминание слов</button>
         <button type="button" class="tab-btn" data-tab="attention">Внимание и Наблюдательность</button>
         <button type="button" class="tab-btn" data-tab="schulte">Таблицы Шульте</button>
-        <button type="button" class="tab-btn" data-tab="progress">Мой прогресс</button>
-        <button type="button" class="tab-btn" data-tab="exam">Экзамен</button>
+        <button type="button" class="tab-btn" data-tab="progress">
+          <span>Мой прогресс</span>
+          <span class="tab-beta">Бета</span>
+        </button>
+        <button type="button" class="tab-btn" data-tab="exam">
+          <span>Экзамен</span>
+          <span class="tab-beta">Бета</span>
+        </button>
       </section>
 
       <section class="panel active" id="math-panel">
@@ -41,7 +50,11 @@
           <h2>Счет в уме</h2>
           <p>Решай примеры как можно быстрее и точнее.</p>
         </div>
-        <div class="controls">
+        <div class="controls math-action-controls">
+          <button type="button" id="math-new" class="btn">Решать</button>
+          <button type="button" id="math-random" class="btn btn-ghost">Случайный пример</button>
+        </div>
+        <div class="controls math-settings-controls">
           <label>
             Числа
             <select id="math-number-size">
@@ -71,14 +84,12 @@
               <option value="100">Числа до 100</option>
             </select>
           </label>
-          <button type="button" id="math-new" class="btn">Новый пример</button>
-          <button type="button" id="math-random" class="btn btn-ghost">Рандом</button>
         </div>
-        <div class="metrics-row">
+        <div class="metrics-row" hidden>
           <span id="math-timer" class="meta-chip">Таймер: 0.0с</span>
           <span id="math-best-time" class="meta-chip">Рекорд: --</span>
         </div>
-        <div class="challenge" id="math-task">Нажми «Новый пример»</div>
+        <div class="challenge" id="math-task" hidden></div>
         <form id="math-form" class="answer-form">
           <input
             id="math-answer"
@@ -454,6 +465,7 @@
             Буквы
           </label>
           <button type="button" id="schulte-start" class="btn">Новый пример</button>
+          <button type="button" id="schulte-random" class="btn btn-ghost">Рандом</button>
         </div>
         <div class="metrics-row">
           <span id="schulte-next" class="meta-chip schulte-next-chip">Следующее число: --</span>

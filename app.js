@@ -175,7 +175,20 @@ mathForm.addEventListener("submit", (event) => {
   applyModeResult("math", correct, { timeSec: tookSec });
 
   if (correct) {
-    mathFeedback.textContent = "Верно!";
+    const bestTimeSec = state.progress.math.bestTimeSec;
+    mathFeedback.innerHTML = `
+      <span class="math-result-title">Верно!</span>
+      <span class="math-result-details">
+        <span class="math-result-stat math-result-time">
+          <span>Время</span>
+          <strong>${formatSeconds(tookSec)}</strong>
+        </span>
+        <span class="math-result-stat math-result-record">
+          <span>Рекорд</span>
+          <strong>${formatSeconds(bestTimeSec)}</strong>
+        </span>
+      </span>
+    `;
     mathFeedback.className = "feedback ok";
   } else {
     mathFeedback.textContent = `Ошибка. Правильный ответ: ${state.math.answer}`;
@@ -219,6 +232,7 @@ function generateMathTask() {
   const task = buildMathTask();
   state.math.answer = task.answer;
   startMathTimer();
+  mathTaskEl.hidden = false;
   mathTaskEl.textContent = task.expression;
   mathTaskEl.classList.remove("challenge-hint");
   mathFeedback.textContent = "";
@@ -291,6 +305,7 @@ function syncMathControls() {
 function setMathTaskPlaceholder(text) {
   mathTaskEl.textContent = text;
   mathTaskEl.classList.add("challenge-hint");
+  mathTaskEl.hidden = true;
 }
 
 const numTaskEl = document.getElementById("num-task");
@@ -2016,6 +2031,7 @@ function revokeAttentionImageUrl() {
 const schulteSizeEl = document.getElementById("schulte-size");
 const schulteLettersEl = document.getElementById("schulte-letters");
 const schulteStartBtn = document.getElementById("schulte-start");
+const schulteRandomBtn = document.getElementById("schulte-random");
 const schulteNextEl = document.getElementById("schulte-next");
 const schulteTimerEl = document.getElementById("schulte-timer");
 const schulteBestTimeEl = document.getElementById("schulte-best-time");
@@ -2034,6 +2050,7 @@ schulteLettersEl.addEventListener("change", () => {
   if (!state.schulte.active) renderSchulteBoard();
 });
 schulteStartBtn.addEventListener("click", startSchulteRound);
+schulteRandomBtn.addEventListener("click", startRandomSchulteRound);
 schulteStopBtn.addEventListener("click", stopSchulteExercise);
 
 function startSchulteRound() {
@@ -2050,6 +2067,13 @@ function startSchulteRound() {
   renderSchulteBoard();
   startSchulteTimer();
   syncSchulteControls();
+}
+
+function startRandomSchulteRound() {
+  const sizeOptions = [...schulteSizeEl.options].map((option) => option.value);
+  schulteSizeEl.value = sizeOptions[randomInt(0, sizeOptions.length - 1)];
+  schulteLettersEl.checked = Math.random() < 0.5;
+  startSchulteRound();
 }
 
 function renderSchulteBoard() {
@@ -2197,6 +2221,7 @@ function stopSchulteExercise() {
 
 function syncSchulteControls() {
   schulteStartBtn.disabled = state.schulte.active;
+  schulteRandomBtn.disabled = state.schulte.active;
   schulteSizeEl.disabled = state.schulte.active;
   schulteLettersEl.disabled = state.schulte.active;
   schulteStopBtn.disabled = !state.schulte.active && !state.schulte.startedAt;
