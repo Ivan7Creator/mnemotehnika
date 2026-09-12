@@ -64,6 +64,7 @@ const state = {
     values: [],
     size: 5,
     nextValue: 1,
+    useLetters: false,
     startedAt: null,
     timerId: null,
     active: false,
@@ -1359,10 +1360,12 @@ const wordAnswer = document.getElementById("word-answer");
 const wordSubmitBtn = wordForm.querySelector('button[type="submit"]');
 const wordReviewEl = document.getElementById("word-review");
 const wordStartBtn = document.getElementById("word-start");
+const wordRandomBtn = document.getElementById("word-random");
 const wordStopBtn = document.getElementById("word-stop");
 const wordTimerEl = document.getElementById("word-timer");
 const wordBestTimeEl = document.getElementById("word-best-time");
 wordStartBtn.addEventListener("click", startWordRound);
+wordRandomBtn.addEventListener("click", startRandomWordRound);
 wordStopBtn.addEventListener("click", stopWordExercise);
 wordAnswer.addEventListener("input", syncWordControls);
 
@@ -1424,6 +1427,19 @@ function startWordRound() {
   revealNextWord();
   startWordRevealSequence();
   syncWordControls();
+}
+
+function startRandomWordRound() {
+  const languageOptions = [...wordLanguageEl.options].map((option) => option.value);
+  const difficultyOptions = [...wordDifficulty.options].map((option) => option.value);
+  const countOptions = [...wordTargetCountEl.options].map((option) => option.value);
+  const showSecondsOptions = [...wordShowSecondsEl.options].map((option) => option.value);
+
+  wordLanguageEl.value = languageOptions[randomInt(0, languageOptions.length - 1)];
+  wordDifficulty.value = difficultyOptions[randomInt(0, difficultyOptions.length - 1)];
+  wordTargetCountEl.value = countOptions[randomInt(0, countOptions.length - 1)];
+  wordShowSecondsEl.value = showSecondsOptions[randomInt(0, showSecondsOptions.length - 1)];
+  startWordRound();
 }
 
 function revealNextWord() {
@@ -1547,7 +1563,7 @@ function renderWordReview(inputWords, originalWords) {
         <div class="word-review-index">${index + 1}</div>
         <div class="word-review-columns">
           <div class="word-review-col">
-            <span class="word-review-label">Правильно</span>
+            <span class="word-review-label">Правильный ответ</span>
             <span class="word-chip expected">${expectedRaw}</span>
           </div>
           <div class="word-review-col">
@@ -1567,7 +1583,7 @@ function renderWordReview(inputWords, originalWords) {
         <div class="word-review-index">+</div>
         <div class="word-review-columns">
           <div class="word-review-col">
-            <span class="word-review-label">Правильно</span>
+            <span class="word-review-label">Правильный ответ</span>
             <span class="word-chip expected">Лишнее слово</span>
           </div>
           <div class="word-review-col">
@@ -1581,8 +1597,7 @@ function renderWordReview(inputWords, originalWords) {
 
   wordReviewEl.innerHTML = `
     <div class="word-review-head">
-      <strong>Разбор ответа</strong>
-      <span>Правильные слова отмечены отдельно, ошибки зачеркнуты, пропуски добавлены.</span>
+      <strong>Разбор упражнения</strong>
     </div>
     <div class="word-review-grid">${rows.join("")}</div>
   `;
@@ -1591,6 +1606,7 @@ function renderWordReview(inputWords, originalWords) {
 
 function syncWordControls() {
   wordStartBtn.disabled = state.words.running;
+  wordRandomBtn.disabled = state.words.running;
   wordSubmitBtn.disabled = state.words.phase !== "recall" || !wordAnswer.value.trim();
   wordStopBtn.disabled = !state.words.running && !state.words.startedAt;
   wordAnswer.disabled = state.words.phase !== "recall";
@@ -1998,6 +2014,7 @@ function revokeAttentionImageUrl() {
 }
 
 const schulteSizeEl = document.getElementById("schulte-size");
+const schulteLettersEl = document.getElementById("schulte-letters");
 const schulteStartBtn = document.getElementById("schulte-start");
 const schulteNextEl = document.getElementById("schulte-next");
 const schulteTimerEl = document.getElementById("schulte-timer");
@@ -2012,12 +2029,17 @@ schulteSizeEl.addEventListener("change", () => {
     renderSchulteBoard();
   }
 });
+schulteLettersEl.addEventListener("change", () => {
+  state.schulte.useLetters = schulteLettersEl.checked;
+  if (!state.schulte.active) renderSchulteBoard();
+});
 schulteStartBtn.addEventListener("click", startSchulteRound);
 schulteStopBtn.addEventListener("click", stopSchulteExercise);
 
 function startSchulteRound() {
   stopSchulteTimer();
   state.schulte.size = Number(schulteSizeEl.value) || 5;
+  state.schulte.useLetters = schulteLettersEl.checked;
   state.schulte.values = shuffle(
     Array.from({ length: state.schulte.size * state.schulte.size }, (_, index) => index + 1),
   );
@@ -2040,7 +2062,7 @@ function renderSchulteBoard() {
     placeholder.className = "schulte-empty-text";
     placeholder.textContent = "Нажми «Новый пример»";
     schulteBoardEl.appendChild(placeholder);
-    schulteNextEl.textContent = "Следующее число: --";
+    schulteNextEl.textContent = `${state.schulte.useLetters ? "Следующий символ" : "Следующее число"}: --`;
     return;
   }
 
@@ -2051,9 +2073,10 @@ function renderSchulteBoard() {
     button.type = "button";
     button.className = "schulte-cell";
     button.dataset.value = String(value);
-    button.textContent = String(value);
+    const displayValue = formatSchulteValue(value);
+    button.textContent = displayValue;
     button.setAttribute("role", "gridcell");
-    button.setAttribute("aria-label", `Число ${value}`);
+    button.setAttribute("aria-label", state.schulte.useLetters ? `Символ ${displayValue}` : `Число ${value}`);
     button.addEventListener("click", () => handleSchulteCellClick(button));
     schulteBoardEl.appendChild(button);
   });
@@ -2126,9 +2149,18 @@ function stopSchulteTimer() {
 }
 
 function updateSchulteProgress(isCompleted = false) {
-  schulteNextEl.textContent = isCompleted
-    ? "Следующее число: --"
-    : `Следующее число: ${state.schulte.values.length ? state.schulte.nextValue : "--"}`;
+  const label = state.schulte.useLetters ? "Следующий символ" : "Следующее число";
+  const value = isCompleted || !state.schulte.values.length
+    ? "--"
+    : formatSchulteValue(state.schulte.nextValue);
+  schulteNextEl.textContent = `${label}: ${value}`;
+}
+
+function formatSchulteValue(value) {
+  if (!state.schulte.useLetters) return String(value);
+  const russianAlphabet = "АБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ";
+  if (value % 2 === 1) return String(Math.ceil(value / 2));
+  return russianAlphabet[value / 2 - 1] || String(value);
 }
 
 function resetSchulteExercise() {
@@ -2165,6 +2197,8 @@ function stopSchulteExercise() {
 
 function syncSchulteControls() {
   schulteStartBtn.disabled = state.schulte.active;
+  schulteSizeEl.disabled = state.schulte.active;
+  schulteLettersEl.disabled = state.schulte.active;
   schulteStopBtn.disabled = !state.schulte.active && !state.schulte.startedAt;
 }
 

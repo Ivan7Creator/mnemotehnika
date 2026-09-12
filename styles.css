@@ -200,6 +200,28 @@ label {
   margin-left: auto;
 }
 
+.schulte-letters-option {
+  min-height: 44px;
+  padding: 0 0.85rem;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: rgba(255, 252, 247, 0.82);
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.schulte-letters-option input {
+  width: 1.1rem;
+  height: 1.1rem;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.schulte-letters-option:has(input:disabled) {
+  opacity: 0.58;
+  cursor: not-allowed;
+}
+
 .exam-progress-chip {
   order: 3;
   margin-left: auto;
@@ -534,9 +556,14 @@ textarea {
   grid-template-columns: repeat(5, minmax(0, 1fr));
 }
 
+.schulte-board[data-size="6"] {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+}
+
 .schulte-board.is-empty[data-size="3"],
 .schulte-board.is-empty[data-size="4"],
-.schulte-board.is-empty[data-size="5"] {
+.schulte-board.is-empty[data-size="5"],
+.schulte-board.is-empty[data-size="6"] {
   grid-template-columns: 1fr;
 }
 
@@ -896,6 +923,7 @@ textarea {
 .word-review-index {
   display: grid;
   place-items: center;
+  align-self: end;
   min-height: 38px;
   border-radius: 999px;
   border: 1px solid var(--line);
@@ -1370,6 +1398,10 @@ textarea {
 
   .controls label {
     width: 100%;
+  }
+
+  .controls .schulte-letters-option {
+    width: auto;
   }
 
   .metrics-row {
