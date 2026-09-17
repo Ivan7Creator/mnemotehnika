@@ -35,6 +35,7 @@
         <button type="button" class="tab-btn" data-tab="words">Запоминание слов</button>
         <button type="button" class="tab-btn" data-tab="attention">Внимание и Наблюдательность</button>
         <button type="button" class="tab-btn" data-tab="schulte">Таблицы Шульте</button>
+        <button type="button" class="tab-btn" data-tab="balda">Балда</button>
         <button type="button" class="tab-btn" data-tab="progress">
           <span>Мой прогресс</span>
           <span class="tab-beta">Бета</span>
@@ -112,7 +113,12 @@
           <h2>Числовой ряд</h2>
           <p>Запоминай последовательность чисел в рядах и далее выводи их по памяти.</p>
         </div>
-        <div class="controls">
+        <div class="controls num-action-controls">
+          <button type="button" id="num-start" class="btn">Решать</button>
+          <button type="button" id="num-random" class="btn btn-ghost">Случайный пример</button>
+          <button type="button" id="num-next" class="btn btn-ghost" disabled hidden>Следующий ряд</button>
+        </div>
+        <div class="controls num-settings-controls">
           <label>
             Кол-во рядов
             <select id="num-total-rounds">
@@ -141,47 +147,32 @@
           <label>
             Показ (сек)
             <select id="num-show-seconds">
-              <option value="1">1</option>
-              <option value="2">2</option>
-              <option value="3" selected>3</option>
-              <option value="4">4</option>
-              <option value="5">5</option>
-              <option value="6">6</option>
-              <option value="7">7</option>
-              <option value="8">8</option>
-              <option value="9">9</option>
+              <option value="0.2">0.2</option>
+              <option value="0.4">0.4</option>
+              <option value="0.6">0.6</option>
+              <option value="0.8">0.8</option>
+              <option value="1" selected>1.0</option>
+              <option value="1.2">1.2</option>
+              <option value="1.4">1.4</option>
+              <option value="1.6">1.6</option>
+              <option value="1.8">1.8</option>
+              <option value="2">2.0</option>
             </select>
           </label>
-          <button type="button" id="num-start" class="btn">Новый пример</button>
-          <button type="button" id="num-random" class="btn btn-ghost">Рандом</button>
-          <button type="button" id="num-next" class="btn btn-ghost" disabled hidden>Следующий ряд</button>
         </div>
-        <fieldset class="digit-pool" id="num-digit-pool">
-          <legend>Цифры в выборке</legend>
-          <label><input type="checkbox" value="0" checked />0</label>
-          <label><input type="checkbox" value="1" checked />1</label>
-          <label><input type="checkbox" value="2" checked />2</label>
-          <label><input type="checkbox" value="3" checked />3</label>
-          <label><input type="checkbox" value="4" checked />4</label>
-          <label><input type="checkbox" value="5" checked />5</label>
-          <label><input type="checkbox" value="6" checked />6</label>
-          <label><input type="checkbox" value="7" checked />7</label>
-          <label><input type="checkbox" value="8" checked />8</label>
-          <label><input type="checkbox" value="9" checked />9</label>
-        </fieldset>
         <div class="metrics-row">
-          <span id="num-series-progress" class="meta-chip num-series-progress-chip">Ряд: 0/6</span>
-          <span id="num-timer" class="meta-chip">Таймер: 0.0с</span>
-          <span id="num-best-time" class="meta-chip">Рекорд: --</span>
+          <span id="num-series-progress" class="meta-chip num-series-progress-chip" hidden>Ряд: 0/6</span>
+          <span id="num-timer" class="meta-chip" hidden>Таймер: 0.0с</span>
+          <span id="num-best-time" class="meta-chip" hidden>Рекорд: --</span>
         </div>
-        <div class="challenge mono" id="num-task">---</div>
+        <div class="challenge mono" id="num-task" hidden></div>
         <form id="num-form" class="answer-form">
           <input
             id="num-answer"
             type="text"
             inputmode="numeric"
             pattern="[0-9]*"
-            placeholder="Введи запомненный ряд"
+            placeholder="Введи ответ"
             autocomplete="off"
             required
           />
@@ -331,7 +322,11 @@
           <h2>Запоминание слов</h2>
           <p>Запоминай последовательность слов и далее выводи их по памяти по порядку.</p>
         </div>
-        <div class="controls">
+        <div class="controls word-action-controls">
+          <button type="button" id="word-start" class="btn">Решать</button>
+          <button type="button" id="word-random" class="btn btn-ghost">Случайный пример</button>
+        </div>
+        <div class="controls word-settings-controls">
           <label>
             Язык слов
             <select id="word-language">
@@ -368,14 +363,12 @@
               <option value="9">9</option>
             </select>
           </label>
-          <button type="button" id="word-start" class="btn">Новый пример</button>
-          <button type="button" id="word-random" class="btn btn-ghost">Рандом</button>
         </div>
-        <div class="metrics-row">
+        <div class="metrics-row" hidden>
           <span id="word-timer" class="meta-chip">Таймер: 0.0с</span>
           <span id="word-best-time" class="meta-chip">Рекорд: --</span>
         </div>
-        <div class="challenge words challenge-hint" id="word-task">Нажми «Новый пример»</div>
+        <div class="challenge words challenge-hint" id="word-task" hidden></div>
         <form id="word-form" class="answer-form">
           <textarea
             id="word-answer"
@@ -448,9 +441,13 @@
       <section class="panel" id="schulte-panel">
         <div class="panel-head">
           <h2>Таблицы Шульте</h2>
-          <p>Находи числа по порядку от 1 до максимума. Тренировка внимания, периферического зрения и скорости поиска.</p>
+          <p>Находи числа по порядку от 1 до максимума, можно с буквами.</p>
         </div>
-        <div class="controls">
+        <div class="controls schulte-action-controls">
+          <button type="button" id="schulte-start" class="btn">Решать</button>
+          <button type="button" id="schulte-random" class="btn btn-ghost">Случайный пример</button>
+        </div>
+        <div class="controls schulte-settings-controls">
           <label>
             Размер
             <select id="schulte-size">
@@ -464,15 +461,11 @@
             <input type="checkbox" id="schulte-letters" />
             Буквы
           </label>
-          <button type="button" id="schulte-start" class="btn">Новый пример</button>
-          <button type="button" id="schulte-random" class="btn btn-ghost">Рандом</button>
         </div>
-        <div class="metrics-row">
-          <span id="schulte-next" class="meta-chip schulte-next-chip">Следующее число: --</span>
-          <span id="schulte-timer" class="meta-chip">Таймер: 0.0с</span>
-          <span id="schulte-best-time" class="meta-chip">Рекорд: --</span>
-        </div>
-        <div class="schulte-board-wrap">
+        <div id="schulte-next" class="challenge challenge-hint schulte-next-task" hidden>Следующее число: --</div>
+        <span id="schulte-timer" hidden>Таймер: 0.0с</span>
+        <span id="schulte-best-time" hidden>Рекорд: --</span>
+        <div id="schulte-board-wrap" class="schulte-board-wrap" hidden>
           <div id="schulte-board" class="schulte-board" data-size="5" role="grid" aria-label="Таблица Шульте"></div>
         </div>
         <p id="schulte-feedback" class="feedback"></p>
@@ -510,6 +503,34 @@
         <div id="exam-summary" class="challenge challenge-hint exam-summary" hidden></div>
         <div id="exam-review" class="num-review" hidden></div>
         <button type="button" id="exam-stop" class="btn btn-stop">Стоп</button>
+      </section>
+
+      <section class="panel" id="balda-panel">
+        <div class="panel-head">
+          <h2>Балда</h2>
+          <p>Меняй ровно одну букву в каждом следующем слове и доберись до финального слова.</p>
+        </div>
+        <div class="controls balda-action-controls">
+          <button type="button" id="balda-start" class="btn">Решать</button>
+          <button type="button" id="balda-random" class="btn btn-ghost">Случайный пример</button>
+        </div>
+        <div class="controls balda-settings-controls">
+          <label>
+            Кол-во букв
+            <select id="balda-word-length">
+              <option value="3">3</option>
+              <option value="4">4</option>
+              <option value="5" selected>5</option>
+            </select>
+          </label>
+        </div>
+        <form id="balda-form" class="balda-form" hidden novalidate>
+          <div id="balda-start-word" class="challenge challenge-hint balda-start-word">Начальное слово — маска</div>
+          <div id="balda-ladder" class="balda-ladder"></div>
+          <button id="balda-check" class="btn" type="submit">Проверить</button>
+        </form>
+        <p id="balda-feedback" class="feedback"></p>
+        <button type="button" id="balda-stop" class="btn btn-stop" disabled>Стоп</button>
       </section>
 
       <section class="panel" id="progress-panel">

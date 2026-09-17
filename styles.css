@@ -133,8 +133,26 @@ body {
 }
 
 @media (max-width: 560px) {
+  .app {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .hero {
+    order: 0;
+  }
+
+  .panel.active {
+    order: 1;
+  }
+
   .tabs {
+    order: 2;
     grid-template-columns: 1fr;
+  }
+
+  .tabs .tab-btn.active {
+    display: none;
   }
 }
 
@@ -210,6 +228,132 @@ label {
   margin-top: 0.75rem;
 }
 
+.num-action-controls,
+.num-settings-controls {
+  margin-bottom: 0.75rem;
+}
+
+#number-series-panel #num-task {
+  margin: 0 0 0.75rem;
+}
+
+.word-action-controls,
+.word-settings-controls {
+  margin-bottom: 0.75rem;
+}
+
+.schulte-action-controls,
+.schulte-settings-controls {
+  margin-bottom: 0.75rem;
+}
+
+#schulte-feedback:empty {
+  display: none;
+}
+
+#schulte-panel .btn-stop {
+  margin-top: 0.75rem;
+}
+
+#word-feedback:empty {
+  display: none;
+}
+
+#words-panel .btn-stop {
+  margin-top: 0.75rem;
+}
+
+.balda-action-controls {
+  margin-bottom: 0.75rem;
+}
+
+.balda-settings-controls {
+  margin-bottom: 0;
+}
+
+.balda-form {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+}
+
+#balda-start-word {
+  margin: 0;
+}
+
+#balda-feedback:empty {
+  display: none;
+}
+
+#balda-panel .btn-stop {
+  margin-top: 0.75rem;
+}
+
+.balda-ladder {
+  display: grid;
+  gap: 0.65rem;
+  padding: 1rem;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: rgba(255, 252, 246, 0.82);
+}
+
+.balda-row {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr);
+  gap: 0.75rem;
+  align-items: center;
+  opacity: 0.58;
+}
+
+.balda-row.is-current,
+.balda-row.is-complete {
+  opacity: 1;
+}
+
+.balda-row-index {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: #efe7d8;
+  font-weight: 700;
+}
+
+.balda-word-input {
+  width: 100%;
+  min-height: 48px;
+  border-radius: 999px;
+  font-size: 1.05rem;
+  font-weight: 650;
+}
+
+.balda-word-input.is-invalid {
+  border-color: rgba(181, 51, 47, 0.5);
+  background: rgba(181, 51, 47, 0.06);
+}
+
+.balda-row.is-complete .balda-word-input {
+  border-color: rgba(42, 111, 99, 0.2);
+  background: rgba(42, 111, 99, 0.1);
+  color: #24594f;
+}
+
+
+#num-form {
+  gap: 0.75rem;
+}
+
+#num-feedback:empty {
+  display: none;
+}
+
+#number-series-panel .btn-stop {
+  margin-top: 0.75rem;
+}
+
 .metrics-row {
   display: flex;
   gap: 0.6rem;
@@ -226,9 +370,12 @@ label {
   margin-left: auto;
 }
 
-.schulte-next-chip {
-  order: 3;
-  margin-left: auto;
+.schulte-next-task {
+  margin: 0 0 0.75rem;
+}
+
+#schulte-panel .schulte-board-wrap {
+  margin-top: 0;
 }
 
 .schulte-letters-option {
@@ -256,31 +403,6 @@ label {
 .exam-progress-chip {
   order: 3;
   margin-left: auto;
-}
-
-.digit-pool {
-  margin: 0.7rem 0 0;
-  padding: 0.6rem 0.75rem;
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  display: flex;
-  gap: 0.55rem;
-  flex-wrap: wrap;
-  align-items: center;
-  background: #fff8ec;
-}
-
-.digit-pool legend {
-  padding: 0 0.3rem;
-  font-weight: 600;
-}
-
-.digit-pool label {
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  padding: 0.2rem 0.55rem;
-  background: #fff;
-  gap: 0.3rem;
 }
 
 .meta-chip {
@@ -1034,8 +1156,21 @@ textarea {
 
 .num-review-row {
   display: grid;
-  gap: 0.55rem;
+  grid-template-columns: 42px 1fr;
+  gap: 0.75rem;
+  align-items: start;
   padding: 0.1rem 0;
+}
+
+.num-review-index {
+  display: grid;
+  place-items: center;
+  align-self: end;
+  min-height: 38px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: #efe7d8;
+  font-weight: 700;
 }
 
 .num-review-row-title {
@@ -1490,10 +1625,6 @@ textarea {
     margin-left: 0;
   }
 
-  .schulte-next-chip {
-    margin-left: 0;
-  }
-
   .progress-head {
     display: grid;
   }
@@ -1551,4 +1682,5 @@ textarea {
   .num-review-columns {
     grid-template-columns: 1fr;
   }
+
 }

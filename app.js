@@ -25,7 +25,7 @@ const state = {
     seriesIndex: 0,
     totalRounds: 6,
     digitsPerRound: 6,
-    showSeconds: 3,
+    showSeconds: 1,
     allowedDigits: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
     correctInSeries: 0,
     awaitingAnswer: false,
@@ -41,6 +41,18 @@ const state = {
     startedAt: null,
     timerId: null,
     revealTimerId: null,
+  },
+  balda: {
+    chain: ["маска", "миска", "мишка", "мышка", "мышца"],
+    chains: {
+      3: [["лук", "лак", "мак", "май", "рай"]],
+      4: [["коза", "роза", "роса", "коса", "кора"]],
+      5: [["маска", "миска", "мишка", "мышка", "мышца"]],
+    },
+    currentStep: 0,
+    active: false,
+    startedAt: null,
+    timerId: null,
   },
   attention: {
     fileName: "",
@@ -83,7 +95,7 @@ const state = {
   },
 };
 
-const wordPoolRuSimple = [
+let wordPoolRuSimple = [
   "солнце", "ручка", "река", "книга", "кофе", "мост", "парус", "яблоко",
   "огонь", "дверь", "зебра", "океан", "память", "часы", "камень", "птица",
   "карандаш", "город", "весна", "снег", "груша", "чашка", "лес", "волна",
@@ -91,7 +103,7 @@ const wordPoolRuSimple = [
   "хлеб", "свеча", "цветок", "дорога", "письмо", "звезда", "щит", "метро",
   "сыр", "космос", "клавиша", "фонарь", "озеро", "радуга", "сахар", "школа",
 ];
-const wordPoolRuComplex = [
+let wordPoolRuComplex = [
   "абстракция", "алгоритм", "архипелаг", "великолепие", "гипотеза", "гравитация",
   "диаграмма", "интеграция", "комбинаторика", "концентрация", "лаборатория",
   "метафора", "многоугольник", "наблюдательность", "непрерывность", "ориентация",
@@ -103,7 +115,7 @@ const wordPoolRuComplex = [
   "логистика", "продуктивность", "дисциплина", "мотивация", "сосредоточенность",
   "конфигурация", "кристаллизация", "классификация", "интерпретация", "унификация",
 ];
-const wordPoolEnSimple = [
+let wordPoolEnSimple = [
   "sun", "pen", "river", "book", "coffee", "bridge", "apple", "fire",
   "door", "ocean", "memory", "clock", "stone", "bird", "city", "spring",
   "snow", "cup", "forest", "wave", "map", "leaf", "lamp", "wind",
@@ -111,7 +123,7 @@ const wordPoolEnSimple = [
   "rainbow", "sugar", "school", "bread", "candle", "planet", "window", "garden",
   "smile", "voice", "pencil", "table", "mountain", "cloud", "beach", "island",
 ];
-const wordPoolEnComplex = [
+let wordPoolEnComplex = [
   "abstraction", "algorithm", "archipelago", "hypothesis", "gravity", "diagram",
   "integration", "combinatorics", "concentration", "laboratory", "metaphor", "observer",
   "continuity", "orientation", "perspective", "sequence", "assumption", "contradiction",
@@ -130,6 +142,7 @@ const panels = {
   words: document.getElementById("words-panel"),
   attention: document.getElementById("attention-panel"),
   schulte: document.getElementById("schulte-panel"),
+  balda: document.getElementById("balda-panel"),
   exam: document.getElementById("exam-panel"),
   progress: document.getElementById("progress-panel"),
 };
@@ -142,6 +155,11 @@ tabs.forEach((tab) => {
       panel.classList.toggle("active", name === key);
     });
     if (key === "progress") renderProgress();
+    if (window.matchMedia("(max-width: 560px)").matches) {
+      window.requestAnimationFrame(() => {
+        panels[key].scrollIntoView({ behavior: "smooth", block: "start" });
+      });
+    }
   });
 });
 
@@ -314,7 +332,6 @@ const numFeedback = document.getElementById("num-feedback");
 const numAnswer = document.getElementById("num-answer");
 const numSubmitBtn = numForm.querySelector('button[type="submit"]');
 const numTotalRoundsEl = document.getElementById("num-total-rounds");
-const numDigitPoolEl = document.getElementById("num-digit-pool");
 const numDigitsCountEl = document.getElementById("num-digits-count");
 const numShowSecondsEl = document.getElementById("num-show-seconds");
 const numSeriesProgressEl = document.getElementById("num-series-progress");
@@ -372,18 +389,8 @@ function startNumberSeries() {
   numTimerEl.textContent = "Таймер: 0.0с";
   state.numbers.totalRounds = Number(numTotalRoundsEl.value) || 6;
   state.numbers.digitsPerRound = Number(numDigitsCountEl.value) || 6;
-  state.numbers.showSeconds = Number(numShowSecondsEl.value) || 3;
-  let hadEmptyPool = false;
-  state.numbers.allowedDigits = getSelectedNumberDigits();
-  if (!state.numbers.allowedDigits.length) {
-    hadEmptyPool = true;
-    state.numbers.allowedDigits = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
-    [...numDigitPoolEl.querySelectorAll('input[type="checkbox"]')].forEach((el) => {
-      el.checked = true;
-    });
-    numFeedback.textContent = "Все цифры были сняты, поэтому включены 0-9.";
-    numFeedback.className = "feedback bad";
-  }
+  state.numbers.showSeconds = Number(numShowSecondsEl.value) || 1;
+  state.numbers.allowedDigits = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
   state.numbers.seriesActive = true;
   state.numbers.seriesIndex = 0;
   state.numbers.correctInSeries = 0;
@@ -396,7 +403,8 @@ function startNumberSeries() {
   numNextBtn.hidden = true;
   numReviewEl.hidden = true;
   numReviewEl.innerHTML = "";
-  if (!hadEmptyPool) numFeedback.textContent = "";
+  numFeedback.textContent = "";
+  numTaskEl.hidden = false;
   numTaskEl.textContent = "Подготовься, начнется первый ряд";
   numTaskEl.classList.add("challenge-hint");
   startNumberTimer();
@@ -408,18 +416,9 @@ function startRandomNumberSeries() {
   const totalRoundsOptions = [...numTotalRoundsEl.options].map((option) => option.value);
   const digitsCountOptions = [...numDigitsCountEl.options].map((option) => option.value);
   const showSecondsOptions = [...numShowSecondsEl.options].map((option) => option.value);
-  const digitCheckboxes = [...numDigitPoolEl.querySelectorAll('input[type="checkbox"]')];
-  const targetDigitCount = randomInt(2, digitCheckboxes.length);
-  const digitIndexes = shuffle(Array.from({ length: digitCheckboxes.length }, (_, index) => index))
-    .slice(0, targetDigitCount);
-
   numTotalRoundsEl.value = totalRoundsOptions[randomInt(0, totalRoundsOptions.length - 1)];
   numDigitsCountEl.value = digitsCountOptions[randomInt(0, digitsCountOptions.length - 1)];
   numShowSecondsEl.value = showSecondsOptions[randomInt(0, showSecondsOptions.length - 1)];
-
-  digitCheckboxes.forEach((checkbox, index) => {
-    checkbox.checked = digitIndexes.includes(index);
-  });
 
   state.numbers.totalRounds = Number(numTotalRoundsEl.value) || 6;
   numSeriesProgressEl.textContent = `Ряд: 0/${state.numbers.totalRounds}`;
@@ -440,13 +439,11 @@ async function runNextNumberRound() {
   numNextBtn.disabled = true;
   numAnswer.value = "";
 
-  for (let i = state.numbers.showSeconds; i > 0; i -= 1) {
-    if (!state.numbers.seriesActive) return;
-    numTaskEl.textContent = `${value}  •  ${i}`;
-    numTaskEl.classList.remove("challenge-hint");
-    numTaskEl.classList.add("mono");
-    await sleep(1000);
-  }
+  if (!state.numbers.seriesActive) return;
+  numTaskEl.textContent = value;
+  numTaskEl.classList.remove("challenge-hint");
+  numTaskEl.classList.add("mono");
+  await sleep(state.numbers.showSeconds * 1000);
   if (!state.numbers.seriesActive) return;
   numTaskEl.textContent = `Введи ${formatOrdinalRow(state.numbers.seriesIndex)} ряд`;
   numTaskEl.classList.add("challenge-hint");
@@ -487,9 +484,27 @@ function finishNumberSeries() {
     timeSec: tookSec,
   });
 
-  numFeedback.textContent =
-    `Серия завершена: ${state.numbers.correctInSeries}/${state.numbers.totalRounds}`;
-  numFeedback.className = success ? "feedback ok" : "feedback bad";
+  if (success) {
+    const bestTimeSec = state.progress.numbers.bestTimeSec;
+    numFeedback.innerHTML = `
+      <span class="math-result-title">Верно! Серия завершена: ${state.numbers.correctInSeries}/${state.numbers.totalRounds}</span>
+      <span class="math-result-details">
+        <span class="math-result-stat math-result-time">
+          <span>Время</span>
+          <strong>${formatSeconds(tookSec)}</strong>
+        </span>
+        <span class="math-result-stat math-result-record">
+          <span>Рекорд</span>
+          <strong>${formatSeconds(bestTimeSec)}</strong>
+        </span>
+      </span>
+    `;
+    numFeedback.className = "feedback ok";
+  } else {
+    numFeedback.textContent =
+      `Ошибка. Серия завершена: ${state.numbers.correctInSeries}/${state.numbers.totalRounds}`;
+    numFeedback.className = "feedback bad";
+  }
   renderNumberReview(state.numbers.reviewRows);
   state.numbers.seriesActive = false;
   state.numbers.awaitingAnswer = false;
@@ -533,10 +548,10 @@ function renderNumberReview(reviewRows) {
     const actual = row.actual || "Пропуск";
     rows.push(`
       <div class="num-review-row ${row.correct ? "is-ok" : "is-bad"}">
-        <div class="num-review-row-title">Ряд ${row.index}</div>
+        <div class="num-review-index">${row.index}</div>
         <div class="num-review-columns">
           <div class="num-review-col">
-            <span class="num-review-label">Правильно</span>
+            <span class="num-review-label">Правильный ответ</span>
             <span class="num-chip expected">${row.expected}</span>
           </div>
           <div class="num-review-col">
@@ -570,6 +585,7 @@ function setNumberTaskPlaceholder(text) {
   numTaskEl.textContent = text;
   numTaskEl.classList.add("challenge-hint");
   numTaskEl.classList.remove("mono");
+  numTaskEl.hidden = true;
 }
 
 function formatOrdinalRow(index) {
@@ -582,11 +598,10 @@ function formatOrdinalRow(index) {
 }
 
 function getNumberSeriesTaskConfig() {
-  const selectedDigits = getSelectedNumberDigits();
   return {
     digitsPerRound: Number(numDigitsCountEl.value) || 6,
-    showSeconds: Number(numShowSecondsEl.value) || 3,
-    allowedDigits: selectedDigits.length ? selectedDigits : [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
+    showSeconds: Number(numShowSecondsEl.value) || 1,
+    allowedDigits: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
   };
 }
 
@@ -732,11 +747,9 @@ async function presentExamNumberTask(task) {
   examTaskEl.classList.add("mono");
   syncExamControls();
 
-  for (let secondsLeft = task.showSeconds; secondsLeft > 0; secondsLeft -= 1) {
-    if (!state.exam.active || state.exam.currentTask !== task || state.exam.revealToken !== revealToken) return;
-    examTaskEl.textContent = `${task.value}  •  ${secondsLeft}`;
-    await sleep(1000);
-  }
+  if (!state.exam.active || state.exam.currentTask !== task || state.exam.revealToken !== revealToken) return;
+  examTaskEl.textContent = task.value;
+  await sleep(task.showSeconds * 1000);
 
   if (!state.exam.active || state.exam.currentTask !== task || state.exam.revealToken !== revealToken) return;
   state.exam.phase = "answering";
@@ -1404,15 +1417,32 @@ wordForm.addEventListener("submit", (event) => {
   applyModeResult("words", perfect, { count: expected.length, timeSec: elapsedSec });
   renderWordReview(inputWords, state.words.value);
 
-  wordFeedback.textContent = `Совпадений по порядку: ${hitByPosition}/${expected.length}`;
-  wordFeedback.className = perfect ? "feedback ok" : "feedback bad";
+  if (perfect) {
+    const bestTimeSec = state.progress.words.bestTimeSec;
+    wordFeedback.innerHTML = `
+      <span class="math-result-title">Верно! Совпадений по порядку: ${hitByPosition}/${expected.length}</span>
+      <span class="math-result-details">
+        <span class="math-result-stat math-result-time">
+          <span>Время</span>
+          <strong>${formatSeconds(elapsedSec)}</strong>
+        </span>
+        <span class="math-result-stat math-result-record">
+          <span>Рекорд</span>
+          <strong>${formatSeconds(bestTimeSec)}</strong>
+        </span>
+      </span>
+    `;
+    wordFeedback.className = "feedback ok";
+  } else {
+    wordFeedback.textContent = `Ошибка. Совпадений по порядку: ${hitByPosition}/${expected.length}`;
+    wordFeedback.className = "feedback bad";
+  }
   clearWordRevealTimer();
   state.words.running = false;
   state.words.phase = "idle";
   state.words.value = [];
   state.words.revealedCount = 0;
-  wordTaskEl.textContent = "Нажми «Новый пример»";
-  wordTaskEl.classList.add("challenge-hint");
+  setWordTaskPlaceholder();
   wordForm.reset();
   syncWordControls();
 });
@@ -1428,6 +1458,7 @@ function startWordRound() {
     ? (isComplex ? wordPoolRuComplex : wordPoolRuSimple)
     : (isComplex ? wordPoolEnComplex : wordPoolEnSimple);
   const chosen = shuffle(pool).slice(0, state.words.targetCount);
+  state.words.targetCount = chosen.length;
   state.words.running = true;
   state.words.phase = "memorize";
   state.words.value = chosen;
@@ -1435,6 +1466,7 @@ function startWordRound() {
   wordFeedback.textContent = "";
   wordReviewEl.hidden = true;
   wordReviewEl.innerHTML = "";
+  wordTaskEl.hidden = false;
   wordTaskEl.textContent = `Слова появляются автоматически каждые ${state.words.revealSeconds} сек.`;
   wordTaskEl.classList.add("challenge-hint");
   startWordTimer();
@@ -1554,8 +1586,7 @@ function stopWordExercise() {
   state.words.phase = "idle";
   state.words.value = [];
   state.words.revealedCount = 0;
-  wordTaskEl.textContent = "Нажми «Новый пример»";
-  wordTaskEl.classList.add("challenge-hint");
+  setWordTaskPlaceholder();
   wordForm.reset();
   wordReviewEl.hidden = true;
   wordReviewEl.innerHTML = "";
@@ -1619,12 +1650,275 @@ function renderWordReview(inputWords, originalWords) {
   wordReviewEl.hidden = false;
 }
 
+function setWordTaskPlaceholder() {
+  wordTaskEl.textContent = "";
+  wordTaskEl.classList.add("challenge-hint");
+  wordTaskEl.hidden = true;
+}
+
+async function loadWordPoolsFromCsv() {
+  try {
+    const response = await fetch("./data/words.csv", { cache: "no-store" });
+    if (!response.ok) throw new Error(`Не удалось загрузить CSV: ${response.status}`);
+    const rows = (await response.text())
+      .replace(/^\uFEFF/, "")
+      .split(/\r?\n/)
+      .filter((line) => line.trim() && !line.trimStart().startsWith("#"));
+    if (rows.length < 2) return;
+
+    const headers = parseCsvRow(rows[0]).map((value) => value.trim());
+    const pools = {
+      ru_simple: [],
+      ru_complex: [],
+      en_simple: [],
+      en_complex: [],
+    };
+
+    for (const line of rows.slice(1)) {
+      const values = parseCsvRow(line);
+      headers.forEach((header, index) => {
+        if (!(header in pools)) return;
+        const word = (values[index] || "").trim();
+        if (word && !pools[header].includes(word)) pools[header].push(word);
+      });
+    }
+
+    if (pools.ru_simple.length) wordPoolRuSimple = pools.ru_simple;
+    if (pools.ru_complex.length) wordPoolRuComplex = pools.ru_complex;
+    if (pools.en_simple.length) wordPoolEnSimple = pools.en_simple;
+    if (pools.en_complex.length) wordPoolEnComplex = pools.en_complex;
+  } catch (error) {
+    console.warn("Используются встроенные списки слов:", error);
+  }
+}
+
+function parseCsvRow(line) {
+  const values = [];
+  let value = "";
+  let quoted = false;
+  for (let index = 0; index < line.length; index += 1) {
+    const char = line[index];
+    if (char === '"' && quoted && line[index + 1] === '"') {
+      value += '"';
+      index += 1;
+    } else if (char === '"') {
+      quoted = !quoted;
+    } else if (char === "," && !quoted) {
+      values.push(value);
+      value = "";
+    } else {
+      value += char;
+    }
+  }
+  values.push(value);
+  return values;
+}
+
 function syncWordControls() {
   wordStartBtn.disabled = state.words.running;
   wordRandomBtn.disabled = state.words.running;
   wordSubmitBtn.disabled = state.words.phase !== "recall" || !wordAnswer.value.trim();
   wordStopBtn.disabled = !state.words.running && !state.words.startedAt;
   wordAnswer.disabled = state.words.phase !== "recall";
+}
+
+const baldaStartBtn = document.getElementById("balda-start");
+const baldaRandomBtn = document.getElementById("balda-random");
+const baldaStopBtn = document.getElementById("balda-stop");
+const baldaCheckBtn = document.getElementById("balda-check");
+const baldaWordLengthEl = document.getElementById("balda-word-length");
+const baldaForm = document.getElementById("balda-form");
+const baldaLadderEl = document.getElementById("balda-ladder");
+const baldaFeedbackEl = document.getElementById("balda-feedback");
+const baldaStartWordEl = document.getElementById("balda-start-word");
+
+baldaStartBtn.addEventListener("click", startBaldaGame);
+baldaRandomBtn.addEventListener("click", startRandomBaldaGame);
+baldaStopBtn.addEventListener("click", stopBaldaGame);
+baldaForm.addEventListener("submit", checkBaldaStep);
+
+function startRandomBaldaGame() {
+  const wordLengths = [3, 4, 5];
+  baldaWordLengthEl.value = String(wordLengths[randomInt(0, wordLengths.length - 1)]);
+  startBaldaGame();
+}
+
+function startBaldaGame() {
+  stopBaldaTimer();
+  const selectedLength = Number(baldaWordLengthEl.value) || 5;
+  const availableChains = state.balda.chains[selectedLength] || state.balda.chains[5];
+  state.balda.chain = availableChains[randomInt(0, availableChains.length - 1)];
+  state.balda.currentStep = 0;
+  state.balda.active = true;
+  baldaFeedbackEl.textContent = "";
+  baldaFeedbackEl.className = "feedback";
+  baldaForm.hidden = false;
+  baldaStartBtn.disabled = true;
+  baldaRandomBtn.disabled = true;
+  baldaCheckBtn.disabled = false;
+  baldaWordLengthEl.disabled = true;
+  baldaStopBtn.disabled = false;
+  baldaStartWordEl.textContent = `Начальное слово — ${state.balda.chain[0]}`;
+  renderBaldaLadder();
+  startBaldaTimer();
+  focusCurrentBaldaInput();
+}
+
+function renderBaldaLadder() {
+  const { chain, currentStep } = state.balda;
+  baldaLadderEl.innerHTML = chain.slice(1).map((word, rowIndex) => {
+    const index = rowIndex + 1;
+    const completed = index <= currentStep;
+    const current = index === currentStep + 1;
+    return `
+      <div class="balda-row ${completed ? "is-complete" : ""} ${current ? "is-current" : ""}">
+        <span class="balda-row-index">${index}</span>
+        <input
+          class="balda-word-input"
+          data-balda-step="${index}"
+          type="text"
+          maxlength="${word.length}"
+          autocomplete="off"
+          spellcheck="false"
+          placeholder="Введи следующее слово"
+          value="${completed ? word : ""}"
+          ${current ? "" : "disabled"}
+          aria-label="Слово для ряда ${index}"
+        />
+      </div>`;
+  }).join("");
+}
+
+function checkBaldaStep(event) {
+  event.preventDefault();
+  if (!state.balda.active) return;
+  const nextIndex = state.balda.currentStep + 1;
+  const input = baldaLadderEl.querySelector(`[data-balda-step="${nextIndex}"]`);
+  if (!input) return;
+  const value = input.value.trim().toLowerCase().replace(/ё/g, "е");
+  const previous = state.balda.chain[nextIndex - 1];
+  const expected = state.balda.chain[nextIndex];
+
+  if (!value) return showBaldaError("Введи слово для следующего ряда.", input);
+  if (!/^[а-я]+$/i.test(value)) return showBaldaError("Используй только русские буквы.", input);
+  if (value.length !== previous.length) {
+    return showBaldaError(`В слове должно быть ${previous.length} букв.`, input);
+  }
+  const changedLetters = [...value].filter((letter, index) => letter !== previous[index]).length;
+  if (changedLetters === 0) return showBaldaError("Нужно изменить одну букву.", input);
+  if (changedLetters !== 1) return showBaldaError("Можно изменить только одну букву.", input);
+  if (value !== expected) return showBaldaError("Такое слово не подходит для этой цепочки. Попробуй другой вариант.", input);
+
+  state.balda.currentStep = nextIndex;
+  baldaFeedbackEl.textContent = "";
+  baldaFeedbackEl.className = "feedback";
+  renderBaldaLadder();
+
+  if (nextIndex === state.balda.chain.length - 1) {
+    finishBaldaGame();
+    return;
+  }
+  focusCurrentBaldaInput();
+}
+
+function showBaldaError(message, input) {
+  baldaFeedbackEl.textContent = `Ошибка. ${message}`;
+  baldaFeedbackEl.className = "feedback bad";
+  input.classList.add("is-invalid");
+  input.focus();
+}
+
+function focusCurrentBaldaInput() {
+  const input = baldaLadderEl.querySelector(`[data-balda-step="${state.balda.currentStep + 1}"]`);
+  if (input) input.focus();
+}
+
+function startBaldaTimer() {
+  state.balda.startedAt = Date.now();
+}
+
+function stopBaldaTimer() {
+  if (state.balda.timerId) clearInterval(state.balda.timerId);
+  state.balda.timerId = null;
+  if (!state.balda.startedAt) return 0;
+  const elapsed = (Date.now() - state.balda.startedAt) / 1000;
+  state.balda.startedAt = null;
+  return elapsed;
+}
+
+function finishBaldaGame() {
+  stopBaldaTimer();
+  state.balda.active = false;
+  baldaStartBtn.disabled = false;
+  baldaRandomBtn.disabled = false;
+  baldaCheckBtn.disabled = true;
+  baldaWordLengthEl.disabled = false;
+  baldaStopBtn.disabled = true;
+  baldaFeedbackEl.textContent = "Готово!";
+  baldaFeedbackEl.className = "feedback ok";
+}
+
+function stopBaldaGame() {
+  const wasActive = state.balda.active;
+  stopBaldaTimer();
+  state.balda.active = false;
+  state.balda.currentStep = 0;
+  baldaForm.hidden = true;
+  baldaLadderEl.innerHTML = "";
+  baldaStartBtn.disabled = false;
+  baldaRandomBtn.disabled = false;
+  baldaCheckBtn.disabled = false;
+  baldaWordLengthEl.disabled = false;
+  baldaStopBtn.disabled = true;
+  if (wasActive) {
+    baldaFeedbackEl.textContent = "Упражнение остановлено.";
+    baldaFeedbackEl.className = "feedback";
+  }
+}
+
+async function loadBaldaChainsFromCsv() {
+  try {
+    const response = await fetch("./data/balda.csv", { cache: "no-store" });
+    if (!response.ok) throw new Error(`Не удалось загрузить CSV: ${response.status}`);
+    const rows = (await response.text())
+      .replace(/^\uFEFF/, "")
+      .split(/\r?\n/)
+      .filter((line) => line.trim() && !line.trimStart().startsWith("#"));
+    if (rows.length < 2) return;
+
+    const headers = parseCsvRow(rows[0]).map((value) => value.trim());
+    const lengthIndex = headers.indexOf("length");
+    const wordIndexes = headers
+      .map((header, index) => (/^word_\d+$/.test(header) ? index : -1))
+      .filter((index) => index >= 0);
+    if (lengthIndex < 0 || wordIndexes.length < 2) return;
+
+    const loadedChains = { 3: [], 4: [], 5: [] };
+    rows.slice(1).forEach((line) => {
+      const values = parseCsvRow(line);
+      const wordLength = Number(values[lengthIndex]);
+      if (!(wordLength in loadedChains)) return;
+      const chain = wordIndexes
+        .map((index) => (values[index] || "").trim().toLowerCase().replace(/ё/g, "е"))
+        .filter(Boolean);
+      if (isValidBaldaChain(chain, wordLength)) loadedChains[wordLength].push(chain);
+    });
+
+    [3, 4, 5].forEach((length) => {
+      if (loadedChains[length].length) state.balda.chains[length] = loadedChains[length];
+    });
+  } catch (error) {
+    console.warn("Используются встроенные цепочки для «Балды»:", error);
+  }
+}
+
+function isValidBaldaChain(chain, wordLength) {
+  if (chain.length < 2) return false;
+  return chain.every((word, index) => {
+    if (!new RegExp(`^[а-я]{${wordLength}}$`, "i").test(word)) return false;
+    if (index === 0) return true;
+    return [...word].filter((letter, letterIndex) => letter !== chain[index - 1][letterIndex]).length === 1;
+  });
 }
 
 const attentionImageInput = document.getElementById("attention-image-input");
@@ -2035,6 +2329,7 @@ const schulteRandomBtn = document.getElementById("schulte-random");
 const schulteNextEl = document.getElementById("schulte-next");
 const schulteTimerEl = document.getElementById("schulte-timer");
 const schulteBestTimeEl = document.getElementById("schulte-best-time");
+const schulteBoardWrapEl = document.getElementById("schulte-board-wrap");
 const schulteBoardEl = document.getElementById("schulte-board");
 const schulteFeedbackEl = document.getElementById("schulte-feedback");
 const schulteStopBtn = document.getElementById("schulte-stop");
@@ -2081,15 +2376,15 @@ function renderSchulteBoard() {
   schulteBoardEl.innerHTML = "";
 
   if (!state.schulte.values.length) {
-    schulteBoardEl.classList.add("is-empty", "challenge", "challenge-hint");
-    const placeholder = document.createElement("div");
-    placeholder.className = "schulte-empty-text";
-    placeholder.textContent = "Нажми «Новый пример»";
-    schulteBoardEl.appendChild(placeholder);
+    schulteBoardWrapEl.hidden = true;
+    schulteBoardEl.hidden = true;
+    schulteNextEl.hidden = true;
     schulteNextEl.textContent = `${state.schulte.useLetters ? "Следующий символ" : "Следующее число"}: --`;
     return;
   }
 
+  schulteBoardWrapEl.hidden = false;
+  schulteBoardEl.hidden = false;
   schulteBoardEl.classList.remove("is-empty", "challenge", "challenge-hint");
 
   state.schulte.values.forEach((value) => {
@@ -2143,8 +2438,19 @@ function finishSchulteRound() {
     size: state.schulte.size,
     timeSec: tookSec,
   });
-  schulteFeedbackEl.textContent =
-    `Таблица ${state.schulte.size}x${state.schulte.size} пройдена`;
+  const bestTimeSec = state.progress.schulte.bestTimeSec;
+  schulteFeedbackEl.innerHTML = `
+    <span class="math-result-title">Готово! Таблица ${state.schulte.size}×${state.schulte.size} пройдена</span>
+    <span class="math-result-details">
+      <span class="math-result-stat math-result-time">
+        <span>Время</span>
+        <strong>${formatSeconds(tookSec)}</strong>
+      </span>
+      <span class="math-result-stat math-result-record">
+        <span>Рекорд</span>
+        <strong>${formatSeconds(bestTimeSec)}</strong>
+      </span>
+    </span>`;
   schulteFeedbackEl.className = "feedback ok";
   syncSchulteControls();
 }
@@ -2177,6 +2483,7 @@ function updateSchulteProgress(isCompleted = false) {
   const value = isCompleted || !state.schulte.values.length
     ? "--"
     : formatSchulteValue(state.schulte.nextValue);
+  schulteNextEl.hidden = isCompleted || !state.schulte.active || !state.schulte.values.length;
   schulteNextEl.textContent = `${label}: ${value}`;
 }
 
@@ -2535,12 +2842,6 @@ function randomInt(min, max) {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
-function getSelectedNumberDigits() {
-  return [...numDigitPoolEl.querySelectorAll('input[type="checkbox"]:checked')]
-    .map((el) => Number(el.value))
-    .filter((n) => Number.isFinite(n) && n >= 0 && n <= 9);
-}
-
 function generateDigits(length, digitsPool) {
   let value = "";
   const pool = Array.isArray(digitsPool) && digitsPool.length ? digitsPool : [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
@@ -2659,6 +2960,8 @@ function escapeHtml(value) {
 }
 
 updateMathControls();
+loadWordPoolsFromCsv();
+loadBaldaChainsFromCsv();
 setMathTaskPlaceholder("Нажми «Новый пример»");
 state.numbers.totalRounds = Number(numTotalRoundsEl.value) || state.numbers.totalRounds;
 numSeriesProgressEl.textContent = `Ряд: 0/${state.numbers.totalRounds}`;
