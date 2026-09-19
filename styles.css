@@ -203,11 +203,6 @@ label {
   align-self: center;
 }
 
-.controls-divider {
-  color: rgba(32, 26, 23, 0.62);
-  font-weight: 600;
-}
-
 .math-action-controls {
   margin-bottom: 0.75rem;
 }
@@ -354,15 +349,36 @@ label {
   margin-top: 0.75rem;
 }
 
+#attention-form {
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+}
+
+#attention-start {
+  width: 100%;
+}
+
+#attention-stage[hidden] {
+  display: none;
+}
+
+#attention-stage[hidden] + #attention-start {
+  margin-top: 0.75rem;
+}
+
+#attention-feedback:empty {
+  display: none;
+}
+
+#attention-panel .btn-stop {
+  margin-top: 0.75rem;
+}
+
 .metrics-row {
   display: flex;
   gap: 0.6rem;
   flex-wrap: wrap;
   margin-top: 0.75rem;
-}
-
-.attention-source-chip {
-  margin-left: auto;
 }
 
 .num-series-progress-chip {
@@ -507,6 +523,20 @@ textarea {
   justify-items: center;
 }
 
+.exam-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.7rem;
+}
+
+.exam-actions .btn {
+  width: 100%;
+}
+
+.exam-schulte-board {
+  width: min(100%, 560px);
+}
+
 .mono {
   font-family: "Space Grotesk", monospace;
   letter-spacing: 0.1em;
@@ -546,45 +576,12 @@ textarea {
   overflow: hidden;
 }
 
-.attention-stage.is-empty {
-  min-height: 60px;
-  padding: 0.8rem;
-}
-
-.attention-placeholder {
-  padding: 1.25rem;
-  text-align: center;
-  color: rgba(32, 26, 23, 0.72);
-  font-family: "Space Grotesk", sans-serif;
-}
-
-.attention-stage.is-empty .attention-placeholder {
-  padding: 0;
-  font-size: 1.12rem;
-  font-weight: 500;
-  letter-spacing: 0.03em;
-  color: var(--ink);
-}
-
 .attention-preview {
   display: block;
   width: 100%;
   max-height: 520px;
   object-fit: contain;
   background: #f4ecdf;
-}
-
-.attention-output {
-  display: grid;
-  gap: 0.45rem;
-  margin-top: 0.9rem;
-  margin-bottom: 0.9rem;
-}
-
-.attention-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.75rem;
 }
 
 .attention-compare {
@@ -1026,14 +1023,6 @@ textarea {
   border-radius: 16px;
   background: rgba(255, 250, 242, 0.72);
   color: rgba(32, 26, 23, 0.68);
-}
-
-.attention-output label {
-  font-weight: 600;
-}
-
-#attention-description {
-  background: #fff8ec;
 }
 
 .helper-text {
@@ -1617,10 +1606,6 @@ textarea {
     margin-top: 0.6rem;
   }
 
-  .attention-source-chip {
-    margin-left: 0;
-  }
-
   .num-series-progress-chip {
     margin-left: 0;
   }
@@ -1676,11 +1661,91 @@ textarea {
   }
 
   .word-review-columns {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.4rem;
+  }
+
+  .word-review {
+    padding: 0.75rem;
+  }
+
+  .word-review-grid {
+    gap: 0.8rem;
+  }
+
+  .word-review-row {
+    grid-template-columns: 40px minmax(0, 1fr);
+    gap: 0.55rem;
+    align-items: center;
+  }
+
+  .word-review-index {
+    width: 40px;
+    min-height: 40px;
+    align-self: center;
+  }
+
+  .word-review-col {
+    min-width: 0;
+    gap: 0.25rem;
+  }
+
+  .word-review-label {
+    overflow: hidden;
+    font-size: 0.7rem;
+    line-height: 1.2;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .word-chip {
+    width: 100%;
+    min-width: 0;
+    padding: 0.45rem 0.65rem;
   }
 
   .num-review-columns {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.4rem;
+  }
+
+  .num-review {
+    padding: 0.75rem;
+  }
+
+  .num-review-grid {
+    gap: 0.8rem;
+  }
+
+  .num-review-row {
+    grid-template-columns: 40px minmax(0, 1fr);
+    gap: 0.55rem;
+    align-items: center;
+  }
+
+  .num-review-index {
+    width: 40px;
+    min-height: 40px;
+    align-self: center;
+  }
+
+  .num-review-col {
+    min-width: 0;
+    gap: 0.25rem;
+  }
+
+  .num-review-label {
+    overflow: hidden;
+    font-size: 0.7rem;
+    line-height: 1.2;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .num-chip {
+    width: 100%;
+    min-width: 0;
+    padding: 0.45rem 0.65rem;
   }
 
 }
