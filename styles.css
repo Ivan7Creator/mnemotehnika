@@ -378,8 +378,7 @@ body {
   width: 100%;
 }
 
-.auth-close,
-.auth-switch {
+.auth-close {
   border: 0;
   color: var(--accent);
   background: transparent;
@@ -393,8 +392,7 @@ body {
 }
 
 .auth-switch {
-  font: inherit;
-  font-weight: 600;
+  background: var(--accent-2);
 }
 
 .auth-message {
@@ -410,6 +408,17 @@ body {
 .auth-signout,
 .auth-admin {
   justify-self: center;
+}
+
+.auth-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.75rem;
+}
+
+.auth-actions .btn {
+  min-width: 150px;
 }
 
 .admin-dialog {

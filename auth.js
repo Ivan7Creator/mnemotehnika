@@ -131,8 +131,8 @@ function renderAuthState() {
   authSubmit.textContent = registering ? "Зарегистрироваться" : "Войти";
   authSubmit.hidden = false;
   authSwitch.textContent = registering
-    ? "Уже есть аккаунт? Войти"
-    : "Нет аккаунта? Зарегистрироваться";
+    ? "Войти"
+    : "Зарегистрироваться";
   authSwitch.hidden = false;
   authAdmin.hidden = true;
   authSignout.hidden = true;
