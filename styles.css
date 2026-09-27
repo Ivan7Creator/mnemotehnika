@@ -2223,10 +2223,16 @@ textarea {
   gap: 1rem;
 }
 
+#progress-panel {
+  --progress-warm: #e85d3f;
+  --progress-cool: #36a487;
+}
+
 .progress-filter {
   display: grid;
   gap: 0.35rem;
-  min-width: 230px;
+  width: min(360px, 100%);
+  margin: 0 auto 1rem;
   color: rgba(32, 26, 23, 0.7);
   font-size: 0.9rem;
   font-weight: 600;
@@ -2260,7 +2266,7 @@ textarea {
   align-items: center;
   gap: 1rem;
   padding: 1.1rem;
-  background: linear-gradient(135deg, rgba(255, 250, 241, 0.94), rgba(236, 248, 244, 0.78));
+  background: linear-gradient(135deg, rgba(255, 244, 226, 0.96), rgba(235, 248, 239, 0.9));
 }
 
 .progress-kicker,
@@ -2276,7 +2282,7 @@ textarea {
   font-size: clamp(3rem, 8vw, 4.8rem);
   font-weight: 700;
   line-height: 0.95;
-  color: var(--accent);
+  color: var(--progress-warm);
 }
 
 .progress-ring {
@@ -2285,7 +2291,7 @@ textarea {
   height: 118px;
   border-radius: 50%;
   padding: 10px;
-  background: conic-gradient(var(--accent-2) var(--progress-angle, 0deg), rgba(32, 26, 23, 0.1) 0);
+  background: conic-gradient(var(--progress-cool) var(--progress-angle, 0deg), rgba(32, 26, 23, 0.1) 0);
 }
 
 .progress-ring-fill {
@@ -2324,7 +2330,7 @@ textarea {
   width: 0%;
   height: 100%;
   border-radius: inherit;
-  background: linear-gradient(90deg, var(--accent), var(--accent-2));
+  background: var(--progress-cool);
   transition: width 0.25s ease;
 }
 
@@ -2389,7 +2395,7 @@ textarea {
   display: block;
   height: 100%;
   border-radius: inherit;
-  background: rgba(42, 111, 99, 0.72);
+  background: var(--progress-cool);
 }
 
 .exercise-row-value {
@@ -2443,11 +2449,11 @@ textarea {
   width: 10px;
   height: 10px;
   border-radius: 50%;
-  background: #b5332f;
+  background: var(--progress-warm);
 }
 
 .attempt-dot.ok {
-  background: var(--accent-2);
+  background: var(--progress-cool);
 }
 
 .attempt-name {
@@ -2457,6 +2463,11 @@ textarea {
 .attempt-time {
   color: rgba(32, 26, 23, 0.62);
   font-size: 0.95rem;
+}
+
+#reset-progress {
+  display: block;
+  margin: 1.4rem auto 0;
 }
 
 .reveal {

@@ -7,6 +7,9 @@ const defaults = {
   math: { attempts: 0, correct: 0, bestStreak: 0, streak: 0, bestTimeSec: null },
   numbers: { attempts: 0, correct: 0, bestLength: 0, streak: 0, bestTimeSec: null },
   words: { attempts: 0, correct: 0, bestCount: 0, streak: 0, bestTimeSec: null },
+  memory: { attempts: 0, correct: 0, streak: 0, bestStreak: 0 },
+  balda: { attempts: 0, correct: 0, streak: 0, bestStreak: 0, bestTimeSec: null },
+  attention: { attempts: 0, correct: 0, streak: 0, bestStreak: 0 },
   schulte: { attempts: 0, correct: 0, bestStreak: 0, streak: 0, bestTimeSec: null, bestSize: 0 },
   exam: { bestTimeSec: null },
   sessions: [],
@@ -150,6 +153,7 @@ const trainerCurrentName = document.getElementById("trainer-current-name");
 const trainerDetailTitle = document.getElementById("trainer-detail-title");
 const trainerDetailDescription = document.getElementById("trainer-detail-description");
 const trainerSteps = [...document.querySelectorAll(".trainer-step")];
+const trainerStepsEl = document.querySelector(".trainer-steps");
 const syncStickyHeader = () => {
   trainerDetailHeader.classList.toggle("is-scrolled", window.scrollY > 12);
 };
@@ -219,6 +223,7 @@ function openTrainerPage(key) {
   trainerCurrentName.textContent = title || "Тренажёр";
   trainerDetailTitle.textContent = title || "Тренажёр";
   trainerDetailDescription.textContent = description || "";
+  trainerStepsEl.hidden = key === "progress";
   setTrainerStage(1);
   if (key === "math") setMathStage(state.math.answer === null ? "prep" : "task");
   if (key === "number-series") setNumberStage(state.numbers.phase);
@@ -1386,6 +1391,7 @@ const memoryState = {
   currentRowIndex: 0,
   currentRowCount: Number(memoryRowCountSelect.value) || 1,
   isChecking: false,
+  resultRecorded: false,
 };
 
 memoryNumberInput.addEventListener("input", () => {
@@ -1534,6 +1540,10 @@ memoryCheckBtn.addEventListener("click", () => {
     <div class="memory-check-summary">Вы правильно назвали ${matchedCount} ${memoryPluralizeDigits(matchedCount)} из ${expectedValues.length}.</div>
     <div class="memory-check-grid">${memoryRenderComparisonRows(userValues, expectedValues)}</div>
   `;
+  if (!memoryState.resultRecorded) {
+    memoryState.resultRecorded = true;
+    applyModeResult("memory", isFullyCorrect, { count: expectedValues.length });
+  }
 });
 
 memoryShowAssociationsBtn.addEventListener("click", () => {
@@ -1679,6 +1689,7 @@ function memoryRenderRandomNumbers() {
 
 function memoryResetTrainerState() {
   memoryState.isChecking = false;
+  memoryState.resultRecorded = false;
   memoryAnswerCards.hidden = true;
   memoryAnswerCards.innerHTML = "";
   memoryRandomRows.classList.remove("hidden");
@@ -2343,7 +2354,7 @@ function stopBaldaTimer() {
 }
 
 function finishBaldaGame() {
-  stopBaldaTimer();
+  const tookSec = stopBaldaTimer();
   state.balda.active = false;
   baldaStartBtn.disabled = false;
   baldaDifficultyEl.disabled = false;
@@ -2353,11 +2364,12 @@ function finishBaldaGame() {
   baldaStopBtn.disabled = true;
   baldaFeedbackEl.textContent = "Верно!";
   baldaFeedbackEl.className = "feedback ok";
+  applyModeResult("balda", true, { timeSec: tookSec });
 }
 
 function stopBaldaGame() {
   const wasActive = state.balda.active;
-  stopBaldaTimer();
+  const tookSec = stopBaldaTimer();
   state.balda.active = false;
   state.balda.currentStep = 0;
   baldaForm.hidden = true;
@@ -2369,6 +2381,7 @@ function stopBaldaGame() {
   baldaWordLengthEl.disabled = false;
   baldaStopBtn.disabled = true;
   if (wasActive) {
+    applyModeResult("balda", false, { timeSec: tookSec });
     baldaFeedbackEl.textContent = "Упражнение остановлено.";
     baldaFeedbackEl.className = "feedback";
   }
@@ -2647,6 +2660,10 @@ async function compareAttentionAnswer() {
 
     renderAttentionComparison(payload);
     state.attention.completed = true;
+    const totalDetails = Number(payload?.totalDetails) || 0;
+    const rememberedDetails = Number(payload?.rememberedDetails) || 0;
+    const success = totalDetails > 0 && rememberedDetails / totalDetails >= 0.6;
+    applyModeResult("attention", success, { count: rememberedDetails });
     attentionFeedbackEl.innerHTML = `
       <span class="math-result-title">Сравнение готово.</span>
       <span class="math-result-details">
@@ -3048,6 +3065,10 @@ function applyModeResult(mode, success, extra = {}) {
       updateWordBestTime();
     }
   }
+  if (mode === "balda" && success && extra.timeSec) {
+    const prev = bucket.bestTimeSec ?? Number.POSITIVE_INFINITY;
+    bucket.bestTimeSec = Math.min(prev, extra.timeSec);
+  }
   if (mode === "schulte" && success) {
     bucket.bestSize = Math.max(bucket.bestSize || 0, extra.size || 0);
     if (extra.timeSec) {
@@ -3073,6 +3094,9 @@ function renderProgress() {
   const math = state.progress.math;
   const numbers = state.progress.numbers;
   const words = state.progress.words;
+  const memory = state.progress.memory;
+  const balda = state.progress.balda;
+  const attention = state.progress.attention;
   const schulte = state.progress.schulte;
 
   const modeMap = {
@@ -3115,6 +3139,31 @@ function renderProgress() {
         ["Попытки", words.attempts],
       ],
     },
+    memory: {
+      label: "Запоминание чисел",
+      correct: memory.correct,
+      attempts: memory.attempts,
+      metrics: [
+        ["Лучшая серия", memory.bestStreak || 0],
+      ],
+    },
+    balda: {
+      label: "Балда",
+      correct: balda.correct,
+      attempts: balda.attempts,
+      metrics: [
+        ["Лучшая серия", balda.bestStreak || 0],
+        ["Рекорд", formatSeconds(balda.bestTimeSec)],
+      ],
+    },
+    attention: {
+      label: "Детали на фото",
+      correct: attention.correct,
+      attempts: attention.attempts,
+      metrics: [
+        ["Лучшая серия", attention.bestStreak || 0],
+      ],
+    },
     schulte: {
       label: "Таблицы Шульте",
       shortLabel: "Шульте",
@@ -3129,14 +3178,15 @@ function renderProgress() {
       ],
     },
   };
-  const modeOrder = ["math", "numbers", "words", "schulte"];
+  const modeOrder = ["numbers", "words", "memory", "math", "balda", "attention", "schulte"];
   const allAttempts = modeOrder.reduce((sum, mode) => sum + modeMap[mode].attempts, 0);
   const allCorrect = modeOrder.reduce((sum, mode) => sum + modeMap[mode].correct, 0);
   const selectedMode = document.getElementById("progress-mode").value;
-  const recentEntries = selectedMode === "all"
-    ? state.progress.sessions
-    : state.progress.sessions.filter((entry) => entry.mode === selectedMode);
+  const recentEntries = state.progress.sessions
+    .filter((entry) => selectedMode === "all" || entry.mode === selectedMode)
+    .sort((a, b) => new Date(b.at) - new Date(a.at));
   const lastAttempt = recentEntries[0];
+  const currentStreak = countSuccessStreak(recentEntries);
   const selected = selectedMode === "all"
     ? {
         label: "Все упражнения",
@@ -3145,15 +3195,22 @@ function renderProgress() {
         attempts: allAttempts,
         metrics: [
           ["Всего попыток", allAttempts],
-          ["Успешных", allCorrect],
-          ["Активная серия", modeOrder.reduce((sum, mode) => sum + (state.progress[mode].streak || 0), 0)],
+          ["Верно", allCorrect],
+          ["Подряд без ошибок", currentStreak],
           ["Последняя", lastAttempt ? formatShortDate(lastAttempt.at) : "--"],
         ],
       }
     : modeMap[selectedMode];
+  if (selectedMode !== "all") {
+    selected.metrics = [
+      ["Подряд без ошибок", currentStreak],
+      ["Верно", selected.correct],
+      ["Попытки", selected.attempts],
+      ["Последняя", lastAttempt ? formatShortDate(lastAttempt.at) : "--"],
+    ];
+  }
   const selectedAcc = percentage(selected.correct, selected.attempts);
 
-  document.getElementById("progress-kicker").textContent = selected.label;
   document.getElementById("progress-main-value").textContent = `${selectedAcc}%`;
   document.getElementById("progress-main-label").textContent =
     selectedMode === "all" ? "общая точность" : "точность упражнения";
@@ -3203,7 +3260,8 @@ function renderProgress() {
 
   const recentList = document.getElementById("recent-list");
   recentList.innerHTML = "";
-  document.getElementById("recent-count").textContent = recentEntries.length;
+  const visibleRecentEntries = recentEntries.slice(0, 5);
+  document.getElementById("recent-count").textContent = visibleRecentEntries.length;
   if (!recentEntries.length) {
     const li = document.createElement("li");
     li.textContent = "Пока нет попыток.";
@@ -3211,19 +3269,28 @@ function renderProgress() {
     return;
   }
 
-  recentEntries.slice(0, 8).forEach((entry) => {
+  visibleRecentEntries.forEach((entry) => {
     const li = document.createElement("li");
     const dot = document.createElement("span");
     dot.className = `attempt-dot${entry.success ? " ok" : ""}`;
     const name = document.createElement("span");
     name.className = "attempt-name";
-    name.textContent = `${modeMap[entry.mode]?.shortLabel || "Раунд"}: ${entry.success ? "успех" : "ошибка"}`;
+    name.textContent = `${modeMap[entry.mode]?.label || "Упражнение"}: ${entry.success ? "верно" : "неверно"}`;
     const time = document.createElement("span");
     time.className = "attempt-time";
     time.textContent = formatShortDate(entry.at);
     li.append(dot, name, time);
     recentList.appendChild(li);
   });
+}
+
+function countSuccessStreak(entries) {
+  let streak = 0;
+  for (const entry of entries) {
+    if (!entry.success) break;
+    streak += 1;
+  }
+  return streak;
 }
 
 function formatSeconds(value) {
@@ -3251,6 +3318,9 @@ function loadProgress() {
       math: { ...defaults.math, ...(parsed.math || {}) },
       numbers: { ...defaults.numbers, ...(parsed.numbers || {}) },
       words: { ...defaults.words, ...(parsed.words || {}) },
+      memory: { ...defaults.memory, ...(parsed.memory || {}) },
+      balda: { ...defaults.balda, ...(parsed.balda || {}) },
+      attention: { ...defaults.attention, ...(parsed.attention || {}) },
       schulte: { ...defaults.schulte, ...(parsed.schulte || {}) },
       exam: { ...defaults.exam, ...(parsed.exam || {}) },
       sessions: Array.isArray(parsed.sessions) ? parsed.sessions : [],
