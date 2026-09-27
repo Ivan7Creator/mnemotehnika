@@ -63,7 +63,10 @@
       </header>
 
       <header class="hero reveal">
-        <h1>Приложение по мнемотехнике</h1>
+        <div class="hero-brand">
+          <img src="assets/mnemotehnika-logo.png" alt="" width="72" height="72" />
+          <h1>Мнемотехника</h1>
+        </div>
         <p class="subtitle">
           Тренируй память, внимание и скорость мышления. Прокачай свои нейроны в комфортном темпе.
         </p>
@@ -166,8 +169,10 @@
         <button type="button" class="trainer-drawer-backdrop" id="trainer-drawer-backdrop" aria-label="Закрыть меню"></button>
         <aside class="trainer-drawer" aria-label="Меню тренажёров">
           <div class="trainer-drawer-head">
-            <strong>Тренажёры</strong>
-            <button type="button" id="trainer-menu-close" aria-label="Закрыть меню">×</button>
+            <span class="trainer-drawer-brand">
+              <img src="assets/mnemotehnika-logo.png" alt="" width="48" height="48" />
+              <strong>Мнемотехника</strong>
+            </span>
           </div>
           <nav class="trainer-drawer-nav">
             <button type="button" class="trainer-drawer-home" id="trainer-drawer-home"><span><svg class="trainer-icon"><use href="#icon-overview"></use></svg></span>Обзор</button>
@@ -202,7 +207,7 @@
           <ol>
             <li>Выбери сложность или настрой свой пример.</li>
             <li>Нажми «Решать» и вычисли пример без калькулятора.</li>
-            <li>Введи ответ — увидишь результат и свой рекорд.</li>
+            <li>Введи ответ и проверь, правильный ли он.</li>
           </ol>
         </details>
         <div class="math-action-controls">
@@ -215,14 +220,10 @@
                 <option value="hard">Высокая</option>
               </select>
             </label>
+          </div>
+          <div class="math-custom-choice">
             <span class="math-choice-divider">или</span>
-            <button
-              type="button"
-              id="math-custom-toggle"
-              class="btn btn-ghost"
-              aria-expanded="false"
-              aria-controls="math-custom-settings"
-            >Свой пример</button>
+            <button type="button" id="math-custom-toggle" class="btn btn-ghost" aria-expanded="false" aria-controls="math-custom-settings">Свой пример</button>
           </div>
           <div class="controls math-settings-controls" id="math-custom-settings" hidden>
             <label>
@@ -255,7 +256,9 @@
               </select>
             </label>
           </div>
-          <button type="button" id="math-new" class="btn math-start-btn">Решать</button>
+          <div class="math-start-row">
+            <button type="button" id="math-new" class="btn math-start-btn">Решать</button>
+          </div>
         </div>
         <div class="metrics-row" hidden>
           <span id="math-timer" class="meta-chip">Таймер: 0.0с</span>
@@ -293,9 +296,9 @@
         <details class="exercise-help num-help" id="num-help" open>
           <summary>Как проходит упражнение</summary>
           <ol>
-            <li>Выбери сложность или настрой свою серию.</li>
+            <li>Выбери сложность или настрой свой пример.</li>
             <li>Запомни каждый показанный ряд и введи его по памяти.</li>
-            <li>После последнего ряда увидишь результат, время и разбор ответов.</li>
+            <li>Введи числа и проверь, правильно ли ты всё запомнил.</li>
           </ol>
         </details>
         <div class="num-action-controls">
@@ -309,14 +312,10 @@
                 <option value="expert">Эксперт</option>
               </select>
             </label>
+          </div>
+          <div class="num-custom-choice">
             <span class="num-choice-divider">или</span>
-            <button
-              type="button"
-              id="num-custom-toggle"
-              class="btn btn-ghost"
-              aria-expanded="false"
-              aria-controls="num-custom-settings"
-            >Свой пример</button>
+            <button type="button" id="num-custom-toggle" class="btn btn-ghost" aria-expanded="false" aria-controls="num-custom-settings">Свой пример</button>
           </div>
           <div class="controls num-settings-controls" id="num-custom-settings" hidden>
             <label>
@@ -343,7 +342,9 @@
               </select>
             </label>
           </div>
-          <button type="button" id="num-start" class="btn num-start-btn">Решать</button>
+          <div class="num-start-row">
+            <button type="button" id="num-start" class="btn num-start-btn">Решать</button>
+          </div>
           <button type="button" id="num-next" class="btn btn-ghost" disabled hidden>Следующий ряд</button>
         </div>
         <div class="metrics-row">
@@ -509,67 +510,68 @@
         </section>
       </section>
 
-      <section class="panel" id="words-panel">
+      <section class="panel word-stage-prep" id="words-panel">
         <div class="panel-head">
           <h2>Запоминание слов</h2>
           <p>Запоминай последовательность слов и далее выводи их по памяти по порядку.</p>
         </div>
-        <div class="controls word-action-controls">
-          <label>
-            Язык слов
-            <select id="word-language">
-              <option value="ru" selected>Русские</option>
-              <option value="en">Английские</option>
-            </select>
-          </label>
-          <label id="word-level-wrap">
-            Выбери сложность
-            <select id="word-level">
-              <option value="easy" selected>Лёгкая</option>
-              <option value="medium">Средняя</option>
-              <option value="hard">Высокая</option>
-              <option value="expert">Эксперт</option>
-            </select>
-          </label>
-          <button type="button" id="word-start" class="btn">Решать</button>
-          <button
-            type="button"
-            id="word-custom-toggle"
-            class="btn btn-ghost"
-            aria-expanded="false"
-            aria-controls="word-custom-settings"
-          >Свой пример</button>
-        </div>
-        <div class="controls word-settings-controls" id="word-custom-settings" hidden>
-          <label>
-            Тип слов
-            <select id="word-difficulty">
-              <option value="simple" selected>Простые</option>
-              <option value="complex">Сложные</option>
-            </select>
-          </label>
-          <label>
-            Кол-во слов
-            <select id="word-target-count">
-              <option value="2">2</option>
-              <option value="10">10</option>
-              <option value="20" selected>20</option>
-            </select>
-          </label>
-          <label>
-            Показ (сек)
-            <select id="word-show-seconds">
-              <option value="1">1</option>
-              <option value="2">2</option>
-              <option value="3" selected>3</option>
-              <option value="4">4</option>
-              <option value="5">5</option>
-              <option value="6">6</option>
-              <option value="7">7</option>
-              <option value="8">8</option>
-              <option value="9">9</option>
-            </select>
-          </label>
+        <details class="exercise-help word-help" id="word-help" open>
+          <summary>Как проходит упражнение</summary>
+          <ol>
+            <li>Выбери язык и сложность или настрой свой пример.</li>
+            <li>Запомни слова в том порядке, в котором они появляются.</li>
+            <li>Введи слова и проверь, правильно ли ты всё запомнил.</li>
+          </ol>
+        </details>
+        <div class="word-action-controls">
+          <div class="controls word-mode-row">
+            <label id="word-level-wrap">
+              Сложность
+              <select id="word-level">
+                <option value="easy" selected>Лёгкая</option>
+                <option value="medium">Средняя</option>
+                <option value="hard">Высокая</option>
+                <option value="expert">Эксперт</option>
+              </select>
+            </label>
+            <label>
+              Язык
+              <select id="word-language">
+                <option value="ru" selected>Русские</option>
+                <option value="en">Английские</option>
+              </select>
+            </label>
+          </div>
+          <div class="word-custom-choice">
+            <span class="word-choice-divider">или</span>
+            <button type="button" id="word-custom-toggle" class="btn btn-ghost" aria-expanded="false" aria-controls="word-custom-settings">Свой пример</button>
+          </div>
+          <div class="controls word-settings-controls" id="word-custom-settings" hidden>
+            <label>
+              Тип слов
+              <select id="word-difficulty">
+                <option value="simple" selected>Простые</option>
+                <option value="complex">Сложные</option>
+              </select>
+            </label>
+            <label>
+              Кол-во слов
+              <select id="word-target-count">
+                <option value="2">2</option><option value="10">10</option><option value="20" selected>20</option>
+              </select>
+            </label>
+            <label>
+              Показ (сек)
+              <select id="word-show-seconds">
+                <option value="1">1</option><option value="2">2</option><option value="3" selected>3</option>
+                <option value="4">4</option><option value="5">5</option><option value="6">6</option>
+                <option value="7">7</option><option value="8">8</option><option value="9">9</option>
+              </select>
+            </label>
+          </div>
+          <div class="word-start-row">
+            <button type="button" id="word-start" class="btn word-start-btn">Решать</button>
+          </div>
         </div>
         <div class="metrics-row" hidden>
           <span id="word-timer" class="meta-chip">Таймер: 0.0с</span>
@@ -585,9 +587,15 @@
           ></textarea>
           <button class="btn" type="submit">Проверить</button>
         </form>
-        <p id="word-feedback" class="feedback"></p>
-        <div id="word-review" class="word-review" hidden></div>
         <button type="button" id="word-stop" class="btn btn-stop">Закончить упражнение</button>
+        <div id="word-result" class="math-result word-result">
+          <h3>Тренировка завершена</h3>
+          <div class="math-result-card">
+            <p id="word-feedback" class="feedback" aria-live="polite"></p>
+          </div>
+          <div id="word-review" class="word-review" hidden></div>
+          <button type="button" id="word-again" class="btn math-again-btn">Ещё упражнение</button>
+        </div>
       </section>
 
       <section class="panel" id="attention-panel">

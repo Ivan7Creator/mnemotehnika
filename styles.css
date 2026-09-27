@@ -66,12 +66,28 @@ body {
 }
 
 .hero {
-  background: linear-gradient(125deg, #2f2622, #49322b);
+  background: linear-gradient(125deg, #4b3730, #6b4a3f);
   color: #fffefc;
   border-radius: 24px;
   padding: 1.75rem 2rem;
   box-shadow: 0 20px 60px rgba(31, 17, 10, 0.25);
   text-align: center;
+}
+
+.hero-brand {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+}
+
+.hero-brand img {
+  width: clamp(56px, 8vw, 72px);
+  height: clamp(56px, 8vw, 72px);
+  flex: 0 0 auto;
+  border-radius: 20px;
+  object-fit: cover;
+  box-shadow: 0 10px 26px rgba(0, 10, 64, 0.42);
 }
 
 .hero h1 {
@@ -442,26 +458,37 @@ body.trainer-home .trainer-breadcrumbs {
 .trainer-drawer-head {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
   padding: 1rem;
   border: 0;
   border-radius: 16px;
   color: #fffefc;
-  background: linear-gradient(125deg, #2f2622, #49322b);
+  background: linear-gradient(125deg, #4b3730, #6b4a3f);
   box-shadow: 0 12px 30px rgba(31, 17, 10, 0.16);
   font-family: "Space Grotesk", sans-serif;
   font-size: 1.35rem;
 }
 
-.trainer-drawer-head button {
-  width: 38px;
-  height: 38px;
-  border: 0;
-  border-radius: 50%;
-  color: #fffefc;
-  background: rgba(255, 255, 255, 0.14);
-  font-size: 1.5rem;
-  cursor: pointer;
+.trainer-drawer-brand {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 0.7rem;
+}
+
+.trainer-drawer-brand img {
+  width: 48px;
+  height: 48px;
+  flex: 0 0 auto;
+  border-radius: 13px;
+  object-fit: cover;
+  box-shadow: 0 5px 16px rgba(0, 10, 64, 0.35);
+}
+
+.trainer-drawer-brand strong {
+  min-width: 0;
+  font-size: clamp(1.05rem, 5vw, 1.35rem);
+  line-height: 1.1;
 }
 
 .trainer-drawer-nav {
@@ -812,6 +839,7 @@ label {
 }
 
 .math-mode-row {
+  justify-content: center;
   flex-wrap: nowrap;
   overflow-x: visible;
 }
@@ -821,16 +849,32 @@ label {
 }
 
 .math-choice-divider {
-  color: rgba(32, 26, 23, 0.55);
-  font-size: 0.95rem;
+  color: var(--ink);
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.math-custom-choice,
+.num-custom-choice {
+  display: grid;
+  justify-items: center;
+  gap: 0.55rem;
+}
+
+.math-start-row,
+.num-start-row {
+  display: flex;
+  justify-content: center;
+  padding-top: 0.9rem;
+  border-top: 1px solid var(--line);
 }
 
 .math-start-btn {
-  justify-self: center;
   min-width: 150px;
 }
 
 .math-settings-controls {
+  justify-content: center;
   margin-bottom: 0.75rem;
 }
 
@@ -839,13 +883,18 @@ label {
   margin-bottom: 0;
 }
 
-.math-action-controls.custom-mode .math-start-btn {
+.math-action-controls.custom-mode .math-start-row {
   order: 2;
 }
 
-.math-action-controls.custom-mode .math-mode-row {
+.math-action-controls.custom-mode .math-custom-choice {
   order: 3;
-  justify-content: center;
+  padding-top: 0.9rem;
+  border-top: 1px solid var(--line);
+}
+
+.math-action-controls.custom-mode .math-mode-row {
+  display: none;
 }
 
 #math-panel.math-stage-prep #math-task,
@@ -934,6 +983,7 @@ label {
 }
 
 .num-mode-row {
+  justify-content: center;
   flex-wrap: nowrap;
   overflow-x: visible;
 }
@@ -943,13 +993,17 @@ label {
 }
 
 .num-choice-divider {
-  color: rgba(32, 26, 23, 0.55);
-  font-size: 0.95rem;
+  color: var(--ink);
+  font-size: 1rem;
+  font-weight: 700;
 }
 
 .num-start-btn {
-  justify-self: center;
   min-width: 150px;
+}
+
+.num-settings-controls {
+  justify-content: center;
 }
 
 .num-action-controls.custom-mode .num-settings-controls {
@@ -957,13 +1011,18 @@ label {
   margin-bottom: 0;
 }
 
-.num-action-controls.custom-mode .num-start-btn {
+.num-action-controls.custom-mode .num-start-row {
   order: 2;
 }
 
-.num-action-controls.custom-mode .num-mode-row {
+.num-action-controls.custom-mode .num-custom-choice {
   order: 3;
-  justify-content: center;
+  padding-top: 0.9rem;
+  border-top: 1px solid var(--line);
+}
+
+.num-action-controls.custom-mode .num-mode-row {
+  display: none;
 }
 
 #number-series-panel.num-stage-prep .metrics-row,
@@ -971,6 +1030,10 @@ label {
 #number-series-panel.num-stage-prep #num-form,
 #number-series-panel.num-stage-prep #num-stop,
 #number-series-panel:not(.num-stage-result) .num-result {
+  display: none;
+}
+
+#number-series-panel .metrics-row {
   display: none;
 }
 
@@ -990,9 +1053,91 @@ label {
   margin: 0 0 0.75rem;
 }
 
-.word-action-controls,
-.word-settings-controls {
-  margin-bottom: 0.75rem;
+.word-action-controls {
+  display: grid;
+  gap: 0.8rem;
+  margin: 0.9rem 0 0.75rem;
+}
+
+.word-mode-row {
+  flex-wrap: wrap;
+  justify-content: center;
+  overflow-x: visible;
+}
+
+.controls.word-mode-row label {
+  width: auto;
+}
+
+.word-choice-divider {
+  color: var(--ink);
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.word-custom-choice {
+  display: grid;
+  justify-items: center;
+  gap: 0.55rem;
+}
+
+.word-start-row {
+  display: flex;
+  justify-content: center;
+  padding-top: 0.9rem;
+  border-top: 1px solid var(--line);
+}
+
+.word-start-btn {
+  min-width: 150px;
+}
+
+.word-action-controls.custom-mode .word-settings-controls {
+  display: grid;
+  justify-content: center;
+  justify-items: stretch;
+  gap: 0.8rem;
+  order: 2;
+  margin-bottom: 0;
+}
+
+.word-action-controls.custom-mode .word-settings-controls label {
+  display: grid;
+  grid-template-columns: 130px minmax(120px, auto);
+  width: auto;
+}
+
+.word-action-controls.custom-mode .word-mode-row {
+  order: 1;
+}
+
+.word-action-controls.custom-mode .word-start-row {
+  order: 3;
+}
+
+.word-action-controls.custom-mode .word-custom-choice {
+  order: 4;
+  padding-top: 0.9rem;
+  border-top: 1px solid var(--line);
+}
+
+#words-panel .metrics-row,
+#words-panel.word-stage-prep #word-task,
+#words-panel.word-stage-prep #word-form,
+#words-panel.word-stage-prep #word-stop,
+#words-panel:not(.word-stage-result) .word-result {
+  display: none;
+}
+
+#words-panel.word-stage-task .word-action-controls,
+#words-panel.word-stage-task .word-help,
+#words-panel.word-stage-task .word-result,
+#words-panel.word-stage-result .word-action-controls,
+#words-panel.word-stage-result .word-help,
+#words-panel.word-stage-result #word-task,
+#words-panel.word-stage-result #word-form,
+#words-panel.word-stage-result #word-stop {
+  display: none !important;
 }
 
 .schulte-action-controls,
@@ -2385,6 +2530,10 @@ textarea {
     border-radius: 18px;
   }
 
+  .hero-brand {
+    gap: 0.75rem;
+  }
+
   .tabs {
     grid-template-columns: 1fr;
   }
@@ -2397,6 +2546,11 @@ textarea {
 
   .controls label {
     width: 100%;
+  }
+
+  .math-settings-controls label,
+  .num-settings-controls label {
+    justify-content: center;
   }
 
   .controls .schulte-letters-option {

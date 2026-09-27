@@ -42,6 +42,7 @@ const state = {
     startedAt: null,
     timerId: null,
     revealTimerId: null,
+    stage: "prep",
   },
   balda: {
     chain: ["маска", "миска", "мишка", "мышка", "мышца"],
@@ -141,7 +142,6 @@ const trainerCards = [...document.querySelectorAll(".trainer-card")];
 const trainerDetailHeader = document.getElementById("trainer-detail-header");
 const trainerDetailIntro = document.getElementById("trainer-detail-intro");
 const trainerMenuToggle = document.getElementById("trainer-menu-toggle");
-const trainerMenuClose = document.getElementById("trainer-menu-close");
 const trainerDrawerLayer = document.getElementById("trainer-drawer-layer");
 const trainerDrawerBackdrop = document.getElementById("trainer-drawer-backdrop");
 const trainerDrawerHome = document.getElementById("trainer-drawer-home");
@@ -181,7 +181,6 @@ tabs.forEach((tab) => {
 });
 
 trainerMenuToggle.addEventListener("click", openTrainerDrawer);
-trainerMenuClose.addEventListener("click", closeTrainerDrawer);
 trainerDrawerBackdrop.addEventListener("click", closeTrainerDrawer);
 trainerCatalogLink.addEventListener("click", openCatalogRoute);
 trainerDrawerHome.addEventListener("click", openCatalogRoute);
@@ -223,6 +222,7 @@ function openTrainerPage(key) {
   setTrainerStage(1);
   if (key === "math") setMathStage(state.math.answer === null ? "prep" : "task");
   if (key === "number-series") setNumberStage(state.numbers.phase);
+  if (key === "words") setWordStage(state.words.stage);
   document.title = title ? `${title} — Mnemonic Lab` : "Mnemonic Lab";
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
@@ -256,7 +256,7 @@ function openCatalogRoute() {
 function openTrainerDrawer() {
   trainerDrawerLayer.hidden = false;
   document.body.classList.add("trainer-drawer-open");
-  trainerMenuClose.focus();
+  trainerDrawerHome.focus();
 }
 
 function closeTrainerDrawer() {
@@ -315,7 +315,7 @@ mathForm.addEventListener("submit", (event) => {
   const bestTimeSec = state.progress.math.bestTimeSec;
   mathFeedback.innerHTML = `
     <span class="math-result-title">${correct ? "Верно!" : "Неверно"}</span>
-    ${correct ? "" : `<span class="math-result-answer">Правильный ответ: ${state.math.answer}</span>`}
+    <span class="math-result-answer">Правильный ответ: ${state.math.answer}</span>
     <span class="math-result-details">
       <span class="math-result-stat math-result-time">
         <span>Время</span>
@@ -689,7 +689,7 @@ function finishNumberSeries() {
   const bestTimeSec = state.progress.numbers.bestTimeSec;
   numFeedback.innerHTML = `
     <span class="math-result-title">${success ? "Верно!" : "Неверно"}</span>
-    <span class="math-result-answer">Верных рядов: ${state.numbers.correctInSeries}/${state.numbers.totalRounds}</span>
+    <span class="math-result-answer">Правильных рядов: ${state.numbers.correctInSeries}/${state.numbers.totalRounds}</span>
     <span class="math-result-details">
       <span class="math-result-stat math-result-time"><span>Время</span><strong>${formatSeconds(tookSec)}</strong></span>
       <span class="math-result-stat math-result-record"><span>Рекорд</span><strong>${formatSeconds(bestTimeSec)}</strong></span>
@@ -1822,6 +1822,7 @@ const wordDifficulty = document.getElementById("word-difficulty");
 const wordLanguageEl = document.getElementById("word-language");
 const wordLevelEl = document.getElementById("word-level");
 const wordLevelWrap = document.getElementById("word-level-wrap");
+const wordChoiceDividerEl = document.querySelector(".word-choice-divider");
 const wordCustomToggleBtn = document.getElementById("word-custom-toggle");
 const wordCustomSettingsEl = document.getElementById("word-custom-settings");
 const wordTargetCountEl = document.getElementById("word-target-count");
@@ -1833,10 +1834,12 @@ const wordAnswer = document.getElementById("word-answer");
 const wordSubmitBtn = wordForm.querySelector('button[type="submit"]');
 const wordReviewEl = document.getElementById("word-review");
 const wordStartBtn = document.getElementById("word-start");
+const wordAgainBtn = document.getElementById("word-again");
 const wordStopBtn = document.getElementById("word-stop");
 const wordTimerEl = document.getElementById("word-timer");
 const wordBestTimeEl = document.getElementById("word-best-time");
 wordStartBtn.addEventListener("click", startWordRound);
+wordAgainBtn.addEventListener("click", resetWordExercise);
 wordCustomToggleBtn.addEventListener("click", toggleCustomWordSettings);
 wordStopBtn.addEventListener("click", stopWordExercise);
 wordAnswer.addEventListener("input", syncWordControls);
@@ -1861,26 +1864,16 @@ wordForm.addEventListener("submit", (event) => {
   applyModeResult("words", perfect, { count: expected.length, timeSec: elapsedSec });
   renderWordReview(inputWords, state.words.value);
 
-  if (perfect) {
-    const bestTimeSec = state.progress.words.bestTimeSec;
-    wordFeedback.innerHTML = `
-      <span class="math-result-title">Верно! Совпадений по порядку: ${hitByPosition}/${expected.length}</span>
-      <span class="math-result-details">
-        <span class="math-result-stat math-result-time">
-          <span>Время</span>
-          <strong>${formatSeconds(elapsedSec)}</strong>
-        </span>
-        <span class="math-result-stat math-result-record">
-          <span>Рекорд</span>
-          <strong>${formatSeconds(bestTimeSec)}</strong>
-        </span>
-      </span>
-    `;
-    wordFeedback.className = "feedback ok";
-  } else {
-    wordFeedback.textContent = `Ошибка. Совпадений по порядку: ${hitByPosition}/${expected.length}`;
-    wordFeedback.className = "feedback bad";
-  }
+  const bestTimeSec = state.progress.words.bestTimeSec;
+  wordFeedback.innerHTML = `
+    <span class="math-result-title">${perfect ? "Верно!" : "Неверно"}</span>
+    <span class="math-result-answer">Правильных слов: ${hitByPosition}/${expected.length}</span>
+    <span class="math-result-details">
+      <span class="math-result-stat math-result-time"><span>Время</span><strong>${formatSeconds(elapsedSec)}</strong></span>
+      <span class="math-result-stat math-result-record"><span>Рекорд</span><strong>${formatSeconds(bestTimeSec)}</strong></span>
+    </span>
+  `;
+  wordFeedback.className = `feedback ${perfect ? "ok" : "bad"}`;
   clearWordRevealTimer();
   state.words.running = false;
   state.words.phase = "idle";
@@ -1888,6 +1881,7 @@ wordForm.addEventListener("submit", (event) => {
   state.words.revealedCount = 0;
   setWordTaskPlaceholder();
   wordForm.reset();
+  setWordStage("result");
   syncWordControls();
 });
 
@@ -1915,6 +1909,7 @@ function startWordRound() {
   wordTaskEl.textContent = `Слова появляются автоматически каждые ${state.words.revealSeconds} сек.`;
   wordTaskEl.classList.add("challenge-hint");
   startWordTimer();
+  setWordStage("task");
   wordForm.reset();
   revealNextWord();
   startWordRevealSequence();
@@ -1942,10 +1937,12 @@ function getWordConfig() {
 function toggleCustomWordSettings() {
   const visible = wordCustomSettingsEl.hidden;
   wordCustomSettingsEl.hidden = !visible;
+  wordCustomSettingsEl.closest(".word-action-controls").classList.toggle("custom-mode", visible);
   wordLevelWrap.hidden = visible;
+  wordChoiceDividerEl.hidden = visible;
   wordCustomToggleBtn.setAttribute("aria-expanded", String(visible));
   wordCustomToggleBtn.classList.toggle("active", visible);
-  wordCustomToggleBtn.textContent = visible ? "Выбрать сложность" : "Свой пример";
+  wordCustomToggleBtn.textContent = visible ? "Готовое упражнение" : "Свой пример";
 }
 
 function revealNextWord() {
@@ -2053,7 +2050,23 @@ function stopWordExercise() {
     wordFeedback.textContent = "Упражнение остановлено.";
     wordFeedback.className = "feedback";
   }
+  setWordStage("prep");
   syncWordControls();
+}
+
+function resetWordExercise() {
+  stopWordExercise();
+  wordFeedback.textContent = "";
+  wordFeedback.className = "feedback";
+  wordStartBtn.focus();
+}
+
+function setWordStage(stage) {
+  const wordsPanelEl = document.getElementById("words-panel");
+  wordsPanelEl.classList.remove("word-stage-prep", "word-stage-task", "word-stage-result");
+  wordsPanelEl.classList.add(`word-stage-${stage}`);
+  state.words.stage = stage;
+  setTrainerStage(stage === "prep" ? 1 : stage === "task" ? 2 : 3);
 }
 
 function renderWordReview(inputWords, originalWords) {
