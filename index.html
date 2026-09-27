@@ -637,51 +637,74 @@
         <button type="button" id="attention-stop" class="btn btn-stop">Закончить упражнение</button>
       </section>
 
-      <section class="panel" id="schulte-panel">
+      <section class="panel schulte-stage-prep" id="schulte-panel">
         <div class="panel-head">
           <h2>Таблицы Шульте</h2>
           <p>Находи числа по порядку от 1 до максимума, можно с буквами.</p>
         </div>
-        <div class="controls schulte-action-controls">
-          <label id="schulte-difficulty-wrap">
-            Выбери сложность
-            <select id="schulte-difficulty">
-              <option value="easy" selected>Лёгкая</option>
-              <option value="medium">Средняя</option>
-              <option value="hard">Высокая</option>
-            </select>
-          </label>
-          <button type="button" id="schulte-start" class="btn">Решать</button>
-          <button
-            type="button"
-            id="schulte-custom-toggle"
-            class="btn btn-ghost"
-            aria-expanded="false"
-            aria-controls="schulte-custom-settings"
-          >Свой пример</button>
+        <details class="exercise-help schulte-help" id="schulte-help" open>
+          <summary>Как проходит упражнение</summary>
+          <ol>
+            <li>Выбери сложность или настрой свою таблицу.</li>
+            <li>Нажми «Решать» и находи числа или символы по порядку.</li>
+            <li>Заверши таблицу и сравни своё время с рекордом.</li>
+          </ol>
+        </details>
+        <div class="schulte-action-controls">
+          <div class="controls schulte-mode-row">
+            <label id="schulte-difficulty-wrap">
+              Сложность
+              <select id="schulte-difficulty">
+                <option value="easy" selected>Лёгкая</option>
+                <option value="medium">Средняя</option>
+                <option value="hard">Высокая</option>
+              </select>
+            </label>
+          </div>
+          <div class="schulte-custom-choice">
+            <span class="schulte-choice-divider">или</span>
+            <button
+              type="button"
+              id="schulte-custom-toggle"
+              class="btn btn-ghost"
+              aria-expanded="false"
+              aria-controls="schulte-custom-settings"
+            >Свой пример</button>
+          </div>
+          <div class="controls schulte-settings-controls" id="schulte-custom-settings" hidden>
+            <label>
+              Размер
+              <select id="schulte-size">
+                <option value="4">4 x 4</option>
+                <option value="5" selected>5 x 5</option>
+                <option value="6">6 x 6</option>
+              </select>
+            </label>
+            <label class="schulte-letters-option">
+              <input type="checkbox" id="schulte-letters" />
+              Буквы
+            </label>
+          </div>
+          <div class="schulte-start-row">
+            <button type="button" id="schulte-start" class="btn">Решать</button>
+          </div>
         </div>
-        <div class="controls schulte-settings-controls" id="schulte-custom-settings" hidden>
-          <label>
-            Размер
-            <select id="schulte-size">
-              <option value="4">4 x 4</option>
-              <option value="5" selected>5 x 5</option>
-              <option value="6">6 x 6</option>
-            </select>
-          </label>
-          <label class="schulte-letters-option">
-            <input type="checkbox" id="schulte-letters" />
-            Буквы
-          </label>
+        <div class="metrics-row schulte-metrics">
+          <span id="schulte-timer" class="meta-chip">Таймер: 0.0с</span>
+          <span id="schulte-best-time" class="meta-chip">Рекорд: --</span>
         </div>
         <div id="schulte-next" class="challenge challenge-hint schulte-next-task" hidden>Следующее число: --</div>
-        <span id="schulte-timer" hidden>Таймер: 0.0с</span>
-        <span id="schulte-best-time" hidden>Рекорд: --</span>
         <div id="schulte-board-wrap" class="schulte-board-wrap" hidden>
           <div id="schulte-board" class="schulte-board" data-size="5" role="grid" aria-label="Таблица Шульте"></div>
         </div>
-        <p id="schulte-feedback" class="feedback"></p>
         <button type="button" id="schulte-stop" class="btn btn-stop">Закончить упражнение</button>
+        <div id="schulte-result" class="math-result schulte-result">
+          <h3>Тренировка завершена</h3>
+          <div class="math-result-card">
+            <p id="schulte-feedback" class="feedback" aria-live="polite"></p>
+          </div>
+          <button type="button" id="schulte-again" class="btn math-again-btn">Ещё упражнение</button>
+        </div>
       </section>
 
       <section class="panel" id="exam-panel">

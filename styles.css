@@ -1325,6 +1325,78 @@ label {
   margin-bottom: 0.75rem;
 }
 
+.schulte-action-controls {
+  display: grid;
+  gap: 0.8rem;
+  margin-top: 0.9rem;
+}
+
+.schulte-mode-row {
+  justify-content: center;
+}
+
+.schulte-custom-choice {
+  display: grid;
+  justify-items: center;
+  gap: 0.55rem;
+}
+
+.schulte-choice-divider {
+  color: var(--ink);
+  font-weight: 700;
+}
+
+.schulte-start-row {
+  display: flex;
+  justify-content: center;
+  padding-top: 0.9rem;
+  border-top: 1px solid var(--line);
+}
+
+.schulte-start-row .btn {
+  min-width: 150px;
+}
+
+.schulte-action-controls.custom-mode .schulte-settings-controls {
+  display: flex;
+  justify-content: center;
+  order: 1;
+}
+
+.schulte-action-controls.custom-mode .schulte-start-row {
+  order: 2;
+}
+
+.schulte-action-controls.custom-mode .schulte-custom-choice {
+  order: 3;
+  padding-top: 0.9rem;
+  border-top: 1px solid var(--line);
+}
+
+.schulte-action-controls.custom-mode .schulte-mode-row {
+  display: none;
+}
+
+#schulte-panel.schulte-stage-prep .schulte-metrics,
+#schulte-panel.schulte-stage-prep #schulte-next,
+#schulte-panel.schulte-stage-prep #schulte-board-wrap,
+#schulte-panel.schulte-stage-prep #schulte-stop,
+#schulte-panel:not(.schulte-stage-result) .schulte-result {
+  display: none;
+}
+
+#schulte-panel.schulte-stage-task .schulte-action-controls,
+#schulte-panel.schulte-stage-task .schulte-help,
+#schulte-panel.schulte-stage-task .schulte-result,
+#schulte-panel.schulte-stage-result .schulte-action-controls,
+#schulte-panel.schulte-stage-result .schulte-help,
+#schulte-panel.schulte-stage-result .schulte-metrics,
+#schulte-panel.schulte-stage-result #schulte-next,
+#schulte-panel.schulte-stage-result #schulte-board-wrap,
+#schulte-panel.schulte-stage-result #schulte-stop {
+  display: none !important;
+}
+
 #schulte-feedback:empty {
   display: none;
 }

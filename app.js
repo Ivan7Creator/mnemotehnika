@@ -85,6 +85,7 @@ const state = {
     startedAt: null,
     timerId: null,
     active: false,
+    stage: "prep",
   },
   exam: {
     active: false,
@@ -228,6 +229,7 @@ function openTrainerPage(key) {
   if (key === "math") setMathStage(state.math.answer === null ? "prep" : "task");
   if (key === "number-series") setNumberStage(state.numbers.phase);
   if (key === "words") setWordStage(state.words.stage);
+  if (key === "schulte") setSchulteStage(state.schulte.stage);
   document.title = title ? `${title} — Mnemonic Lab` : "Mnemonic Lab";
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
@@ -2782,6 +2784,7 @@ const schulteSizeEl = document.getElementById("schulte-size");
 const schulteLettersEl = document.getElementById("schulte-letters");
 const schulteDifficultyEl = document.getElementById("schulte-difficulty");
 const schulteDifficultyWrap = document.getElementById("schulte-difficulty-wrap");
+const schulteActionControlsEl = document.querySelector(".schulte-action-controls");
 const schulteCustomToggleBtn = document.getElementById("schulte-custom-toggle");
 const schulteCustomSettingsEl = document.getElementById("schulte-custom-settings");
 const schulteStartBtn = document.getElementById("schulte-start");
@@ -2792,6 +2795,7 @@ const schulteBoardWrapEl = document.getElementById("schulte-board-wrap");
 const schulteBoardEl = document.getElementById("schulte-board");
 const schulteFeedbackEl = document.getElementById("schulte-feedback");
 const schulteStopBtn = document.getElementById("schulte-stop");
+const schulteAgainBtn = document.getElementById("schulte-again");
 
 schulteSizeEl.addEventListener("change", () => {
   state.schulte.size = Number(schulteSizeEl.value) || 5;
@@ -2806,6 +2810,7 @@ schulteLettersEl.addEventListener("change", () => {
 schulteStartBtn.addEventListener("click", startSchulteRound);
 schulteCustomToggleBtn.addEventListener("click", toggleCustomSchulteSettings);
 schulteStopBtn.addEventListener("click", stopSchulteExercise);
+schulteAgainBtn.addEventListener("click", resetSchulteExercise);
 
 function getSchulteConfig() {
   if (!schulteCustomSettingsEl.hidden) {
@@ -2829,6 +2834,7 @@ function toggleCustomSchulteSettings() {
   schulteDifficultyWrap.hidden = visible;
   schulteCustomToggleBtn.setAttribute("aria-expanded", String(visible));
   schulteCustomToggleBtn.classList.toggle("active", visible);
+  schulteActionControlsEl.classList.toggle("custom-mode", visible);
   schulteCustomToggleBtn.textContent = visible ? "Выбрать сложность" : "Свой пример";
 }
 
@@ -2846,6 +2852,7 @@ function startSchulteRound() {
   schulteFeedbackEl.className = "feedback";
   renderSchulteBoard();
   startSchulteTimer();
+  setSchulteStage("task");
   syncSchulteControls();
 }
 
@@ -2916,8 +2923,23 @@ function finishSchulteRound() {
     size: state.schulte.size,
     timeSec: tookSec,
   });
-  schulteFeedbackEl.textContent = "Верно!";
+  const bestTimeSec = state.progress.schulte.bestTimeSec;
+  schulteFeedbackEl.innerHTML = `
+    <span class="math-result-title">Готово!</span>
+    <span class="math-result-answer">Таблица ${state.schulte.size} × ${state.schulte.size} пройдена</span>
+    <span class="math-result-details">
+      <span class="math-result-stat math-result-time">
+        <span>Время</span>
+        <strong>${formatSeconds(tookSec)}</strong>
+      </span>
+      <span class="math-result-stat math-result-record">
+        <span>Рекорд</span>
+        <strong>${formatSeconds(bestTimeSec)}</strong>
+      </span>
+    </span>
+  `;
   schulteFeedbackEl.className = "feedback ok";
+  setSchulteStage("result");
   syncSchulteControls();
 }
 
@@ -2972,7 +2994,9 @@ function resetSchulteExercise() {
   renderSchulteBoard();
   schulteFeedbackEl.textContent = "";
   schulteFeedbackEl.className = "feedback";
+  setSchulteStage("prep");
   syncSchulteControls();
+  schulteStartBtn.focus();
 }
 
 function stopSchulteExercise() {
@@ -2993,7 +3017,16 @@ function stopSchulteExercise() {
     schulteFeedbackEl.textContent = "";
     schulteFeedbackEl.className = "feedback";
   }
+  setSchulteStage("prep");
   syncSchulteControls();
+}
+
+function setSchulteStage(stage) {
+  const schultePanelEl = document.getElementById("schulte-panel");
+  schultePanelEl.classList.remove("schulte-stage-prep", "schulte-stage-task", "schulte-stage-result");
+  schultePanelEl.classList.add(`schulte-stage-${stage}`);
+  state.schulte.stage = stage;
+  setTrainerStage(stage === "prep" ? 1 : stage === "task" ? 2 : 3);
 }
 
 function syncSchulteControls() {
