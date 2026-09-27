@@ -239,5 +239,11 @@ function authErrorText(error) {
   if (message.includes("Invalid login credentials")) return "Неверный email или пароль.";
   if (message.includes("already registered")) return "Пользователь с таким email уже зарегистрирован.";
   if (message.includes("Password should be")) return "Пароль должен содержать не меньше 6 символов.";
+  if (message.toLowerCase().includes("email rate limit") || error?.code === "over_email_send_rate_limit") {
+    return "Слишком много писем отправлено. Попробуй снова примерно через час.";
+  }
+  if (error?.code === "email_address_not_authorized") {
+    return "Supabase пока не разрешает отправлять письма на этот адрес. Настрой SMTP или отключи подтверждение email для теста.";
+  }
   return message;
 }
