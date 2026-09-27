@@ -13,92 +13,249 @@
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
+    <svg class="trainer-icon-sprite" aria-hidden="true">
+      <symbol id="icon-number-series" viewBox="0 0 24 24">
+        <path d="M7 3 5 21M14 3l-2 18M3 8h14M2 15h14M18 7l3 3-3 3" />
+      </symbol>
+      <symbol id="icon-words" viewBox="0 0 24 24">
+        <path d="m3 20 7-17 7 17M6 14h8M20 19V6m-3 3 3-3 3 3" />
+      </symbol>
+      <symbol id="icon-numbers" viewBox="0 0 24 24">
+        <rect x="5" y="3" width="13" height="17" rx="2" /><path d="M8 8h7M8 12h4M8 16h6M3 7v12a2 2 0 0 0 2 2h10" />
+      </symbol>
+      <symbol id="icon-math" viewBox="0 0 24 24">
+        <path d="M6 3v8M2 7h8M15 5h7M3 17h7M15 14l7 7M22 14l-7 7" />
+      </symbol>
+      <symbol id="icon-balda" viewBox="0 0 24 24">
+        <circle cx="5" cy="5" r="2" /><circle cx="19" cy="19" r="2" /><path d="M7 5h7a3 3 0 0 1 3 3v8M14 16h3" />
+      </symbol>
+      <symbol id="icon-eye" viewBox="0 0 24 24">
+        <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z" /><circle cx="12" cy="12" r="3" />
+      </symbol>
+      <symbol id="icon-schulte" viewBox="0 0 24 24">
+        <rect x="3" y="3" width="18" height="18" rx="2" /><path d="M9 3v18M15 3v18M3 9h18M3 15h18" />
+      </symbol>
+      <symbol id="icon-check" viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="9" /><path d="m8 12 3 3 5-6" />
+      </symbol>
+      <symbol id="icon-exam" viewBox="0 0 24 24">
+        <path d="M9 5V3h6v2M7 5h10a2 2 0 0 1 2 2v14H5V7a2 2 0 0 1 2-2Z" /><path d="m8 12 2 2 4-4M8 18h8" />
+      </symbol>
+      <symbol id="icon-progress" viewBox="0 0 24 24">
+        <path d="M4 20V10M10 20V4M16 20v-7M22 20H2" />
+      </symbol>
+      <symbol id="icon-overview" viewBox="0 0 24 24">
+        <rect x="3" y="3" width="7" height="7" rx="1.5" /><rect x="14" y="3" width="7" height="7" rx="1.5" /><rect x="3" y="14" width="7" height="7" rx="1.5" /><rect x="14" y="14" width="7" height="7" rx="1.5" />
+      </symbol>
+    </svg>
     <div class="bg-shape bg-shape-a"></div>
     <div class="bg-shape bg-shape-b"></div>
     <main class="app">
-      <header class="hero reveal">
-        <h1>Тренажер мнемотехника</h1>
-        <p class="subtitle">
-          Практикуй счет в уме, запоминание чисел и слов, внимание и наблюдательность, а теперь еще и Таблицы Шульте.
-          Прогресс сохраняется автоматически.
-        </p>
-        <p class="hero-quote"><em>"нейроны - основы всего" - Иван Трофимов</em></p>
+      <header class="trainer-detail-header" id="trainer-detail-header">
+        <button type="button" class="trainer-menu-toggle" id="trainer-menu-toggle" aria-label="Открыть меню">
+          <span></span><span></span><span></span>
+        </button>
+        <nav class="trainer-breadcrumbs" aria-label="Навигация">
+          <button type="button" id="trainer-catalog-link">Главная</button>
+          <span aria-hidden="true">/</span>
+          <span id="trainer-current-name"></span>
+        </nav>
       </header>
 
-      <section class="tabs reveal">
-        <button type="button" class="tab-btn active" data-tab="math">Счет в уме</button>
-        <button type="button" class="tab-btn" data-tab="number-series">Числовой ряд</button>
-        <button type="button" class="tab-btn" data-tab="numbers">
-          <span>Запоминание чисел</span>
-          <span class="tab-beta">Бета</span>
-        </button>
-        <button type="button" class="tab-btn" data-tab="words">Запоминание слов</button>
-        <button type="button" class="tab-btn" data-tab="attention">Внимание и Наблюдательность</button>
-        <button type="button" class="tab-btn" data-tab="schulte">Таблицы Шульте</button>
-        <button type="button" class="tab-btn" data-tab="balda">Балда</button>
-        <button type="button" class="tab-btn" data-tab="progress">
-          <span>Мой прогресс</span>
-          <span class="tab-beta">Бета</span>
-        </button>
-        <button type="button" class="tab-btn" data-tab="exam">
-          <span>Экзамен</span>
-          <span class="tab-beta">Бета</span>
-        </button>
+      <header class="hero reveal">
+        <h1>Приложение по мнемотехнике</h1>
+        <p class="subtitle">
+          Тренируй память, внимание и скорость мышления. Прокачай свои нейроны в комфортном темпе.
+        </p>
+      </header>
+
+      <section class="trainer-menu tabs reveal" aria-labelledby="trainer-menu-title">
+        <div class="trainer-menu-head">
+          <h2 class="trainer-menu-eyebrow" id="trainer-menu-title">Тренажеры</h2>
+        </div>
+
+        <div class="trainer-filters" role="group" aria-label="Фильтр тренажёров">
+          <button type="button" class="trainer-filter active" data-filter="all" aria-pressed="true">Все</button>
+          <button type="button" class="trainer-filter" data-filter="memory" aria-pressed="false">Память</button>
+          <button type="button" class="trainer-filter" data-filter="attention" aria-pressed="false">Внимание</button>
+          <button type="button" class="trainer-filter" data-filter="thinking" aria-pressed="false">Мышление</button>
+        </div>
+
+        <div class="trainer-grid">
+          <button type="button" class="tab-btn trainer-card" data-tab="number-series" data-category="memory">
+            <span class="trainer-card-visual visual-number-series" aria-hidden="true"><svg class="trainer-icon"><use href="#icon-number-series"></use></svg></span>
+            <span class="trainer-card-title">Числовой ряд</span>
+            <span class="trainer-card-description">Запоминай последовательность чисел в рядах и выводи их по памяти.</span>
+            <span class="trainer-card-footer"><span class="trainer-card-start">Начать</span></span>
+          </button>
+
+          <button type="button" class="tab-btn trainer-card" data-tab="words" data-category="memory">
+            <span class="trainer-card-visual visual-words" aria-hidden="true"><svg class="trainer-icon"><use href="#icon-words"></use></svg></span>
+            <span class="trainer-card-title">Запоминание слов</span>
+            <span class="trainer-card-description">Запоминай последовательность слов и выводи их по памяти по порядку.</span>
+            <span class="trainer-card-footer"><span class="trainer-card-start">Начать</span></span>
+          </button>
+
+          <button type="button" class="tab-btn trainer-card" data-tab="numbers" data-category="memory">
+            <span class="trainer-card-visual visual-numbers" aria-hidden="true"><svg class="trainer-icon"><use href="#icon-numbers"></use></svg></span>
+            <span class="trainer-card-title">Запоминание чисел</span>
+            <span class="trainer-card-description">Создавай карточки образов для чисел и проверяй свои ассоциации.</span>
+            <span class="trainer-card-footer"><span class="trainer-card-start">Начать</span></span>
+          </button>
+
+          <button type="button" class="tab-btn trainer-card" data-tab="math" data-category="thinking">
+            <span class="trainer-card-visual visual-math" aria-hidden="true"><svg class="trainer-icon"><use href="#icon-math"></use></svg></span>
+            <span class="trainer-card-title">Счет в уме</span>
+            <span class="trainer-card-description">Решай примеры как можно быстрее и точнее.</span>
+            <span class="trainer-card-footer"><span class="trainer-card-start">Начать</span></span>
+          </button>
+
+          <button type="button" class="tab-btn trainer-card" data-tab="balda" data-category="thinking">
+            <span class="trainer-card-visual visual-balda" aria-hidden="true"><svg class="trainer-icon"><use href="#icon-balda"></use></svg></span>
+            <span class="trainer-card-title">Балда</span>
+            <span class="trainer-card-description">Меняй ровно одну букву в каждом слове и доберись до финала.</span>
+            <span class="trainer-card-footer"><span class="trainer-card-start">Начать</span></span>
+          </button>
+
+          <button type="button" class="tab-btn trainer-card" data-tab="attention" data-category="attention">
+            <span class="trainer-card-visual visual-attention" aria-hidden="true"><svg class="trainer-icon"><use href="#icon-eye"></use></svg></span>
+            <span class="trainer-card-title">Детали на фото</span>
+            <span class="trainer-card-description">Запоминай детали фотографии и сравнивай ответ с тем, что видит ИИ.</span>
+            <span class="trainer-card-footer"><span class="trainer-card-start">Начать</span></span>
+          </button>
+
+          <button type="button" class="tab-btn trainer-card" data-tab="schulte" data-category="attention">
+            <span class="trainer-card-visual visual-schulte" aria-hidden="true"><svg class="trainer-icon"><use href="#icon-schulte"></use></svg></span>
+            <span class="trainer-card-title">Таблицы Шульте</span>
+            <span class="trainer-card-description">Находи числа по порядку от 1 до максимума, можно с буквами.</span>
+            <span class="trainer-card-footer"><span class="trainer-card-start">Начать</span></span>
+          </button>
+        </div>
+
+        <div class="trainer-utility-nav" aria-label="Экзамен и результаты">
+          <button type="button" class="tab-btn trainer-utility-btn trainer-utility-exam" data-tab="exam">
+            <span class="trainer-utility-icon"><svg class="trainer-icon"><use href="#icon-exam"></use></svg></span>
+            <span class="trainer-utility-copy">
+              <strong>Готов к небольшой проверке?</strong>
+              <span>Пройди задания из разных тренажёров в одном экзамене.</span>
+            </span>
+            <span class="trainer-utility-action">К экзамену</span>
+          </button>
+          <button type="button" class="tab-btn trainer-utility-btn trainer-utility-progress" data-tab="progress">
+            <span class="trainer-utility-icon"><svg class="trainer-icon"><use href="#icon-progress"></use></svg></span>
+            <span class="trainer-utility-copy">
+              <strong>Мой прогресс</strong>
+              <span>Следи за точностью, рекордами и сериями занятий.</span>
+            </span>
+            <span class="trainer-utility-action">Смотреть</span>
+          </button>
+        </div>
       </section>
 
-      <section class="panel active" id="math-panel">
+      <section class="trainer-detail-intro" id="trainer-detail-intro" hidden>
+        <h1 id="trainer-detail-title"></h1>
+        <p class="trainer-detail-description" id="trainer-detail-description"></p>
+        <div class="trainer-steps" aria-label="Этапы упражнения">
+          <div class="trainer-step active"><span>1</span><strong>Подготовка</strong></div>
+          <div class="trainer-step"><span>2</span><strong>Задание</strong></div>
+          <div class="trainer-step"><span>3</span><strong>Результат</strong></div>
+        </div>
+      </section>
+
+      <div class="trainer-drawer-layer" id="trainer-drawer-layer" hidden>
+        <button type="button" class="trainer-drawer-backdrop" id="trainer-drawer-backdrop" aria-label="Закрыть меню"></button>
+        <aside class="trainer-drawer" aria-label="Меню тренажёров">
+          <div class="trainer-drawer-head">
+            <strong>Тренажёры</strong>
+            <button type="button" id="trainer-menu-close" aria-label="Закрыть меню">×</button>
+          </div>
+          <nav class="trainer-drawer-nav">
+            <button type="button" class="trainer-drawer-home" id="trainer-drawer-home"><span><svg class="trainer-icon"><use href="#icon-overview"></use></svg></span>Обзор</button>
+
+            <p>Память</p>
+            <button type="button" class="tab-btn trainer-drawer-link" data-tab="number-series"><span><svg class="trainer-icon"><use href="#icon-number-series"></use></svg></span>Числовой ряд</button>
+            <button type="button" class="tab-btn trainer-drawer-link" data-tab="words"><span><svg class="trainer-icon"><use href="#icon-words"></use></svg></span>Запоминание слов</button>
+            <button type="button" class="tab-btn trainer-drawer-link" data-tab="numbers"><span><svg class="trainer-icon"><use href="#icon-numbers"></use></svg></span>Запоминание чисел</button>
+
+            <p>Мышление</p>
+            <button type="button" class="tab-btn trainer-drawer-link" data-tab="math"><span><svg class="trainer-icon"><use href="#icon-math"></use></svg></span>Счет в уме</button>
+            <button type="button" class="tab-btn trainer-drawer-link" data-tab="balda"><span><svg class="trainer-icon"><use href="#icon-balda"></use></svg></span>Балда</button>
+
+            <p>Внимание</p>
+            <button type="button" class="tab-btn trainer-drawer-link" data-tab="attention"><span><svg class="trainer-icon"><use href="#icon-eye"></use></svg></span>Детали на фото</button>
+            <button type="button" class="tab-btn trainer-drawer-link" data-tab="schulte"><span><svg class="trainer-icon"><use href="#icon-schulte"></use></svg></span>Таблицы Шульте</button>
+
+            <p>Ещё</p>
+            <button type="button" class="tab-btn trainer-drawer-link" data-tab="exam"><span><svg class="trainer-icon"><use href="#icon-exam"></use></svg></span>Экзамен</button>
+            <button type="button" class="tab-btn trainer-drawer-link" data-tab="progress"><span><svg class="trainer-icon"><use href="#icon-progress"></use></svg></span>Мой прогресс</button>
+          </nav>
+        </aside>
+      </div>
+
+      <section class="panel math-stage-prep" id="math-panel">
         <div class="panel-head">
           <h2>Счет в уме</h2>
           <p>Решай примеры как можно быстрее и точнее.</p>
         </div>
-        <div class="controls math-action-controls">
-          <label id="math-difficulty-wrap">
-            Выбери сложность
-            <select id="math-difficulty">
-              <option value="easy" selected>Легкий</option>
-              <option value="medium">Средний</option>
-              <option value="hard">Сложный</option>
-            </select>
-          </label>
-          <button type="button" id="math-new" class="btn">Решать</button>
-          <button
-            type="button"
-            id="math-custom-toggle"
-            class="btn btn-ghost"
-            aria-expanded="false"
-            aria-controls="math-custom-settings"
-          >Свой пример</button>
-        </div>
-        <div class="controls math-settings-controls" id="math-custom-settings" hidden>
-          <label>
-            Числа
-            <select id="math-number-size">
-              <option value="one" selected>Однозначные</option>
-              <option value="two">Двузначные</option>
-            </select>
-          </label>
-          <label>
-            Операция
-            <select id="math-operation">
-              <option value="add" selected>Сложение</option>
-              <option value="sub">Вычитание</option>
-              <option value="mul">Умножение</option>
-            </select>
-          </label>
-          <label id="math-mul-limit-wrap" hidden>
-            Диапазон
-            <select id="math-mul-limit">
-              <option value="20">Числа до 20</option>
-              <option value="30">Числа до 30</option>
-              <option value="40">Числа до 40</option>
-              <option value="50">Числа до 50</option>
-              <option value="60">Числа до 60</option>
-              <option value="70">Числа до 70</option>
-              <option value="80">Числа до 80</option>
-              <option value="90">Числа до 90</option>
-              <option value="100">Числа до 100</option>
-            </select>
-          </label>
+        <details class="exercise-help math-help" id="math-help" open>
+          <summary>Как проходит упражнение</summary>
+          <ol>
+            <li>Выбери сложность или настрой свой пример.</li>
+            <li>Нажми «Решать» и вычисли пример без калькулятора.</li>
+            <li>Введи ответ — увидишь результат и свой рекорд.</li>
+          </ol>
+        </details>
+        <div class="math-action-controls">
+          <div class="controls math-mode-row">
+            <label id="math-difficulty-wrap">
+              Сложность
+              <select id="math-difficulty">
+                <option value="easy" selected>Лёгкая</option>
+                <option value="medium">Средняя</option>
+                <option value="hard">Высокая</option>
+              </select>
+            </label>
+            <span class="math-choice-divider">или</span>
+            <button
+              type="button"
+              id="math-custom-toggle"
+              class="btn btn-ghost"
+              aria-expanded="false"
+              aria-controls="math-custom-settings"
+            >Свой пример</button>
+          </div>
+          <div class="controls math-settings-controls" id="math-custom-settings" hidden>
+            <label>
+              Числа
+              <select id="math-number-size">
+                <option value="one" selected>Однозначные</option>
+                <option value="two">Двузначные</option>
+              </select>
+            </label>
+            <label>
+              Операция
+              <select id="math-operation">
+                <option value="add" selected>Сложение</option>
+                <option value="sub">Вычитание</option>
+                <option value="mul">Умножение</option>
+              </select>
+            </label>
+            <label id="math-mul-limit-wrap" hidden>
+              Диапазон
+              <select id="math-mul-limit">
+                <option value="20">Числа до 20</option>
+                <option value="30">Числа до 30</option>
+                <option value="40">Числа до 40</option>
+                <option value="50">Числа до 50</option>
+                <option value="60">Числа до 60</option>
+                <option value="70">Числа до 70</option>
+                <option value="80">Числа до 80</option>
+                <option value="90">Числа до 90</option>
+                <option value="100">Числа до 100</option>
+              </select>
+            </label>
+          </div>
+          <button type="button" id="math-new" class="btn math-start-btn">Решать</button>
         </div>
         <div class="metrics-row" hidden>
           <span id="math-timer" class="meta-chip">Таймер: 0.0с</span>
@@ -118,76 +275,76 @@
           />
           <button class="btn" type="submit">Проверить</button>
         </form>
-        <p id="math-feedback" class="feedback"></p>
-        <button type="button" id="math-stop" class="btn btn-stop">Стоп</button>
+        <div id="math-result" class="math-result">
+          <h3>Тренировка завершена</h3>
+          <div class="math-result-card">
+            <p id="math-feedback" class="feedback" aria-live="polite"></p>
+          </div>
+          <button type="button" id="math-again" class="btn math-again-btn">Ещё упражнение</button>
+        </div>
+        <button type="button" id="math-stop" class="btn btn-stop">Закончить упражнение</button>
       </section>
 
-      <section class="panel" id="number-series-panel">
+      <section class="panel num-stage-prep" id="number-series-panel">
         <div class="panel-head">
           <h2>Числовой ряд</h2>
           <p>Запоминай последовательность чисел в рядах и далее выводи их по памяти.</p>
         </div>
-        <div class="controls num-action-controls">
-          <label id="num-difficulty-wrap">
-            Выбери сложность
-            <select id="num-difficulty">
-              <option value="easy" selected>Легкий</option>
-              <option value="medium">Средний</option>
-              <option value="hard">Сложный</option>
-              <option value="expert">Эксперт</option>
-            </select>
-          </label>
-          <button type="button" id="num-start" class="btn">Решать</button>
-          <button
-            type="button"
-            id="num-custom-toggle"
-            class="btn btn-ghost"
-            aria-expanded="false"
-            aria-controls="num-custom-settings"
-          >Свой пример</button>
+        <details class="exercise-help num-help" id="num-help" open>
+          <summary>Как проходит упражнение</summary>
+          <ol>
+            <li>Выбери сложность или настрой свою серию.</li>
+            <li>Запомни каждый показанный ряд и введи его по памяти.</li>
+            <li>После последнего ряда увидишь результат, время и разбор ответов.</li>
+          </ol>
+        </details>
+        <div class="num-action-controls">
+          <div class="controls num-mode-row">
+            <label id="num-difficulty-wrap">
+              Сложность
+              <select id="num-difficulty">
+                <option value="easy" selected>Лёгкая</option>
+                <option value="medium">Средняя</option>
+                <option value="hard">Высокая</option>
+                <option value="expert">Эксперт</option>
+              </select>
+            </label>
+            <span class="num-choice-divider">или</span>
+            <button
+              type="button"
+              id="num-custom-toggle"
+              class="btn btn-ghost"
+              aria-expanded="false"
+              aria-controls="num-custom-settings"
+            >Свой пример</button>
+          </div>
+          <div class="controls num-settings-controls" id="num-custom-settings" hidden>
+            <label>
+              Кол-во рядов
+              <select id="num-total-rounds">
+                <option value="1">1</option><option value="2">2</option><option value="3">3</option>
+                <option value="4">4</option><option value="5">5</option><option value="6" selected>6</option>
+                <option value="7">7</option><option value="8">8</option><option value="9">9</option>
+              </select>
+            </label>
+            <label>
+              Длина ряда
+              <select id="num-digits-count">
+                <option value="1">1</option><option value="2">2</option><option value="3">3</option>
+                <option value="4">4</option><option value="5">5</option><option value="6" selected>6</option>
+              </select>
+            </label>
+            <label>
+              Показ (сек)
+              <select id="num-show-seconds">
+                <option value="0.2">0.2</option><option value="0.4">0.4</option><option value="0.6">0.6</option>
+                <option value="0.8">0.8</option><option value="1" selected>1.0</option><option value="1.2">1.2</option>
+                <option value="1.4">1.4</option><option value="1.6">1.6</option><option value="1.8">1.8</option><option value="2">2.0</option>
+              </select>
+            </label>
+          </div>
+          <button type="button" id="num-start" class="btn num-start-btn">Решать</button>
           <button type="button" id="num-next" class="btn btn-ghost" disabled hidden>Следующий ряд</button>
-        </div>
-        <div class="controls num-settings-controls" id="num-custom-settings" hidden>
-          <label>
-            Кол-во рядов
-            <select id="num-total-rounds">
-              <option value="1">1</option>
-              <option value="2">2</option>
-              <option value="3">3</option>
-              <option value="4">4</option>
-              <option value="5">5</option>
-              <option value="6" selected>6</option>
-              <option value="7">7</option>
-              <option value="8">8</option>
-              <option value="9">9</option>
-            </select>
-          </label>
-          <label>
-            Длина ряда
-            <select id="num-digits-count">
-              <option value="1">1</option>
-              <option value="2">2</option>
-              <option value="3">3</option>
-              <option value="4">4</option>
-              <option value="5">5</option>
-              <option value="6" selected>6</option>
-            </select>
-          </label>
-          <label>
-            Показ (сек)
-            <select id="num-show-seconds">
-              <option value="0.2">0.2</option>
-              <option value="0.4">0.4</option>
-              <option value="0.6">0.6</option>
-              <option value="0.8">0.8</option>
-              <option value="1" selected>1.0</option>
-              <option value="1.2">1.2</option>
-              <option value="1.4">1.4</option>
-              <option value="1.6">1.6</option>
-              <option value="1.8">1.8</option>
-              <option value="2">2.0</option>
-            </select>
-          </label>
         </div>
         <div class="metrics-row">
           <span id="num-series-progress" class="meta-chip num-series-progress-chip" hidden>Ряд: 0/6</span>
@@ -207,9 +364,15 @@
           />
           <button class="btn" type="submit">Проверить</button>
         </form>
-        <p id="num-feedback" class="feedback"></p>
-        <div id="num-review" class="num-review" hidden></div>
-        <button type="button" id="num-stop" class="btn btn-stop">Стоп</button>
+        <button type="button" id="num-stop" class="btn btn-stop">Закончить упражнение</button>
+        <div id="num-result" class="math-result num-result">
+          <h3>Тренировка завершена</h3>
+          <div class="math-result-card">
+            <p id="num-feedback" class="feedback" aria-live="polite"></p>
+          </div>
+          <div id="num-review" class="num-review" hidden></div>
+          <button type="button" id="num-again" class="btn math-again-btn">Ещё упражнение</button>
+        </div>
       </section>
 
       <section class="panel" id="numbers-panel">
@@ -362,9 +525,9 @@
           <label id="word-level-wrap">
             Выбери сложность
             <select id="word-level">
-              <option value="easy" selected>Легкий</option>
-              <option value="medium">Средний</option>
-              <option value="hard">Сложный</option>
+              <option value="easy" selected>Лёгкая</option>
+              <option value="medium">Средняя</option>
+              <option value="hard">Высокая</option>
               <option value="expert">Эксперт</option>
             </select>
           </label>
@@ -424,12 +587,12 @@
         </form>
         <p id="word-feedback" class="feedback"></p>
         <div id="word-review" class="word-review" hidden></div>
-        <button type="button" id="word-stop" class="btn btn-stop">Стоп</button>
+        <button type="button" id="word-stop" class="btn btn-stop">Закончить упражнение</button>
       </section>
 
       <section class="panel" id="attention-panel">
         <div class="panel-head">
-          <h2>Внимание и Наблюдательность</h2>
+          <h2>Детали на фото</h2>
           <p>Загрузи фотографию или сгенирируй случайную, после запомни как можно больше деталей и напиши их, сравни с тем, что видит ИИ.</p>
         </div>
         <div class="controls">
@@ -462,7 +625,7 @@
         </form>
         <div id="attention-compare-result" class="attention-compare" hidden></div>
         <p id="attention-feedback" class="feedback"></p>
-        <button type="button" id="attention-stop" class="btn btn-stop">Стоп</button>
+        <button type="button" id="attention-stop" class="btn btn-stop">Закончить упражнение</button>
       </section>
 
       <section class="panel" id="schulte-panel">
@@ -474,9 +637,9 @@
           <label id="schulte-difficulty-wrap">
             Выбери сложность
             <select id="schulte-difficulty">
-              <option value="easy" selected>Легкий</option>
-              <option value="medium">Средний</option>
-              <option value="hard">Сложный</option>
+              <option value="easy" selected>Лёгкая</option>
+              <option value="medium">Средняя</option>
+              <option value="hard">Высокая</option>
             </select>
           </label>
           <button type="button" id="schulte-start" class="btn">Решать</button>
@@ -509,7 +672,7 @@
           <div id="schulte-board" class="schulte-board" data-size="5" role="grid" aria-label="Таблица Шульте"></div>
         </div>
         <p id="schulte-feedback" class="feedback"></p>
-        <button type="button" id="schulte-stop" class="btn btn-stop">Стоп</button>
+        <button type="button" id="schulte-stop" class="btn btn-stop">Закончить упражнение</button>
       </section>
 
       <section class="panel" id="exam-panel">
@@ -521,9 +684,9 @@
           <label>
             Выбери сложность
             <select id="exam-difficulty">
-              <option value="easy" selected>Легкий</option>
-              <option value="medium">Средний</option>
-              <option value="hard">Сложный</option>
+              <option value="easy" selected>Лёгкая</option>
+              <option value="medium">Средняя</option>
+              <option value="hard">Высокая</option>
               <option value="expert">Эксперт</option>
             </select>
           </label>
@@ -531,8 +694,6 @@
         </div>
         <div class="metrics-row">
           <span id="exam-progress" class="meta-chip exam-progress-chip">Задание: 0/5</span>
-          <span id="exam-timer" class="meta-chip">Таймер: 0.0с</span>
-          <span id="exam-best-time" class="meta-chip">Рекорд: --</span>
         </div>
         <div class="challenge challenge-hint exam-task" id="exam-task">Нажми «Начать экзамен»</div>
         <form id="exam-form" class="answer-form">
@@ -551,8 +712,12 @@
         </form>
         <p id="exam-feedback" class="feedback"></p>
         <div id="exam-summary" class="challenge challenge-hint exam-summary" hidden></div>
+        <div id="exam-result-metrics" class="metrics-row" hidden>
+          <span id="exam-timer" class="meta-chip">Таймер: 0.0с</span>
+          <span id="exam-best-time" class="meta-chip">Рекорд: --</span>
+        </div>
         <div id="exam-review" class="num-review" hidden></div>
-        <button type="button" id="exam-stop" class="btn btn-stop">Стоп</button>
+        <button type="button" id="exam-stop" class="btn btn-stop">Закончить упражнение</button>
       </section>
 
       <section class="panel" id="balda-panel">
@@ -564,9 +729,9 @@
           <label id="balda-difficulty-wrap">
             Выбери сложность
             <select id="balda-difficulty">
-              <option value="easy" selected>Легкий</option>
-              <option value="medium">Средний</option>
-              <option value="hard">Сложный</option>
+              <option value="easy" selected>Лёгкая</option>
+              <option value="medium">Средняя</option>
+              <option value="hard">Высокая</option>
             </select>
           </label>
           <button type="button" id="balda-start" class="btn">Решать</button>
@@ -594,7 +759,7 @@
           <button id="balda-check" class="btn" type="submit">Проверить</button>
         </form>
         <p id="balda-feedback" class="feedback"></p>
-        <button type="button" id="balda-stop" class="btn btn-stop" disabled>Стоп</button>
+        <button type="button" id="balda-stop" class="btn btn-stop" disabled>Закончить упражнение</button>
       </section>
 
       <section class="panel" id="progress-panel">

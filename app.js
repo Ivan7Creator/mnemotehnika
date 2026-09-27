@@ -30,6 +30,7 @@ const state = {
     correctInSeries: 0,
     awaitingAnswer: false,
     reviewRows: [],
+    phase: "prep",
   },
   words: {
     value: [],
@@ -135,6 +136,26 @@ let wordPoolEnComplex = [
 ];
 
 const tabs = [...document.querySelectorAll(".tab-btn")];
+const trainerFilters = [...document.querySelectorAll(".trainer-filter")];
+const trainerCards = [...document.querySelectorAll(".trainer-card")];
+const trainerDetailHeader = document.getElementById("trainer-detail-header");
+const trainerDetailIntro = document.getElementById("trainer-detail-intro");
+const trainerMenuToggle = document.getElementById("trainer-menu-toggle");
+const trainerMenuClose = document.getElementById("trainer-menu-close");
+const trainerDrawerLayer = document.getElementById("trainer-drawer-layer");
+const trainerDrawerBackdrop = document.getElementById("trainer-drawer-backdrop");
+const trainerDrawerHome = document.getElementById("trainer-drawer-home");
+const trainerCatalogLink = document.getElementById("trainer-catalog-link");
+const trainerCurrentName = document.getElementById("trainer-current-name");
+const trainerDetailTitle = document.getElementById("trainer-detail-title");
+const trainerDetailDescription = document.getElementById("trainer-detail-description");
+const trainerSteps = [...document.querySelectorAll(".trainer-step")];
+const syncStickyHeader = () => {
+  trainerDetailHeader.classList.toggle("is-scrolled", window.scrollY > 12);
+};
+
+window.addEventListener("scroll", syncStickyHeader, { passive: true });
+syncStickyHeader();
 const panels = {
   math: document.getElementById("math-panel"),
   "number-series": document.getElementById("number-series-panel"),
@@ -150,20 +171,112 @@ const panels = {
 tabs.forEach((tab) => {
   tab.addEventListener("click", () => {
     const key = tab.dataset.tab;
-    tabs.forEach((btn) => btn.classList.toggle("active", btn === tab));
-    Object.entries(panels).forEach(([name, panel]) => {
-      panel.classList.toggle("active", name === key);
-    });
-    if (key === "progress") renderProgress();
-    if (window.matchMedia("(max-width: 560px)").matches) {
-      window.requestAnimationFrame(() => {
-        panels[key].scrollIntoView({ behavior: "smooth", block: "start" });
-      });
+    closeTrainerDrawer();
+    if (window.location.hash === `#${key}`) {
+      openTrainerPage(key);
+      return;
     }
+    window.location.hash = key;
   });
 });
 
+trainerMenuToggle.addEventListener("click", openTrainerDrawer);
+trainerMenuClose.addEventListener("click", closeTrainerDrawer);
+trainerDrawerBackdrop.addEventListener("click", closeTrainerDrawer);
+trainerCatalogLink.addEventListener("click", openCatalogRoute);
+trainerDrawerHome.addEventListener("click", openCatalogRoute);
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape") closeTrainerDrawer();
+});
+
+window.addEventListener("hashchange", syncTrainerRoute);
+
+trainerFilters.forEach((filterButton) => {
+  filterButton.addEventListener("click", () => {
+    const filter = filterButton.dataset.filter;
+    trainerFilters.forEach((button) => {
+      const isActive = button === filterButton;
+      button.classList.toggle("active", isActive);
+      button.setAttribute("aria-pressed", String(isActive));
+    });
+    trainerCards.forEach((card) => {
+      card.hidden = filter !== "all" && card.dataset.category !== filter;
+    });
+  });
+});
+
+function openTrainerPage(key) {
+  if (!panels[key]) return;
+  document.body.classList.add("trainer-page-open");
+  document.body.classList.remove("trainer-home");
+  trainerDetailIntro.hidden = false;
+  tabs.forEach((button) => button.classList.toggle("active", button.dataset.tab === key));
+  Object.entries(panels).forEach(([name, panel]) => {
+    panel.classList.toggle("active", name === key);
+  });
+  if (key === "progress") renderProgress();
+  const title = panels[key].querySelector(".panel-head h2")?.textContent?.trim();
+  const description = panels[key].querySelector(".panel-head p")?.textContent?.trim();
+  trainerCurrentName.textContent = title || "Тренажёр";
+  trainerDetailTitle.textContent = title || "Тренажёр";
+  trainerDetailDescription.textContent = description || "";
+  setTrainerStage(1);
+  if (key === "math") setMathStage(state.math.answer === null ? "prep" : "task");
+  if (key === "number-series") setNumberStage(state.numbers.phase);
+  document.title = title ? `${title} — Mnemonic Lab` : "Mnemonic Lab";
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+function setTrainerStage(stage) {
+  trainerSteps.forEach((step, index) => {
+    step.classList.toggle("active", index + 1 === stage);
+  });
+}
+
+function openTrainerCatalog() {
+  closeTrainerDrawer();
+  document.body.classList.remove("trainer-page-open");
+  document.body.classList.add("trainer-home");
+  trainerDetailIntro.hidden = true;
+  trainerCurrentName.textContent = "";
+  tabs.forEach((button) => button.classList.remove("active"));
+  Object.values(panels).forEach((panel) => panel.classList.remove("active"));
+  document.title = "Mnemonic Lab";
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+function openCatalogRoute() {
+  if (window.location.hash === "#home" || !window.location.hash) {
+    openTrainerCatalog();
+    return;
+  }
+  window.location.hash = "home";
+}
+
+function openTrainerDrawer() {
+  trainerDrawerLayer.hidden = false;
+  document.body.classList.add("trainer-drawer-open");
+  trainerMenuClose.focus();
+}
+
+function closeTrainerDrawer() {
+  trainerDrawerLayer.hidden = true;
+  document.body.classList.remove("trainer-drawer-open");
+}
+
+function syncTrainerRoute() {
+  const key = window.location.hash.slice(1);
+  if (panels[key]) {
+    openTrainerPage(key);
+  } else {
+    openTrainerCatalog();
+  }
+}
+
+window.addEventListener("load", syncTrainerRoute);
+
 const mathTaskEl = document.getElementById("math-task");
+const mathPanelEl = document.getElementById("math-panel");
 const mathForm = document.getElementById("math-form");
 const mathAnswer = document.getElementById("math-answer");
 const mathFeedback = document.getElementById("math-feedback");
@@ -172,6 +285,7 @@ const mathTimerEl = document.getElementById("math-timer");
 const mathBestTimeEl = document.getElementById("math-best-time");
 const mathDifficultyEl = document.getElementById("math-difficulty");
 const mathDifficultyWrap = document.getElementById("math-difficulty-wrap");
+const mathChoiceDividerEl = document.querySelector(".math-choice-divider");
 const mathCustomToggleBtn = document.getElementById("math-custom-toggle");
 const mathCustomSettingsEl = document.getElementById("math-custom-settings");
 const mathNumberSizeEl = document.getElementById("math-number-size");
@@ -179,8 +293,11 @@ const mathOperationEl = document.getElementById("math-operation");
 const mathMulLimitWrap = document.getElementById("math-mul-limit-wrap");
 const mathMulLimitEl = document.getElementById("math-mul-limit");
 const mathNewBtn = document.getElementById("math-new");
+const mathAgainBtn = document.getElementById("math-again");
 const mathStopBtn = document.getElementById("math-stop");
+const mathHelpEl = document.getElementById("math-help");
 mathNewBtn.addEventListener("click", generateMathTask);
+mathAgainBtn.addEventListener("click", resetMathExercise);
 mathStopBtn.addEventListener("click", stopMathExercise);
 mathCustomToggleBtn.addEventListener("click", toggleCustomMathSettings);
 mathNumberSizeEl.addEventListener("change", updateCustomMathControls);
@@ -195,29 +312,26 @@ mathForm.addEventListener("submit", (event) => {
   const tookSec = stopMathTimer();
   applyModeResult("math", correct, { timeSec: tookSec });
 
-  if (correct) {
-    const bestTimeSec = state.progress.math.bestTimeSec;
-    mathFeedback.innerHTML = `
-      <span class="math-result-title">Верно!</span>
-      <span class="math-result-details">
-        <span class="math-result-stat math-result-time">
-          <span>Время</span>
-          <strong>${formatSeconds(tookSec)}</strong>
-        </span>
-        <span class="math-result-stat math-result-record">
-          <span>Рекорд</span>
-          <strong>${formatSeconds(bestTimeSec)}</strong>
-        </span>
+  const bestTimeSec = state.progress.math.bestTimeSec;
+  mathFeedback.innerHTML = `
+    <span class="math-result-title">${correct ? "Верно!" : "Неверно"}</span>
+    ${correct ? "" : `<span class="math-result-answer">Правильный ответ: ${state.math.answer}</span>`}
+    <span class="math-result-details">
+      <span class="math-result-stat math-result-time">
+        <span>Время</span>
+        <strong>${formatSeconds(tookSec)}</strong>
       </span>
-    `;
-    mathFeedback.className = "feedback ok";
-  } else {
-    mathFeedback.textContent = `Ошибка. Правильный ответ: ${state.math.answer}`;
-    mathFeedback.className = "feedback bad";
-  }
+      <span class="math-result-stat math-result-record">
+        <span>Рекорд</span>
+        <strong>${formatSeconds(bestTimeSec)}</strong>
+      </span>
+    </span>
+  `;
+  mathFeedback.className = `feedback ${correct ? "ok" : "bad"}`;
   mathForm.reset();
   state.math.answer = null;
   setMathTaskPlaceholder("Нажми «Решать»");
+  setMathStage("result");
   syncMathControls();
 });
 
@@ -255,10 +369,12 @@ function toggleCustomMathSettings() {
 
 function setCustomMathSettingsVisible(visible) {
   mathCustomSettingsEl.hidden = !visible;
+  mathCustomSettingsEl.closest(".math-action-controls").classList.toggle("custom-mode", visible);
   mathDifficultyWrap.hidden = visible;
+  mathChoiceDividerEl.hidden = visible;
   mathCustomToggleBtn.setAttribute("aria-expanded", String(visible));
   mathCustomToggleBtn.classList.toggle("active", visible);
-  mathCustomToggleBtn.textContent = visible ? "Выбрать сложность" : "Свой пример";
+  mathCustomToggleBtn.textContent = visible ? "Готовое упражнение" : "Свой пример";
   updateCustomMathControls();
   syncMathControls();
 }
@@ -292,6 +408,7 @@ function generateMathTask() {
   mathTaskEl.textContent = task.expression;
   mathTaskEl.classList.remove("challenge-hint");
   mathFeedback.textContent = "";
+  setMathStage("task");
   mathAnswer.focus();
   syncMathControls();
 }
@@ -324,12 +441,32 @@ function stopMathExercise() {
   stopMathTimer();
   state.math.answer = null;
   setMathTaskPlaceholder("Нажми «Решать»");
+  setMathStage("prep");
   mathForm.reset();
   if (hadActive) {
     mathFeedback.textContent = "Упражнение остановлено.";
     mathFeedback.className = "feedback";
   }
   syncMathControls();
+}
+
+function resetMathExercise() {
+  stopMathTimer();
+  state.math.answer = null;
+  mathForm.reset();
+  mathFeedback.textContent = "";
+  mathFeedback.className = "feedback";
+  setMathTaskPlaceholder("Нажми «Решать»");
+  setMathStage("prep");
+  syncMathControls();
+  mathNewBtn.focus();
+}
+
+function setMathStage(stage) {
+  mathPanelEl.classList.remove("math-stage-prep", "math-stage-task", "math-stage-result");
+  mathPanelEl.classList.add(`math-stage-${stage}`);
+  mathHelpEl.hidden = stage !== "prep";
+  setTrainerStage(stage === "prep" ? 1 : stage === "task" ? 2 : 3);
 }
 
 function syncMathControls() {
@@ -365,12 +502,15 @@ const numBestTimeEl = document.getElementById("num-best-time");
 const numReviewEl = document.getElementById("num-review");
 const numDifficultyEl = document.getElementById("num-difficulty");
 const numDifficultyWrap = document.getElementById("num-difficulty-wrap");
+const numChoiceDividerEl = document.querySelector(".num-choice-divider");
 const numCustomToggleBtn = document.getElementById("num-custom-toggle");
 const numCustomSettingsEl = document.getElementById("num-custom-settings");
 const numStartBtn = document.getElementById("num-start");
+const numAgainBtn = document.getElementById("num-again");
 const numNextBtn = document.getElementById("num-next");
 const numStopBtn = document.getElementById("num-stop");
 numStartBtn.addEventListener("click", startNumberSeries);
+numAgainBtn.addEventListener("click", resetNumberExercise);
 numCustomToggleBtn.addEventListener("click", toggleCustomNumberSettings);
 numNextBtn.addEventListener("click", runNextNumberRound);
 numStopBtn.addEventListener("click", stopNumberExercise);
@@ -433,10 +573,14 @@ function startNumberSeries() {
   numReviewEl.hidden = true;
   numReviewEl.innerHTML = "";
   numFeedback.textContent = "";
+  numSeriesProgressEl.hidden = false;
+  numTimerEl.hidden = false;
+  numBestTimeEl.hidden = false;
   numTaskEl.hidden = false;
   numTaskEl.textContent = "Подготовься, начнется первый ряд";
   numTaskEl.classList.add("challenge-hint");
   startNumberTimer();
+  setNumberStage("task");
   runNextNumberRound();
   syncNumberControls();
 }
@@ -465,10 +609,12 @@ function toggleCustomNumberSettings() {
 
 function setCustomNumberSettingsVisible(visible) {
   numCustomSettingsEl.hidden = !visible;
+  numCustomSettingsEl.closest(".num-action-controls").classList.toggle("custom-mode", visible);
   numDifficultyWrap.hidden = visible;
+  numChoiceDividerEl.hidden = visible;
   numCustomToggleBtn.setAttribute("aria-expanded", String(visible));
   numCustomToggleBtn.classList.toggle("active", visible);
-  numCustomToggleBtn.textContent = visible ? "Выбрать сложность" : "Свой пример";
+  numCustomToggleBtn.textContent = visible ? "Готовое упражнение" : "Свой пример";
   updateNumberDifficultyPreview();
   syncNumberControls();
 }
@@ -540,27 +686,16 @@ function finishNumberSeries() {
     timeSec: tookSec,
   });
 
-  if (success) {
-    const bestTimeSec = state.progress.numbers.bestTimeSec;
-    numFeedback.innerHTML = `
-      <span class="math-result-title">Верно! Серия завершена: ${state.numbers.correctInSeries}/${state.numbers.totalRounds}</span>
-      <span class="math-result-details">
-        <span class="math-result-stat math-result-time">
-          <span>Время</span>
-          <strong>${formatSeconds(tookSec)}</strong>
-        </span>
-        <span class="math-result-stat math-result-record">
-          <span>Рекорд</span>
-          <strong>${formatSeconds(bestTimeSec)}</strong>
-        </span>
-      </span>
-    `;
-    numFeedback.className = "feedback ok";
-  } else {
-    numFeedback.textContent =
-      `Ошибка. Серия завершена: ${state.numbers.correctInSeries}/${state.numbers.totalRounds}`;
-    numFeedback.className = "feedback bad";
-  }
+  const bestTimeSec = state.progress.numbers.bestTimeSec;
+  numFeedback.innerHTML = `
+    <span class="math-result-title">${success ? "Верно!" : "Неверно"}</span>
+    <span class="math-result-answer">Верных рядов: ${state.numbers.correctInSeries}/${state.numbers.totalRounds}</span>
+    <span class="math-result-details">
+      <span class="math-result-stat math-result-time"><span>Время</span><strong>${formatSeconds(tookSec)}</strong></span>
+      <span class="math-result-stat math-result-record"><span>Рекорд</span><strong>${formatSeconds(bestTimeSec)}</strong></span>
+    </span>
+  `;
+  numFeedback.className = `feedback ${success ? "ok" : "bad"}`;
   renderNumberReview(state.numbers.reviewRows);
   state.numbers.seriesActive = false;
   state.numbers.awaitingAnswer = false;
@@ -569,6 +704,7 @@ function finishNumberSeries() {
   numStartBtn.disabled = false;
   numNextBtn.disabled = true;
   numNextBtn.hidden = true;
+  setNumberStage("result");
   syncNumberControls();
 }
 
@@ -595,7 +731,23 @@ function stopNumberExercise() {
     numFeedback.textContent = "Упражнение остановлено.";
     numFeedback.className = "feedback";
   }
+  setNumberStage("prep");
   syncNumberControls();
+}
+
+function resetNumberExercise() {
+  stopNumberExercise();
+  numFeedback.textContent = "";
+  numFeedback.className = "feedback";
+  numStartBtn.focus();
+}
+
+function setNumberStage(stage) {
+  const numPanelEl = document.getElementById("number-series-panel");
+  numPanelEl.classList.remove("num-stage-prep", "num-stage-task", "num-stage-result");
+  numPanelEl.classList.add(`num-stage-${stage}`);
+  state.numbers.phase = stage;
+  setTrainerStage(stage === "prep" ? 1 : stage === "task" ? 2 : 3);
 }
 
 function renderNumberReview(reviewRows) {
@@ -688,6 +840,7 @@ const examStopBtn = document.getElementById("exam-stop");
 const examProgressEl = document.getElementById("exam-progress");
 const examTimerEl = document.getElementById("exam-timer");
 const examBestTimeEl = document.getElementById("exam-best-time");
+const examResultMetricsEl = document.getElementById("exam-result-metrics");
 
 examStartBtn.addEventListener("click", startExam);
 examSkipBtn.addEventListener("click", skipExamTask);
@@ -1071,8 +1224,7 @@ function finishExam() {
   examTaskEl.classList.remove("mono");
   examSummaryEl.innerHTML = `
     <strong>Итог: ${state.exam.correctCount}/${totalTasks}</strong><br />
-    ${modeSummary}<br />
-    Время: ${tookSec.toFixed(1)}с
+    ${modeSummary}
   `;
   examSummaryEl.hidden = false;
   renderExamReview(state.exam.results);
@@ -1122,6 +1274,7 @@ function updateExamStats() {
 }
 
 function syncExamControls() {
+  examResultMetricsEl.hidden = state.exam.phase !== "done";
   const readyForAnswer =
     state.exam.active
     && state.exam.phase === "answering"
