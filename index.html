@@ -60,6 +60,7 @@
           <span aria-hidden="true">/</span>
           <span id="trainer-current-name"></span>
         </nav>
+        <button type="button" class="account-button" id="account-button">Войти</button>
       </header>
 
       <header class="hero reveal">
@@ -849,6 +850,52 @@
       </article>
     </template>
 
+    <dialog class="auth-dialog" id="auth-dialog">
+      <form class="auth-card" id="auth-form">
+        <div class="auth-card-head">
+          <div>
+            <h2 id="auth-title">Вход</h2>
+            <p id="auth-subtitle">Войди, чтобы сохранять свой прогресс.</p>
+          </div>
+          <button type="button" class="auth-close" id="auth-close" aria-label="Закрыть">×</button>
+        </div>
+        <label class="auth-name-field" id="auth-name-field" hidden>
+          Имя
+          <input id="auth-name" type="text" autocomplete="name" />
+        </label>
+        <label>
+          Email
+          <input id="auth-email" type="email" autocomplete="email" required />
+        </label>
+        <label>
+          Пароль
+          <input id="auth-password" type="password" autocomplete="current-password" minlength="6" required />
+        </label>
+        <p class="auth-message" id="auth-message" aria-live="polite"></p>
+        <button type="submit" class="btn auth-submit" id="auth-submit">Войти</button>
+        <button type="button" class="auth-switch" id="auth-switch">Нет аккаунта? Зарегистрироваться</button>
+        <button type="button" class="btn btn-ghost auth-admin" id="auth-admin" hidden>Панель администратора</button>
+        <button type="button" class="auth-signout btn btn-ghost" id="auth-signout" hidden>Выйти из аккаунта</button>
+      </form>
+    </dialog>
+
+    <dialog class="auth-dialog admin-dialog" id="admin-dialog">
+      <section class="auth-card admin-card">
+        <div class="auth-card-head">
+          <div>
+            <h2>Пользователи</h2>
+            <p>Прогресс зарегистрированных учеников.</p>
+          </div>
+          <button type="button" class="auth-close" id="admin-close" aria-label="Закрыть">×</button>
+        </div>
+        <p class="auth-message" id="admin-message" aria-live="polite"></p>
+        <div class="admin-summary" id="admin-summary"></div>
+        <div class="admin-users" id="admin-users"></div>
+      </section>
+    </dialog>
+
+    <script src="node_modules/@supabase/supabase-js/dist/umd/supabase.js"></script>
+    <script src="auth.js"></script>
     <script src="app.js"></script>
   </body>
 </html>

@@ -3005,7 +3005,7 @@ function syncSchulteControls() {
   schulteStopBtn.disabled = !state.schulte.active && !state.schulte.startedAt;
 }
 
-document.getElementById("reset-progress").addEventListener("click", () => {
+document.getElementById("reset-progress").addEventListener("click", async () => {
   if (!window.confirm("Сбросить весь сохраненный прогресс?")) return;
   stopMathTimer();
   stopNumberTimer();
@@ -3021,6 +3021,7 @@ document.getElementById("reset-progress").addEventListener("click", () => {
   wordTimerEl.textContent = "Таймер: 0.0с";
   state.progress = structuredClone(defaults);
   persist();
+  await deleteRemoteProgress();
   updateMathBestTime();
   updateNumberBestTime();
   updateWordBestTime();
@@ -3032,7 +3033,15 @@ document.getElementById("reset-progress").addEventListener("click", () => {
 document.getElementById("progress-mode").addEventListener("change", renderProgress);
 
 function applyModeResult(mode, success, extra = {}) {
-  const bucket = state.progress[mode];
+  addResultToProgress(state.progress, mode, success, extra, new Date().toISOString());
+
+  persist();
+  renderProgress();
+  saveRemoteAttempt(mode, success, extra);
+}
+
+function addResultToProgress(progress, mode, success, extra = {}, at = new Date().toISOString()) {
+  const bucket = progress[mode];
   bucket.attempts += 1;
   if (success) {
     bucket.correct += 1;
@@ -3078,17 +3087,97 @@ function applyModeResult(mode, success, extra = {}) {
     }
   }
 
-  state.progress.sessions.unshift({
+  progress.sessions.unshift({
     mode,
     success,
-    at: new Date().toISOString(),
+    at,
     score: extra.span || extra.count || extra.size || null,
   });
-  state.progress.sessions = state.progress.sessions.slice(0, 20);
+  progress.sessions = progress.sessions.slice(0, 20);
+}
 
+async function saveRemoteAttempt(mode, success, score) {
+  const auth = window.mnemonicAuth;
+  const user = auth?.getUser();
+  if (!user) return;
+
+  const { error } = await auth.client.from("attempts").insert({
+    user_id: user.id,
+    exercise: mode,
+    success,
+    score,
+  });
+  if (error) console.error("Не удалось сохранить попытку:", error.message);
+}
+
+async function deleteRemoteProgress() {
+  const auth = window.mnemonicAuth;
+  const user = auth?.getUser();
+  if (!user) return;
+
+  const { error } = await auth.client.from("attempts").delete().eq("user_id", user.id);
+  if (error) console.error("Не удалось сбросить прогресс аккаунта:", error.message);
+}
+
+async function syncProgressForUser(user) {
+  if (!user || !window.mnemonicAuth) {
+    state.progress = loadProgress();
+    refreshProgressUi();
+    return;
+  }
+
+  const auth = window.mnemonicAuth;
+  const migrationKey = `mnemonic_lab_migrated_${user.id}`;
+  let { data: rows, error } = await auth.client
+    .from("attempts")
+    .select("exercise, success, score, created_at")
+    .order("created_at", { ascending: true });
+
+  if (error) {
+    console.error("Не удалось загрузить прогресс:", error.message);
+    return;
+  }
+
+  const localProgress = loadProgress(STORAGE_KEY);
+  if (!rows.length && localProgress.sessions.length && !localStorage.getItem(migrationKey)) {
+    const legacyRows = localProgress.sessions.map((entry) => ({
+      user_id: user.id,
+      exercise: entry.mode,
+      success: Boolean(entry.success),
+      score: entry.score == null ? {} : { value: entry.score },
+      created_at: entry.at,
+    }));
+    const migration = await auth.client.from("attempts").insert(legacyRows);
+    if (!migration.error) {
+      localStorage.setItem(migrationKey, "1");
+      rows = legacyRows;
+    } else {
+      console.error("Не удалось перенести локальный прогресс:", migration.error.message);
+    }
+  }
+
+  const remoteProgress = structuredClone(defaults);
+  rows.forEach((row) => {
+    const score = row.score && typeof row.score === "object" ? row.score : {};
+    addResultToProgress(remoteProgress, row.exercise, Boolean(row.success), score, row.created_at);
+  });
+  state.progress = remoteProgress;
   persist();
+  refreshProgressUi();
+}
+
+function refreshProgressUi() {
+  updateMathBestTime();
+  updateNumberBestTime();
+  updateWordBestTime();
+  updateSchulteBestTime();
+  updateExamBestTime();
   renderProgress();
 }
+
+window.addEventListener("mnemonic-auth-changed", (event) => {
+  syncProgressForUser(event.detail?.user || null);
+});
 
 function renderProgress() {
   const math = state.progress.math;
@@ -3308,9 +3397,14 @@ function formatShortDate(value) {
   });
 }
 
-function loadProgress() {
+function progressStorageKey() {
+  const userId = window.mnemonicAuth?.getUser()?.id;
+  return userId ? `${STORAGE_KEY}_${userId}` : STORAGE_KEY;
+}
+
+function loadProgress(storageKey = progressStorageKey()) {
   try {
-    const parsed = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null");
+    const parsed = JSON.parse(localStorage.getItem(storageKey) || "null");
     if (!parsed) return structuredClone(defaults);
     return {
       ...structuredClone(defaults),
@@ -3359,7 +3453,7 @@ function updateSchulteBestTime() {
 }
 
 function persist() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(state.progress));
+  localStorage.setItem(progressStorageKey(), JSON.stringify(state.progress));
 }
 
 function randomInt(min, max) {
