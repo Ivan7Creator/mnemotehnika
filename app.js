@@ -17,7 +17,17 @@ const defaults = {
 
 const state = {
   progress: loadProgress(),
-  math: { answer: null, startedAt: null, timerId: null },
+  math: {
+    answer: null,
+    startedAt: null,
+    timerId: null,
+    seriesActive: false,
+    seriesIndex: 0,
+    totalRounds: 5,
+    correctInSeries: 0,
+    reviewRows: [],
+    taskConfig: null,
+  },
   numbers: {
     value: "",
     roundId: 0,
@@ -291,7 +301,15 @@ const mathSubmitBtn = mathForm.querySelector('button[type="submit"]');
 const mathTimerEl = document.getElementById("math-timer");
 const mathBestTimeEl = document.getElementById("math-best-time");
 const mathDifficultyEl = document.getElementById("math-difficulty");
+const mathTotalRoundsEl = document.getElementById("math-total-rounds");
+const mathSeriesProgressEl = document.getElementById("math-series-progress");
+const mathReviewEl = document.getElementById("math-review");
 const mathDifficultyWrap = document.getElementById("math-difficulty-wrap");
+const mathDifficultyPreviewEl = document.getElementById("math-difficulty-preview");
+const mathPreviewTagsEl = document.getElementById("math-preview-tags");
+const mathPreviewRangesEl = document.getElementById("math-preview-ranges");
+const mathPreviewNumberTypeEl = document.getElementById("math-preview-number-type");
+const mathPreviewExamplesEl = document.getElementById("math-preview-examples");
 const mathChoiceDividerEl = document.querySelector(".math-choice-divider");
 const mathCustomToggleBtn = document.getElementById("math-custom-toggle");
 const mathCustomSettingsEl = document.getElementById("math-custom-settings");
@@ -307,6 +325,7 @@ mathNewBtn.addEventListener("click", generateMathTask);
 mathAgainBtn.addEventListener("click", resetMathExercise);
 mathStopBtn.addEventListener("click", stopMathExercise);
 mathCustomToggleBtn.addEventListener("click", toggleCustomMathSettings);
+mathDifficultyEl.addEventListener("change", updateMathDifficultyPreview);
 mathNumberSizeEl.addEventListener("change", updateCustomMathControls);
 mathOperationEl.addEventListener("change", updateCustomMathControls);
 mathAnswer.addEventListener("input", syncMathControls);
@@ -316,30 +335,21 @@ mathForm.addEventListener("submit", (event) => {
   if (state.math.answer === null) return;
   const value = Number((mathAnswer.value || "").trim());
   const correct = value === state.math.answer;
-  const tookSec = stopMathTimer();
-  applyModeResult("math", correct, { timeSec: tookSec });
-
-  const bestTimeSec = state.progress.math.bestTimeSec;
-  mathFeedback.innerHTML = `
-    <span class="math-result-title">${correct ? "Верно!" : "Неверно"}</span>
-    <span class="math-result-answer">Правильный ответ: ${state.math.answer}</span>
-    <span class="math-result-details">
-      <span class="math-result-stat math-result-time">
-        <span>Время</span>
-        <strong>${formatSeconds(tookSec)}</strong>
-      </span>
-      <span class="math-result-stat math-result-record">
-        <span>Рекорд</span>
-        <strong>${formatSeconds(bestTimeSec)}</strong>
-      </span>
-    </span>
-  `;
-  mathFeedback.className = `feedback ${correct ? "ok" : "bad"}`;
+  if (correct) state.math.correctInSeries += 1;
+  state.math.reviewRows.push({
+    index: state.math.seriesIndex,
+    expression: mathTaskEl.textContent,
+    expected: state.math.answer,
+    actual: value,
+    correct,
+  });
   mathForm.reset();
   state.math.answer = null;
-  setMathTaskPlaceholder("Нажми «Решать»");
-  setMathStage("result");
-  syncMathControls();
+  if (state.math.seriesIndex >= state.math.totalRounds) {
+    finishMathSeries();
+  } else {
+    showNextMathTask();
+  }
 });
 
 function getMathTaskConfig() {
@@ -353,7 +363,11 @@ function getMathTaskConfig() {
   }
 
   const difficulty = mathDifficultyEl.value;
-  const operations = difficulty === "hard" ? ["mul"] : ["add", "sub", "mul"];
+  const operations = difficulty === "hard" || difficulty === "expert"
+    ? ["mul"]
+    : difficulty === "medium"
+      ? ["add", "sub"]
+      : ["add", "sub", "mul"];
   const operation = operations[randomInt(0, operations.length - 1)];
 
   if (difficulty === "easy") {
@@ -361,13 +375,14 @@ function getMathTaskConfig() {
   }
 
   if (difficulty === "hard") {
-    return { operation, bounds: { min: 20, max: 100 } };
+    return { operation, bounds: { min: 1, max: 9 } };
   }
 
-  const bounds = operation === "mul"
-    ? { min: 10, max: 20 }
-    : { min: 10, max: 99 };
-  return { operation, bounds };
+  if (difficulty === "expert") {
+    return { operation, bounds: { min: 10, max: 99 } };
+  }
+
+  return { operation, bounds: { min: 10, max: 99 } };
 }
 
 function toggleCustomMathSettings() {
@@ -378,12 +393,57 @@ function setCustomMathSettingsVisible(visible) {
   mathCustomSettingsEl.hidden = !visible;
   mathCustomSettingsEl.closest(".math-action-controls").classList.toggle("custom-mode", visible);
   mathDifficultyWrap.hidden = visible;
+  mathDifficultyPreviewEl.hidden = visible;
   mathChoiceDividerEl.hidden = visible;
   mathCustomToggleBtn.setAttribute("aria-expanded", String(visible));
   mathCustomToggleBtn.classList.toggle("active", visible);
   mathCustomToggleBtn.textContent = visible ? "Готовое упражнение" : "Свой пример";
   updateCustomMathControls();
   syncMathControls();
+}
+
+const mathDifficultyPreviews = {
+  easy: {
+    tags: ["Сложение", "Вычитание", "Умножение"],
+    ranges: ["1–9"],
+    numberType: "Однозначные",
+    examples: ["7 + 4", "9 − 3", "6 × 8"],
+  },
+  medium: {
+    tags: ["Сложение", "Вычитание"],
+    ranges: ["До 100"],
+    numberType: "Двузначные",
+    examples: ["47 + 28", "83 − 36", "64 + 19"],
+  },
+  hard: {
+    tags: ["Умножение"],
+    ranges: ["До 10"],
+    numberType: "Однозначные",
+    examples: ["7 × 4", "9 × 3", "6 × 8"],
+  },
+  expert: {
+    tags: ["Умножение"],
+    ranges: ["До 100"],
+    numberType: "Двузначные",
+    examples: ["24 × 36", "57 × 42", "83 × 69"],
+  },
+};
+
+function updateMathDifficultyPreview() {
+  const preview = mathDifficultyPreviews[mathDifficultyEl.value] || mathDifficultyPreviews.easy;
+  const createPill = (text) => {
+    const element = document.createElement("span");
+    element.textContent = text;
+    return element;
+  };
+  mathPreviewTagsEl.replaceChildren(...preview.tags.map(createPill));
+  mathPreviewRangesEl.replaceChildren(...preview.ranges.map(createPill));
+  mathPreviewNumberTypeEl.replaceChildren(createPill(preview.numberType));
+  mathPreviewExamplesEl.replaceChildren(...preview.examples.map((example) => {
+    const element = document.createElement("span");
+    element.textContent = example;
+    return element;
+  }));
 }
 
 function updateCustomMathControls() {
@@ -408,16 +468,75 @@ function buildMathTask(config = getMathTaskConfig()) {
 
 function generateMathTask() {
   stopMathTimer();
-  const task = buildMathTask();
-  state.math.answer = task.answer;
-  startMathTimer();
-  mathTaskEl.hidden = false;
-  mathTaskEl.textContent = task.expression;
-  mathTaskEl.classList.remove("challenge-hint");
+  state.math.seriesActive = true;
+  state.math.seriesIndex = 0;
+  state.math.totalRounds = Number(mathTotalRoundsEl.value) || 1;
+  state.math.correctInSeries = 0;
+  state.math.reviewRows = [];
+  state.math.taskConfig = getMathTaskConfig();
+  mathReviewEl.hidden = true;
+  mathReviewEl.innerHTML = "";
   mathFeedback.textContent = "";
+  mathSeriesProgressEl.hidden = false;
+  startMathTimer();
   setMathStage("task");
+  showNextMathTask();
+}
+
+function showNextMathTask() {
+  const task = buildMathTask(state.math.taskConfig);
+  state.math.seriesIndex += 1;
+  state.math.answer = task.answer;
+  mathSeriesProgressEl.textContent = `Пример: ${state.math.seriesIndex}/${state.math.totalRounds}`;
+  mathSubmitBtn.textContent = state.math.seriesIndex === state.math.totalRounds
+    ? "Проверить"
+    : "Дальше";
+  mathTaskEl.hidden = false;
+  mathTaskEl.textContent = task.expression.replace("*", "×");
+  mathTaskEl.classList.remove("challenge-hint");
   mathAnswer.focus();
   syncMathControls();
+}
+
+function finishMathSeries() {
+  const tookSec = stopMathTimer();
+  const success = state.math.correctInSeries === state.math.totalRounds;
+  applyModeResult("math", success, { timeSec: tookSec });
+  const bestTimeSec = state.progress.math.bestTimeSec;
+  mathFeedback.innerHTML = `
+    <span class="math-result-title">${success ? "Верно!" : "Неверно"}</span>
+    <span class="math-result-answer">Правильных ответов: ${state.math.correctInSeries}/${state.math.totalRounds}</span>
+    <span class="math-result-details">
+      <span class="math-result-stat math-result-time"><span>Время</span><strong>${formatSeconds(tookSec)}</strong></span>
+      <span class="math-result-stat math-result-record"><span>Рекорд</span><strong>${formatSeconds(bestTimeSec)}</strong></span>
+    </span>`;
+  mathFeedback.className = `feedback ${success ? "ok" : "bad"}`;
+  renderMathReview();
+  state.math.seriesActive = false;
+  state.math.answer = null;
+  mathSeriesProgressEl.hidden = true;
+  setMathStage("result");
+  syncMathControls();
+}
+
+function renderMathReview() {
+  mathReviewEl.innerHTML = `
+    <div class="word-review-head"><strong>Разбор упражнения</strong></div>
+    <div class="word-review-grid">${state.math.reviewRows.map((row) => `
+      <div class="word-review-row ${row.correct ? "is-ok" : "is-bad"}">
+        <div class="word-review-index">${row.index}</div>
+        <div class="word-review-columns">
+          <div class="word-review-col">
+            <span class="word-review-label">Правильный ответ</span>
+            <span class="word-chip expected">${escapeHtml(row.expression)} = ${row.expected}</span>
+          </div>
+          <div class="word-review-col">
+            <span class="word-review-label">Твой ответ</span>
+            <span class="word-chip actual ${row.correct ? "ok" : "bad"}">${row.actual}</span>
+          </div>
+        </div>
+      </div>`).join("")}</div>`;
+  mathReviewEl.hidden = false;
 }
 
 function startMathTimer() {
@@ -447,6 +566,12 @@ function stopMathExercise() {
   const hadActive = state.math.answer !== null || Boolean(state.math.startedAt);
   stopMathTimer();
   state.math.answer = null;
+  state.math.seriesActive = false;
+  state.math.seriesIndex = 0;
+  state.math.reviewRows = [];
+  mathSeriesProgressEl.hidden = true;
+  mathReviewEl.hidden = true;
+  mathReviewEl.innerHTML = "";
   setMathTaskPlaceholder("Нажми «Решать»");
   setMathStage("prep");
   mathForm.reset();
@@ -460,6 +585,12 @@ function stopMathExercise() {
 function resetMathExercise() {
   stopMathTimer();
   state.math.answer = null;
+  state.math.seriesActive = false;
+  state.math.seriesIndex = 0;
+  state.math.reviewRows = [];
+  mathSeriesProgressEl.hidden = true;
+  mathReviewEl.hidden = true;
+  mathReviewEl.innerHTML = "";
   mathForm.reset();
   mathFeedback.textContent = "";
   mathFeedback.className = "feedback";
@@ -477,13 +608,14 @@ function setMathStage(stage) {
 }
 
 function syncMathControls() {
-  const hasActiveTask = state.math.answer !== null;
+  const hasActiveTask = state.math.seriesActive;
   mathNewBtn.disabled = hasActiveTask;
   mathDifficultyEl.disabled = hasActiveTask;
   mathCustomToggleBtn.disabled = hasActiveTask;
   mathNumberSizeEl.disabled = hasActiveTask;
   mathOperationEl.disabled = hasActiveTask;
   mathMulLimitEl.disabled = hasActiveTask;
+  mathTotalRoundsEl.disabled = hasActiveTask;
   mathSubmitBtn.disabled = state.math.answer === null || !mathAnswer.value.trim();
   mathStopBtn.disabled = state.math.answer === null && !state.math.startedAt;
   mathAnswer.disabled = state.math.answer === null;
@@ -509,6 +641,9 @@ const numBestTimeEl = document.getElementById("num-best-time");
 const numReviewEl = document.getElementById("num-review");
 const numDifficultyEl = document.getElementById("num-difficulty");
 const numDifficultyWrap = document.getElementById("num-difficulty-wrap");
+const numDifficultyPreviewEl = document.getElementById("num-difficulty-preview");
+const numPreviewTagsEl = document.getElementById("num-preview-tags");
+const numPreviewExamplesEl = document.getElementById("num-preview-examples");
 const numChoiceDividerEl = document.querySelector(".num-choice-divider");
 const numCustomToggleBtn = document.getElementById("num-custom-toggle");
 const numCustomSettingsEl = document.getElementById("num-custom-settings");
@@ -522,6 +657,7 @@ numCustomToggleBtn.addEventListener("click", toggleCustomNumberSettings);
 numNextBtn.addEventListener("click", runNextNumberRound);
 numStopBtn.addEventListener("click", stopNumberExercise);
 numAnswer.addEventListener("input", syncNumberControls);
+numDifficultyEl.addEventListener("change", updateNumberDifficultyPreview);
 numTotalRoundsEl.addEventListener("change", () => {
   state.numbers.totalRounds = Number(numTotalRoundsEl.value) || 6;
   if (!state.numbers.seriesActive) {
@@ -618,6 +754,7 @@ function setCustomNumberSettingsVisible(visible) {
   numCustomSettingsEl.hidden = !visible;
   numCustomSettingsEl.closest(".num-action-controls").classList.toggle("custom-mode", visible);
   numDifficultyWrap.hidden = visible;
+  numDifficultyPreviewEl.hidden = visible;
   numChoiceDividerEl.hidden = visible;
   numCustomToggleBtn.setAttribute("aria-expanded", String(visible));
   numCustomToggleBtn.classList.toggle("active", visible);
@@ -626,12 +763,45 @@ function setCustomNumberSettingsVisible(visible) {
   syncNumberControls();
 }
 
+const numberDifficultyPreviews = {
+  easy: {
+    tags: ["3 ряда", "По 3 цифры", "2 сек. на показ"],
+    examples: ["4 8 2", "7 1 9", "3 6 5"],
+  },
+  medium: {
+    tags: ["4 ряда", "По 4 цифры", "1,5 сек. на показ"],
+    examples: ["5 2 8 1", "9 4 6 3", "7 0 2 5"],
+  },
+  hard: {
+    tags: ["5 рядов", "По 5 цифр", "1 сек. на показ"],
+    examples: ["8 3 7 1 6", "4 9 2 5 0", "6 1 8 4 7"],
+  },
+  expert: {
+    tags: ["6 рядов", "По 6 циф", "0,5 сек. на показ"],
+    examples: ["9 2 6 4 1 8", "3 7 0 5 9 2", "6 1 8 3 7 4"],
+  },
+};
+
 function updateNumberDifficultyPreview() {
   const config = getNumberSeriesConfig();
   state.numbers.totalRounds = config.totalRounds;
   if (!state.numbers.seriesActive) {
     numSeriesProgressEl.textContent = `Ряд: 0/${config.totalRounds}`;
   }
+  if (!numCustomSettingsEl.hidden) return;
+
+  const preview = numberDifficultyPreviews[numDifficultyEl.value] || numberDifficultyPreviews.easy;
+  const createPill = (text) => {
+    const element = document.createElement("span");
+    element.textContent = text;
+    return element;
+  };
+  numPreviewTagsEl.replaceChildren(...preview.tags.map(createPill));
+  numPreviewExamplesEl.replaceChildren(...preview.examples.map((example) => {
+    const element = document.createElement("span");
+    element.textContent = example;
+    return element;
+  }));
 }
 
 async function runNextNumberRound() {
@@ -1835,6 +2005,9 @@ const wordDifficulty = document.getElementById("word-difficulty");
 const wordLanguageEl = document.getElementById("word-language");
 const wordLevelEl = document.getElementById("word-level");
 const wordLevelWrap = document.getElementById("word-level-wrap");
+const wordDifficultyPreviewEl = document.getElementById("word-difficulty-preview");
+const wordPreviewTagsEl = document.getElementById("word-preview-tags");
+const wordPreviewExamplesEl = document.getElementById("word-preview-examples");
 const wordChoiceDividerEl = document.querySelector(".word-choice-divider");
 const wordCustomToggleBtn = document.getElementById("word-custom-toggle");
 const wordCustomSettingsEl = document.getElementById("word-custom-settings");
@@ -1856,6 +2029,8 @@ wordAgainBtn.addEventListener("click", resetWordExercise);
 wordCustomToggleBtn.addEventListener("click", toggleCustomWordSettings);
 wordStopBtn.addEventListener("click", stopWordExercise);
 wordAnswer.addEventListener("input", syncWordControls);
+wordLevelEl.addEventListener("change", updateWordDifficultyPreview);
+wordLanguageEl.addEventListener("change", updateWordDifficultyPreview);
 
 wordForm.addEventListener("submit", (event) => {
   event.preventDefault();
@@ -1952,10 +2127,52 @@ function toggleCustomWordSettings() {
   wordCustomSettingsEl.hidden = !visible;
   wordCustomSettingsEl.closest(".word-action-controls").classList.toggle("custom-mode", visible);
   wordLevelWrap.hidden = visible;
+  wordDifficultyPreviewEl.hidden = visible;
   wordChoiceDividerEl.hidden = visible;
   wordCustomToggleBtn.setAttribute("aria-expanded", String(visible));
   wordCustomToggleBtn.classList.toggle("active", visible);
   wordCustomToggleBtn.textContent = visible ? "Готовое упражнение" : "Свой пример";
+  if (!visible) updateWordDifficultyPreview();
+}
+
+const wordDifficultyPreviews = {
+  easy: {
+    tags: ["10 слов", "Простые", "5 сек. на слово"],
+    ru: ["лес", "книга", "мост"],
+    en: ["forest", "book", "bridge"],
+  },
+  medium: {
+    tags: ["20 слов", "Простые", "4 сек. на слово"],
+    ru: ["окно", "река", "фонарь"],
+    en: ["window", "river", "lantern"],
+  },
+  hard: {
+    tags: ["10 слов", "Сложные", "3 сек. на слово"],
+    ru: ["лабиринт", "созвездие", "равновесие"],
+    en: ["labyrinth", "constellation", "equilibrium"],
+  },
+  expert: {
+    tags: ["20 слов", "Сложные", "2 сек. на слово"],
+    ru: ["метаморфоза", "противоречие", "воображение"],
+    en: ["metamorphosis", "contradiction", "imagination"],
+  },
+};
+
+function updateWordDifficultyPreview() {
+  if (!wordCustomSettingsEl.hidden) return;
+  const preview = wordDifficultyPreviews[wordLevelEl.value] || wordDifficultyPreviews.easy;
+  const language = wordLanguageEl.value === "en" ? "en" : "ru";
+  const createPill = (text) => {
+    const element = document.createElement("span");
+    element.textContent = text;
+    return element;
+  };
+  wordPreviewTagsEl.replaceChildren(...preview.tags.map(createPill));
+  wordPreviewExamplesEl.replaceChildren(...preview[language].map((word) => {
+    const element = document.createElement("span");
+    element.textContent = word;
+    return element;
+  }));
 }
 
 function revealNextWord() {
@@ -3618,11 +3835,14 @@ loadBaldaChainsFromCsv();
 setMathTaskPlaceholder("Нажми «Решать»");
 state.numbers.totalRounds = getNumberSeriesConfig().totalRounds;
 numSeriesProgressEl.textContent = `Ряд: 0/${state.numbers.totalRounds}`;
+updateNumberDifficultyPreview();
 setNumberTaskPlaceholder("Нажми «Новый пример»");
 setExamTaskPlaceholder("Нажми «Начать экзамен»");
 updateMathBestTime();
+updateMathDifficultyPreview();
 updateNumberBestTime();
 updateWordBestTime();
+updateWordDifficultyPreview();
 updateSchulteBestTime();
 updateExamBestTime();
 syncMathControls();

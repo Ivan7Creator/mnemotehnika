@@ -1028,6 +1028,125 @@ label {
   width: auto;
 }
 
+#math-total-rounds {
+  min-width: 76px;
+}
+
+.math-difficulty-preview {
+  order: -1;
+  max-width: 720px;
+  width: 100%;
+  margin: 0 auto 0.25rem;
+  border: 1px solid rgba(196, 75, 50, 0.18);
+  border-radius: 16px;
+  background: linear-gradient(135deg, rgba(248, 227, 193, 0.42), rgba(255, 255, 255, 0.72));
+}
+
+.math-difficulty-preview summary {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 1rem 1.2rem;
+  color: var(--ink);
+  font-weight: 700;
+  cursor: pointer;
+  list-style: none;
+}
+
+.math-difficulty-preview summary::-webkit-details-marker {
+  display: none;
+}
+
+.math-difficulty-preview summary::before {
+  content: "›";
+  display: inline-block;
+  color: var(--accent);
+  font-size: 1.25rem;
+  line-height: 1;
+  transform: rotate(0deg);
+  transition: transform 0.18s ease;
+}
+
+.math-difficulty-preview[open] summary::before {
+  transform: rotate(90deg);
+}
+
+.math-preview-content {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(210px, 0.7fr);
+  gap: 1.25rem;
+  align-items: center;
+  padding: 0 1.2rem 1.1rem;
+}
+
+.math-preview-copy {
+  display: grid;
+  gap: 0.8rem;
+  min-width: 0;
+}
+
+.math-preview-line {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.math-preview-label {
+  color: rgba(32, 26, 23, 0.68);
+  font-size: 0.86rem;
+  font-weight: 600;
+}
+
+.math-preview-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.math-preview-tags span {
+  padding: 0.26rem 0.55rem;
+  border-radius: 999px;
+  background: rgba(196, 75, 50, 0.09);
+  color: rgba(98, 43, 31, 0.9);
+  font-size: 0.76rem;
+  font-weight: 600;
+}
+
+.math-preview-ranges span {
+  background: rgba(61, 115, 105, 0.1);
+  color: rgba(37, 82, 74, 0.92);
+}
+
+.math-preview-operations span,
+.math-preview-number-type span {
+  background: rgba(61, 115, 105, 0.1);
+  color: rgba(37, 82, 74, 0.92);
+}
+
+.math-preview-examples {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
+.math-preview-examples span {
+  display: grid;
+  min-height: 48px;
+  place-items: center;
+  padding: 0.55rem;
+  border: 1px solid rgba(196, 75, 50, 0.14);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.78);
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 1rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  box-shadow: 0 5px 14px rgba(93, 61, 43, 0.06);
+}
+
+.math-preview-examples span:last-child {
+  grid-column: 1 / -1;
+}
+
 .math-choice-divider {
   color: var(--ink);
   font-size: 1rem;
@@ -1074,7 +1193,7 @@ label {
 }
 
 .math-action-controls.custom-mode .math-mode-row {
-  display: none;
+  display: flex;
 }
 
 #math-panel.math-stage-prep #math-task,
@@ -1082,6 +1201,18 @@ label {
 #math-panel.math-stage-prep #math-feedback,
 #math-panel.math-stage-prep #math-stop {
   display: none;
+}
+
+#math-panel.math-stage-prep #math-series-progress,
+#math-panel.math-stage-result #math-series-progress {
+  display: none;
+}
+
+#math-series-progress {
+  margin: 0.5rem 0;
+  color: rgba(32, 26, 23, 0.68);
+  text-align: center;
+  font-weight: 700;
 }
 
 #math-panel.math-stage-task .math-action-controls,
@@ -1178,6 +1309,14 @@ label {
   font-weight: 700;
 }
 
+.num-preview-content {
+  grid-template-columns: minmax(0, 0.9fr) minmax(280px, 1.1fr);
+}
+
+.num-preview-content .math-preview-examples span {
+  white-space: nowrap;
+}
+
 .num-start-btn {
   min-width: 150px;
 }
@@ -1253,6 +1392,14 @@ label {
   color: var(--ink);
   font-size: 1rem;
   font-weight: 700;
+}
+
+.word-preview-content {
+  grid-template-columns: minmax(0, 0.9fr) minmax(280px, 1.1fr);
+}
+
+.word-preview-examples span {
+  overflow-wrap: anywhere;
 }
 
 .word-custom-choice {
@@ -2814,6 +2961,34 @@ textarea {
   .math-settings-controls label,
   .num-settings-controls label {
     justify-content: center;
+  }
+
+  .math-difficulty-preview {
+    width: 100%;
+  }
+
+  .math-difficulty-preview summary {
+    padding: 0.9rem 1rem;
+  }
+
+  .math-preview-content {
+    grid-template-columns: 1fr;
+    gap: 0.9rem;
+    padding: 0 1rem 1rem;
+  }
+
+  .math-preview-examples {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .math-preview-examples span {
+    min-height: 44px;
+    padding: 0.45rem 0.25rem;
+    font-size: 0.9rem;
+  }
+
+  .math-preview-examples span:last-child {
+    grid-column: auto;
   }
 
   .controls .schulte-letters-option {

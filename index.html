@@ -206,9 +206,9 @@
         <details class="exercise-help math-help" id="math-help" open>
           <summary>Как проходит упражнение</summary>
           <ol>
-            <li>Выбери сложность или настрой свой пример.</li>
-            <li>Нажми «Решать» и вычисли пример без калькулятора.</li>
-            <li>Введи ответ и проверь, правильный ли он.</li>
+            <li>Выбери сложность или настрой свои примеры.</li>
+            <li>Задай количество примеров от 1 до 10 и нажми «Решать».</li>
+            <li>Вводи ответы по очереди. Результаты и разбор появятся в конце.</li>
           </ol>
         </details>
         <div class="math-action-controls">
@@ -219,9 +219,45 @@
                 <option value="easy" selected>Лёгкая</option>
                 <option value="medium">Средняя</option>
                 <option value="hard">Высокая</option>
+                <option value="expert">Экспертная</option>
+              </select>
+            </label>
+            <label>
+              Кол-во примеров
+              <select id="math-total-rounds">
+                <option value="1">1</option>
+                <option value="2">2</option>
+                <option value="3">3</option>
+                <option value="4">4</option>
+                <option value="5" selected>5</option>
+                <option value="6">6</option>
+                <option value="7">7</option>
+                <option value="8">8</option>
+                <option value="9">9</option>
+                <option value="10">10</option>
               </select>
             </label>
           </div>
+          <details class="math-difficulty-preview" id="math-difficulty-preview" open>
+            <summary>Что будет в упражнении</summary>
+            <div class="math-preview-content" aria-live="polite">
+              <div class="math-preview-copy">
+                <div class="math-preview-line">
+                  <span class="math-preview-label">Операции</span>
+                  <div class="math-preview-tags math-preview-operations" id="math-preview-tags" aria-label="Операции"></div>
+                </div>
+                <div class="math-preview-line">
+                  <span class="math-preview-label">Тип числа</span>
+                  <div class="math-preview-tags math-preview-number-type" id="math-preview-number-type" aria-label="Тип числа"></div>
+                </div>
+                <div class="math-preview-line">
+                  <span class="math-preview-label">Числа</span>
+                  <div class="math-preview-tags math-preview-ranges" id="math-preview-ranges" aria-label="Диапазоны чисел"></div>
+                </div>
+              </div>
+              <div class="math-preview-examples" id="math-preview-examples" aria-label="Примеры заданий"></div>
+            </div>
+          </details>
           <div class="math-custom-choice">
             <span class="math-choice-divider">или</span>
             <button type="button" id="math-custom-toggle" class="btn btn-ghost" aria-expanded="false" aria-controls="math-custom-settings">Свой пример</button>
@@ -265,6 +301,7 @@
           <span id="math-timer" class="meta-chip">Таймер: 0.0с</span>
           <span id="math-best-time" class="meta-chip">Рекорд: --</span>
         </div>
+        <div id="math-series-progress" class="series-progress" hidden>Пример: 0/5</div>
         <div class="challenge" id="math-task" hidden></div>
         <form id="math-form" class="answer-form">
           <input
@@ -284,6 +321,7 @@
           <div class="math-result-card">
             <p id="math-feedback" class="feedback" aria-live="polite"></p>
           </div>
+          <div id="math-review" class="word-review" hidden></div>
           <button type="button" id="math-again" class="btn math-again-btn">Ещё упражнение</button>
         </div>
         <button type="button" id="math-stop" class="btn btn-stop">Закончить упражнение</button>
@@ -314,6 +352,18 @@
               </select>
             </label>
           </div>
+          <details class="math-difficulty-preview num-difficulty-preview" id="num-difficulty-preview" open>
+            <summary>Что будет в упражнении</summary>
+            <div class="math-preview-content num-preview-content" aria-live="polite">
+              <div class="math-preview-copy">
+                <div class="math-preview-line">
+                  <span class="math-preview-label">Вас ждут</span>
+                  <div class="math-preview-tags" id="num-preview-tags" aria-label="Параметры упражнения"></div>
+                </div>
+              </div>
+              <div class="math-preview-examples" id="num-preview-examples" aria-label="Примеры числовых рядов"></div>
+            </div>
+          </details>
           <div class="num-custom-choice">
             <span class="num-choice-divider">или</span>
             <button type="button" id="num-custom-toggle" class="btn btn-ghost" aria-expanded="false" aria-controls="num-custom-settings">Свой пример</button>
@@ -543,6 +593,18 @@
               </select>
             </label>
           </div>
+          <details class="math-difficulty-preview word-difficulty-preview" id="word-difficulty-preview" open>
+            <summary>Что будет в упражнении</summary>
+            <div class="math-preview-content word-preview-content" aria-live="polite">
+              <div class="math-preview-copy">
+                <div class="math-preview-line">
+                  <span class="math-preview-label">Вас ждут</span>
+                  <div class="math-preview-tags" id="word-preview-tags" aria-label="Параметры упражнения"></div>
+                </div>
+              </div>
+              <div class="math-preview-examples word-preview-examples" id="word-preview-examples" aria-label="Примеры слов"></div>
+            </div>
+          </details>
           <div class="word-custom-choice">
             <span class="word-choice-divider">или</span>
             <button type="button" id="word-custom-toggle" class="btn btn-ghost" aria-expanded="false" aria-controls="word-custom-settings">Свой пример</button>
