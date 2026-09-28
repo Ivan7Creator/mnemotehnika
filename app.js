@@ -95,6 +95,7 @@ const state = {
     startedAt: null,
     timerId: null,
     active: false,
+    errors: 0,
     stage: "prep",
   },
   exam: {
@@ -642,7 +643,8 @@ const numReviewEl = document.getElementById("num-review");
 const numDifficultyEl = document.getElementById("num-difficulty");
 const numDifficultyWrap = document.getElementById("num-difficulty-wrap");
 const numDifficultyPreviewEl = document.getElementById("num-difficulty-preview");
-const numPreviewTagsEl = document.getElementById("num-preview-tags");
+const numPreviewDigitsEl = document.getElementById("num-preview-digits");
+const numPreviewDurationEl = document.getElementById("num-preview-duration");
 const numPreviewExamplesEl = document.getElementById("num-preview-examples");
 const numChoiceDividerEl = document.querySelector(".num-choice-divider");
 const numCustomToggleBtn = document.getElementById("num-custom-toggle");
@@ -765,19 +767,23 @@ function setCustomNumberSettingsVisible(visible) {
 
 const numberDifficultyPreviews = {
   easy: {
-    tags: ["3 ряда", "По 3 цифры", "2 сек. на показ"],
+    digits: "3",
+    duration: "2 сек.",
     examples: ["4 8 2", "7 1 9", "3 6 5"],
   },
   medium: {
-    tags: ["4 ряда", "По 4 цифры", "1,5 сек. на показ"],
+    digits: "4",
+    duration: "1,5 сек.",
     examples: ["5 2 8 1", "9 4 6 3", "7 0 2 5"],
   },
   hard: {
-    tags: ["5 рядов", "По 5 цифр", "1 сек. на показ"],
+    digits: "5",
+    duration: "1 сек.",
     examples: ["8 3 7 1 6", "4 9 2 5 0", "6 1 8 4 7"],
   },
   expert: {
-    tags: ["6 рядов", "По 6 циф", "0,5 сек. на показ"],
+    digits: "6",
+    duration: "0,5 сек.",
     examples: ["9 2 6 4 1 8", "3 7 0 5 9 2", "6 1 8 3 7 4"],
   },
 };
@@ -796,7 +802,8 @@ function updateNumberDifficultyPreview() {
     element.textContent = text;
     return element;
   };
-  numPreviewTagsEl.replaceChildren(...preview.tags.map(createPill));
+  numPreviewDigitsEl.replaceChildren(createPill(preview.digits));
+  numPreviewDurationEl.replaceChildren(createPill(preview.duration));
   numPreviewExamplesEl.replaceChildren(...preview.examples.map((example) => {
     const element = document.createElement("span");
     element.textContent = example;
@@ -2006,7 +2013,10 @@ const wordLanguageEl = document.getElementById("word-language");
 const wordLevelEl = document.getElementById("word-level");
 const wordLevelWrap = document.getElementById("word-level-wrap");
 const wordDifficultyPreviewEl = document.getElementById("word-difficulty-preview");
-const wordPreviewTagsEl = document.getElementById("word-preview-tags");
+const wordPreviewCountEl = document.getElementById("word-preview-count");
+const wordPreviewTypeEl = document.getElementById("word-preview-type");
+const wordPreviewDurationEl = document.getElementById("word-preview-duration");
+const wordPreviewLanguageEl = document.getElementById("word-preview-language");
 const wordPreviewExamplesEl = document.getElementById("word-preview-examples");
 const wordChoiceDividerEl = document.querySelector(".word-choice-divider");
 const wordCustomToggleBtn = document.getElementById("word-custom-toggle");
@@ -2114,10 +2124,11 @@ function getWordConfig() {
   }
 
   const presets = {
+    easiest: { targetCount: 2, revealSeconds: 2, isComplex: false },
     easy: { targetCount: 10, revealSeconds: 5, isComplex: false },
     medium: { targetCount: 20, revealSeconds: 4, isComplex: false },
     hard: { targetCount: 10, revealSeconds: 3, isComplex: true },
-    expert: { targetCount: 20, revealSeconds: 2, isComplex: true },
+    expert: { targetCount: 10, revealSeconds: 2, isComplex: true },
   };
   return presets[wordLevelEl.value] || presets.easy;
 }
@@ -2136,23 +2147,38 @@ function toggleCustomWordSettings() {
 }
 
 const wordDifficultyPreviews = {
+  easiest: {
+    count: "2",
+    type: "Простые",
+    duration: "2 сек.",
+    ru: ["лес", "мост"],
+    en: ["forest", "bridge"],
+  },
   easy: {
-    tags: ["10 слов", "Простые", "5 сек. на слово"],
+    count: "10",
+    type: "Простые",
+    duration: "5 сек.",
     ru: ["лес", "книга", "мост"],
     en: ["forest", "book", "bridge"],
   },
   medium: {
-    tags: ["20 слов", "Простые", "4 сек. на слово"],
+    count: "20",
+    type: "Простые",
+    duration: "4 сек.",
     ru: ["окно", "река", "фонарь"],
     en: ["window", "river", "lantern"],
   },
   hard: {
-    tags: ["10 слов", "Сложные", "3 сек. на слово"],
+    count: "10",
+    type: "Сложные",
+    duration: "3 сек.",
     ru: ["лабиринт", "созвездие", "равновесие"],
     en: ["labyrinth", "constellation", "equilibrium"],
   },
   expert: {
-    tags: ["20 слов", "Сложные", "2 сек. на слово"],
+    count: "10",
+    type: "Сложные",
+    duration: "2 сек.",
     ru: ["метаморфоза", "противоречие", "воображение"],
     en: ["metamorphosis", "contradiction", "imagination"],
   },
@@ -2167,7 +2193,10 @@ function updateWordDifficultyPreview() {
     element.textContent = text;
     return element;
   };
-  wordPreviewTagsEl.replaceChildren(...preview.tags.map(createPill));
+  wordPreviewCountEl.replaceChildren(createPill(preview.count));
+  wordPreviewTypeEl.replaceChildren(createPill(preview.type));
+  wordPreviewDurationEl.replaceChildren(createPill(preview.duration));
+  wordPreviewLanguageEl.replaceChildren(createPill(language === "ru" ? "Русский" : "Английский"));
   wordPreviewExamplesEl.replaceChildren(...preview[language].map((word) => {
     const element = document.createElement("span");
     element.textContent = word;
@@ -2234,7 +2263,7 @@ function finishWordMemorizing() {
   }
   clearWordRevealTimer();
   state.words.phase = "recall";
-  wordTaskEl.textContent = "Все слова показаны, выведи теперь их по памяти по порядку.";
+  wordTaskEl.textContent = "Показ завершен";
   wordTaskEl.classList.add("challenge-hint");
   wordFeedback.textContent = "";
   wordAnswer.focus();
@@ -3000,7 +3029,11 @@ function revokeAttentionImageUrl() {
 const schulteSizeEl = document.getElementById("schulte-size");
 const schulteLettersEl = document.getElementById("schulte-letters");
 const schulteDifficultyEl = document.getElementById("schulte-difficulty");
+const schulteSymbolModeEl = document.getElementById("schulte-symbol-mode");
 const schulteDifficultyWrap = document.getElementById("schulte-difficulty-wrap");
+const schultePreviewSizeEl = document.getElementById("schulte-preview-size");
+const schultePreviewElementsEl = document.getElementById("schulte-preview-elements");
+const schultePreviewExamplesEl = document.getElementById("schulte-preview-examples");
 const schulteActionControlsEl = document.querySelector(".schulte-action-controls");
 const schulteCustomToggleBtn = document.getElementById("schulte-custom-toggle");
 const schulteCustomSettingsEl = document.getElementById("schulte-custom-settings");
@@ -3028,6 +3061,8 @@ schulteStartBtn.addEventListener("click", startSchulteRound);
 schulteCustomToggleBtn.addEventListener("click", toggleCustomSchulteSettings);
 schulteStopBtn.addEventListener("click", stopSchulteExercise);
 schulteAgainBtn.addEventListener("click", resetSchulteExercise);
+schulteDifficultyEl.addEventListener("change", updateSchulteDifficultyPreview);
+schulteSymbolModeEl.addEventListener("change", updateSchulteDifficultyPreview);
 
 function getSchulteConfig() {
   if (!schulteCustomSettingsEl.hidden) {
@@ -3038,11 +3073,50 @@ function getSchulteConfig() {
   }
 
   const presets = {
-    easy: { size: 4, useLetters: false },
-    medium: { size: 5, useLetters: false },
-    hard: { size: 6, useLetters: true },
+    easy: { size: 4 },
+    medium: { size: 5 },
+    hard: { size: 6 },
   };
-  return presets[schulteDifficultyEl.value] || presets.easy;
+  const preset = presets[schulteDifficultyEl.value] || presets.easy;
+  return {
+    ...preset,
+    useLetters: schulteSymbolModeEl.value === "mixed",
+  };
+}
+
+const schulteDifficultyPreviews = {
+  easy: {
+    size: "4 × 4",
+    cells: "16",
+    numberExamples: ["1", "8", "16"],
+    mixedExamples: ["1", "А", "8"],
+  },
+  medium: {
+    size: "5 × 5",
+    cells: "25",
+    numberExamples: ["1", "13", "25"],
+    mixedExamples: ["1", "А", "12"],
+  },
+  hard: {
+    size: "6 × 6",
+    cells: "36",
+    numberExamples: ["1", "18", "36"],
+    mixedExamples: ["1", "А", "18"],
+  },
+};
+
+function updateSchulteDifficultyPreview() {
+  const preview = schulteDifficultyPreviews[schulteDifficultyEl.value] || schulteDifficultyPreviews.easy;
+  const useLetters = schulteSymbolModeEl.value === "mixed";
+  const createPill = (text) => {
+    const element = document.createElement("span");
+    element.textContent = text;
+    return element;
+  };
+  schultePreviewSizeEl.replaceChildren(createPill(preview.size));
+  schultePreviewElementsEl.replaceChildren(createPill(useLetters ? "Числа и буквы" : "Только числа"));
+  const examples = useLetters ? preview.mixedExamples : preview.numberExamples;
+  schultePreviewExamplesEl.replaceChildren(...examples.map(createPill));
 }
 
 function toggleCustomSchulteSettings() {
@@ -3064,6 +3138,7 @@ function startSchulteRound() {
     Array.from({ length: state.schulte.size * state.schulte.size }, (_, index) => index + 1),
   );
   state.schulte.nextValue = 1;
+  state.schulte.errors = 0;
   state.schulte.active = true;
   schulteFeedbackEl.textContent = "";
   schulteFeedbackEl.className = "feedback";
@@ -3110,6 +3185,7 @@ function handleSchulteCellClick(button) {
 
   const value = Number(button.dataset.value);
   if (value !== state.schulte.nextValue) {
+    state.schulte.errors += 1;
     button.classList.remove("is-wrong");
     void button.offsetWidth;
     button.classList.add("is-wrong");
@@ -3134,16 +3210,20 @@ function handleSchulteCellClick(button) {
 
 function finishSchulteRound() {
   const tookSec = stopSchulteTimer();
+  const success = state.schulte.errors === 0;
   state.schulte.active = false;
   updateSchulteProgress(true);
-  applyModeResult("schulte", true, {
+  applyModeResult("schulte", success, {
     size: state.schulte.size,
     timeSec: tookSec,
+    errors: state.schulte.errors,
   });
   const bestTimeSec = state.progress.schulte.bestTimeSec;
   schulteFeedbackEl.innerHTML = `
-    <span class="math-result-title">Готово!</span>
-    <span class="math-result-answer">Таблица ${state.schulte.size} × ${state.schulte.size} пройдена</span>
+    <span class="math-result-title">${success ? "Верно!" : "Неверно"}</span>
+    <span class="math-result-answer">${success
+      ? "Таблица пройдена без ошибок"
+      : `Таблица пройдена с ${state.schulte.errors} ${formatSchulteErrorWord(state.schulte.errors)}`}</span>
     <span class="math-result-details">
       <span class="math-result-stat math-result-time">
         <span>Время</span>
@@ -3155,9 +3235,15 @@ function finishSchulteRound() {
       </span>
     </span>
   `;
-  schulteFeedbackEl.className = "feedback ok";
+  schulteFeedbackEl.className = `feedback ${success ? "ok" : "bad"}`;
   setSchulteStage("result");
   syncSchulteControls();
+}
+
+function formatSchulteErrorWord(count) {
+  const mod10 = count % 10;
+  const mod100 = count % 100;
+  return mod10 === 1 && mod100 !== 11 ? "ошибкой" : "ошибками";
 }
 
 function startSchulteTimer() {
@@ -3206,6 +3292,7 @@ function resetSchulteExercise() {
   state.schulte.useLetters = config.useLetters;
   state.schulte.values = [];
   state.schulte.nextValue = 1;
+  state.schulte.errors = 0;
   state.schulte.active = false;
   schulteTimerEl.textContent = "Таймер: 0.0с";
   renderSchulteBoard();
@@ -3224,6 +3311,7 @@ function stopSchulteExercise() {
   state.schulte.useLetters = config.useLetters;
   state.schulte.values = [];
   state.schulte.nextValue = 1;
+  state.schulte.errors = 0;
   state.schulte.active = false;
   schulteTimerEl.textContent = "Таймер: 0.0с";
   renderSchulteBoard();
@@ -3249,6 +3337,7 @@ function setSchulteStage(stage) {
 function syncSchulteControls() {
   schulteStartBtn.disabled = state.schulte.active;
   schulteDifficultyEl.disabled = state.schulte.active;
+  schulteSymbolModeEl.disabled = state.schulte.active;
   schulteCustomToggleBtn.disabled = state.schulte.active;
   schulteSizeEl.disabled = state.schulte.active;
   schulteLettersEl.disabled = state.schulte.active;
@@ -3843,6 +3932,7 @@ updateMathDifficultyPreview();
 updateNumberBestTime();
 updateWordBestTime();
 updateWordDifficultyPreview();
+updateSchulteDifficultyPreview();
 updateSchulteBestTime();
 updateExamBestTime();
 syncMathControls();

@@ -219,18 +219,21 @@ body {
   margin-bottom: 0;
   overflow: hidden;
   border-radius: 13px;
-  color: rgba(32, 26, 23, 0.72);
-  background:
-    radial-gradient(circle at 72% 28%, rgba(255, 255, 255, 0.75), transparent 28%),
-    linear-gradient(145deg, #f5e9cf, #dfece5);
+  background: #edf7f1;
 }
 
-.visual-words,
-.visual-numbers,
-.visual-attention,
-.visual-schulte { background: linear-gradient(145deg, #e8efdd, #dcebe6); }
-.visual-math,
-.visual-balda { background: linear-gradient(145deg, #f8e3c1, #f1d7ca); }
+.trainer-card-icon,
+.trainer-menu-icon {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform: scale(1.44);
+}
+
+.trainer-menu-icon {
+  border-radius: 7px;
+}
 
 .trainer-card-title {
   grid-column: 1 / -1;
@@ -709,6 +712,7 @@ body.trainer-home .trainer-breadcrumbs {
   width: 38px;
   height: 38px;
   flex: 0 0 auto;
+  overflow: hidden;
   border-radius: 10px;
   background: linear-gradient(145deg, #f5e9cf, #dfece5);
   color: rgba(32, 26, 23, 0.72);
@@ -785,7 +789,7 @@ body.trainer-page-open .panel.active > .panel-head {
 .tab-btn.trainer-utility-btn {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  grid-template-rows: 48px auto auto auto;
+  grid-template-rows: 58px auto auto auto;
   row-gap: 0.55rem;
   align-items: start;
   width: 100%;
@@ -813,9 +817,10 @@ body.trainer-page-open .panel.active > .panel-head {
 .trainer-utility-icon {
   display: grid;
   place-items: center;
-  width: 48px;
-  height: 48px;
+  width: 58px;
+  height: 58px;
   justify-self: start;
+  overflow: hidden;
   border-radius: 13px;
   color: rgba(32, 26, 23, 0.72);
   background: linear-gradient(145deg, #e6e0f1, #dde8ed);
@@ -824,6 +829,15 @@ body.trainer-page-open .panel.active > .panel-head {
 .trainer-utility-icon .trainer-icon {
   width: 25px;
   height: 25px;
+}
+
+.trainer-utility-image {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  object-fit: cover;
+  transform: scale(1.44);
 }
 
 .trainer-utility-copy {
@@ -938,7 +952,7 @@ body.trainer-page-open .panel.active > .panel-head {
   }
 
   .tab-btn.trainer-utility-btn {
-    grid-template-rows: 44px auto auto auto;
+    grid-template-rows: 48px auto auto auto;
     row-gap: 0.45rem;
     min-height: 0;
     padding: 0.75rem;
@@ -960,8 +974,8 @@ body.trainer-page-open .panel.active > .panel-head {
   }
 
   .trainer-utility-icon {
-    width: 44px;
-    height: 44px;
+    width: 48px;
+    height: 48px;
   }
 }
 
@@ -1040,6 +1054,10 @@ label {
   border: 1px solid rgba(196, 75, 50, 0.18);
   border-radius: 16px;
   background: linear-gradient(135deg, rgba(248, 227, 193, 0.42), rgba(255, 255, 255, 0.72));
+}
+
+#math-difficulty-preview {
+  order: 0;
 }
 
 .math-difficulty-preview summary {
@@ -1317,6 +1335,10 @@ label {
   grid-template-columns: minmax(0, 0.9fr) minmax(280px, 1.1fr);
 }
 
+#num-difficulty-preview {
+  order: 0;
+}
+
 .num-preview-content .math-preview-examples span {
   white-space: nowrap;
 }
@@ -1383,13 +1405,23 @@ label {
 }
 
 .word-mode-row {
-  flex-wrap: wrap;
-  justify-content: center;
-  overflow-x: visible;
+  display: grid;
+  width: fit-content;
+  margin-right: auto;
+  margin-left: auto;
+  justify-items: end;
+  overflow: visible;
 }
 
 .controls.word-mode-row label {
-  width: auto;
+  display: grid;
+  grid-template-columns: 104px minmax(190px, 1fr);
+  width: 100%;
+  justify-items: start;
+}
+
+.controls.word-mode-row select {
+  width: 100%;
 }
 
 .word-choice-divider {
@@ -1402,6 +1434,10 @@ label {
   grid-template-columns: minmax(0, 0.9fr) minmax(280px, 1.1fr);
 }
 
+#word-difficulty-preview {
+  order: 0;
+}
+
 .word-preview-examples span {
   overflow-wrap: anywhere;
 }
@@ -1410,6 +1446,10 @@ label {
   display: grid;
   justify-items: center;
   gap: 0.55rem;
+}
+
+.word-custom-choice[hidden] {
+  display: none !important;
 }
 
 .word-start-row {
@@ -1483,13 +1523,53 @@ label {
 }
 
 .schulte-mode-row {
-  justify-content: center;
+  display: grid;
+  width: fit-content;
+  margin-right: auto;
+  margin-left: auto;
+  justify-items: end;
+  overflow: visible;
+}
+
+.controls.schulte-mode-row label {
+  display: grid;
+  grid-template-columns: 104px minmax(190px, 1fr);
+  width: 100%;
+  justify-items: start;
+}
+
+.controls.schulte-mode-row select {
+  width: 100%;
 }
 
 .schulte-custom-choice {
   display: grid;
   justify-items: center;
   gap: 0.55rem;
+}
+
+.schulte-custom-choice[hidden] {
+  display: none !important;
+}
+
+#schulte-difficulty-preview {
+  order: 0;
+}
+
+.schulte-preview-examples span:last-child {
+  grid-column: auto;
+}
+
+.schulte-next-task {
+  margin: 0.5rem 0 1rem;
+  color: rgba(32, 26, 23, 0.68);
+  font-size: 1.05rem;
+  font-weight: 700;
+  text-align: center;
+}
+
+.schulte-metrics {
+  display: none !important;
 }
 
 .schulte-choice-divider {
@@ -1690,10 +1770,6 @@ label {
 .num-series-progress-chip {
   order: 3;
   margin-left: auto;
-}
-
-.schulte-next-task {
-  margin: 0 0 0.75rem;
 }
 
 #schulte-panel .schulte-board-wrap {
