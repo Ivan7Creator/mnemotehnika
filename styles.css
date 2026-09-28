@@ -1160,6 +1160,10 @@ label {
   gap: 0.55rem;
 }
 
+.math-custom-choice[hidden] {
+  display: none !important;
+}
+
 .math-start-row,
 .num-start-row {
   display: flex;
