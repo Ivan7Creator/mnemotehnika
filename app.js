@@ -320,7 +320,6 @@ const mathReviewEl = document.getElementById("math-review");
 const mathDifficultyWrap = document.getElementById("math-difficulty-wrap");
 const mathDifficultyPreviewEl = document.getElementById("math-difficulty-preview");
 const mathPreviewTagsEl = document.getElementById("math-preview-tags");
-const mathPreviewRangesEl = document.getElementById("math-preview-ranges");
 const mathPreviewNumberTypeEl = document.getElementById("math-preview-number-type");
 const mathPreviewRoundsEl = document.getElementById("math-preview-rounds");
 const mathPreviewExamplesEl = document.getElementById("math-preview-examples");
@@ -400,7 +399,7 @@ function getMathTaskConfig() {
       : ["add", "sub", "mul"];
   const operation = operations[randomInt(0, operations.length - 1)];
 
-  if (difficulty === "easy") {
+  if (difficulty === "easy" || difficulty === "medium") {
     return { operation, bounds: { min: 1, max: 9 } };
   }
 
@@ -441,9 +440,9 @@ const mathDifficultyPreviews = {
   },
   medium: {
     tags: ["Сложение", "Вычитание"],
-    ranges: ["До 100"],
-    numberType: "Двузначные",
-    examples: ["47 + 28", "83 − 36", "64 + 19"],
+    ranges: ["1–9"],
+    numberType: "Однозначные",
+    examples: ["7 + 4", "9 − 3", "8 + 6"],
   },
   hard: {
     tags: ["Умножение"],
@@ -467,7 +466,6 @@ function updateMathDifficultyPreview() {
     return element;
   };
   mathPreviewTagsEl.replaceChildren(...preview.tags.map(createPill));
-  mathPreviewRangesEl.replaceChildren(...preview.ranges.map(createPill));
   mathPreviewNumberTypeEl.replaceChildren(createPill(preview.numberType));
   mathPreviewRoundsEl.replaceChildren(createPill(mathTotalRoundsEl.value));
   mathPreviewExamplesEl.replaceChildren(...preview.examples.map((example) => {

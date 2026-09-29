@@ -3376,6 +3376,40 @@ textarea {
     grid-column: auto;
   }
 
+  /* На телефоне настройки не должны прижиматься к правому краю. */
+  .math-mode-row,
+  .num-mode-row,
+  .word-mode-row,
+  .schulte-mode-row,
+  .balda-mode-row,
+  .attention-mode-row,
+  .guess-word-mode-row {
+    width: min(100%, 420px);
+    max-width: calc(100% - 2rem);
+    margin-right: auto;
+    margin-left: auto;
+    box-sizing: border-box;
+  }
+
+  .controls.math-mode-row label,
+  .controls.num-mode-row label,
+  .controls.word-mode-row label,
+  .controls.schulte-mode-row label,
+  .controls.balda-mode-row label,
+  .attention-mode-row label,
+  .controls.guess-word-mode-row label {
+    grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+    column-gap: 0.65rem;
+    min-width: 0;
+  }
+
+  .math-difficulty-preview,
+  .exercise-help {
+    box-sizing: border-box;
+    margin-right: auto;
+    margin-left: auto;
+  }
+
   .controls .schulte-letters-option {
     width: auto;
   }
