@@ -4,13 +4,14 @@ const LEGACY_MEMORY_PROFILES_KEY = "memory-number-cards-by-login";
 const LEGACY_MEMORY_CARDS_KEY = "memory-number-cards";
 
 const defaults = {
-  math: { attempts: 0, correct: 0, bestStreak: 0, streak: 0, bestTimeSec: null },
-  numbers: { attempts: 0, correct: 0, bestLength: 0, streak: 0, bestTimeSec: null },
-  words: { attempts: 0, correct: 0, bestCount: 0, streak: 0, bestTimeSec: null },
-  memory: { attempts: 0, correct: 0, streak: 0, bestStreak: 0 },
-  balda: { attempts: 0, correct: 0, streak: 0, bestStreak: 0, bestTimeSec: null },
-  attention: { attempts: 0, correct: 0, streak: 0, bestStreak: 0 },
-  schulte: { attempts: 0, correct: 0, bestStreak: 0, streak: 0, bestTimeSec: null, bestSize: 0 },
+  math: { attempts: 0, correct: 0, stopped: 0, bestStreak: 0, streak: 0, bestTimeSec: null },
+  numbers: { attempts: 0, correct: 0, stopped: 0, bestLength: 0, streak: 0, bestTimeSec: null },
+  words: { attempts: 0, correct: 0, stopped: 0, bestCount: 0, streak: 0, bestTimeSec: null },
+  "guess-word": { attempts: 0, correct: 0, stopped: 0, streak: 0, bestStreak: 0 },
+  memory: { attempts: 0, correct: 0, stopped: 0, streak: 0, bestStreak: 0 },
+  balda: { attempts: 0, correct: 0, stopped: 0, streak: 0, bestStreak: 0, bestTimeSec: null },
+  attention: { attempts: 0, correct: 0, stopped: 0, streak: 0, bestStreak: 0 },
+  schulte: { attempts: 0, correct: 0, stopped: 0, bestStreak: 0, streak: 0, bestTimeSec: null, bestSize: 0 },
   exam: { bestTimeSec: null },
   sessions: [],
 };
@@ -57,17 +58,19 @@ const state = {
     revealTimerId: null,
     stage: "prep",
   },
+  guessWord: { words: [], index: 0, active: false, startedAt: null, stage: "prep" },
   balda: {
     chain: ["маска", "миска", "мишка", "мышка", "мышца"],
     chains: {
-      3: [["лук", "лак", "мак", "май", "рай"]],
-      4: [["коза", "роза", "роса", "коса", "кора"]],
+      3: [["лук", "лак", "мак"]],
+      4: [["коза", "роза", "роса", "коса"]],
       5: [["маска", "миска", "мишка", "мышка", "мышца"]],
     },
     currentStep: 0,
     active: false,
     startedAt: null,
     timerId: null,
+    stage: "prep",
   },
   attention: {
     fileName: "",
@@ -86,12 +89,14 @@ const state = {
     completed: false,
     descriptionReady: false,
     loadToken: 0,
+    stage: "prep",
   },
   schulte: {
     values: [],
     size: 5,
     nextValue: 1,
     useLetters: false,
+    symbolMode: "numbers",
     startedAt: null,
     timerId: null,
     active: false,
@@ -177,6 +182,7 @@ const panels = {
   "number-series": document.getElementById("number-series-panel"),
   numbers: document.getElementById("numbers-panel"),
   words: document.getElementById("words-panel"),
+  "guess-word": document.getElementById("guess-word-panel"),
   attention: document.getElementById("attention-panel"),
   schulte: document.getElementById("schulte-panel"),
   balda: document.getElementById("balda-panel"),
@@ -240,6 +246,12 @@ function openTrainerPage(key) {
   if (key === "math") setMathStage(state.math.answer === null ? "prep" : "task");
   if (key === "number-series") setNumberStage(state.numbers.phase);
   if (key === "words") setWordStage(state.words.stage);
+  if (key === "guess-word") setGuessWordStage(state.guessWord.stage);
+  if (key === "balda") setBaldaStage(state.balda.stage);
+  if (key === "attention") {
+    setAttentionStage(state.attention.stage);
+    if (!state.attention.file && !state.attention.randomLoading) loadRandomAttentionImage();
+  }
   if (key === "schulte") setSchulteStage(state.schulte.stage);
   document.title = title ? `${title} — Mnemonic Lab` : "Mnemonic Lab";
   window.scrollTo({ top: 0, behavior: "smooth" });
@@ -310,6 +322,7 @@ const mathDifficultyPreviewEl = document.getElementById("math-difficulty-preview
 const mathPreviewTagsEl = document.getElementById("math-preview-tags");
 const mathPreviewRangesEl = document.getElementById("math-preview-ranges");
 const mathPreviewNumberTypeEl = document.getElementById("math-preview-number-type");
+const mathPreviewRoundsEl = document.getElementById("math-preview-rounds");
 const mathPreviewExamplesEl = document.getElementById("math-preview-examples");
 const mathChoiceDividerEl = document.querySelector(".math-choice-divider");
 const mathCustomToggleBtn = document.getElementById("math-custom-toggle");
@@ -327,14 +340,22 @@ mathAgainBtn.addEventListener("click", resetMathExercise);
 mathStopBtn.addEventListener("click", stopMathExercise);
 mathCustomToggleBtn.addEventListener("click", toggleCustomMathSettings);
 mathDifficultyEl.addEventListener("change", updateMathDifficultyPreview);
+mathTotalRoundsEl.addEventListener("change", updateMathDifficultyPreview);
 mathNumberSizeEl.addEventListener("change", updateCustomMathControls);
 mathOperationEl.addEventListener("change", updateCustomMathControls);
-mathAnswer.addEventListener("input", syncMathControls);
+mathAnswer.addEventListener("input", () => {
+  mathAnswer.classList.remove("is-invalid");
+  mathAnswer.placeholder = "Введи ответ";
+  syncMathControls();
+});
 
 mathForm.addEventListener("submit", (event) => {
   event.preventDefault();
   if (state.math.answer === null) return;
-  const value = Number((mathAnswer.value || "").trim());
+  const rawValue = (mathAnswer.value || "").trim();
+  if (!rawValue) return showMathInputError("Введи ответ");
+  if (!/^\d+$/.test(rawValue)) return showMathInputError("Введи целое число");
+  const value = Number(rawValue);
   const correct = value === state.math.answer;
   if (correct) state.math.correctInSeries += 1;
   state.math.reviewRows.push({
@@ -352,6 +373,14 @@ mathForm.addEventListener("submit", (event) => {
     showNextMathTask();
   }
 });
+
+function showMathInputError(message) {
+  mathAnswer.value = "";
+  mathAnswer.placeholder = message;
+  mathAnswer.classList.add("is-invalid");
+  mathAnswer.focus();
+  syncMathControls();
+}
 
 function getMathTaskConfig() {
   if (!mathCustomSettingsEl.hidden) {
@@ -440,6 +469,7 @@ function updateMathDifficultyPreview() {
   mathPreviewTagsEl.replaceChildren(...preview.tags.map(createPill));
   mathPreviewRangesEl.replaceChildren(...preview.ranges.map(createPill));
   mathPreviewNumberTypeEl.replaceChildren(createPill(preview.numberType));
+  mathPreviewRoundsEl.replaceChildren(createPill(mathTotalRoundsEl.value));
   mathPreviewExamplesEl.replaceChildren(...preview.examples.map((example) => {
     const element = document.createElement("span");
     element.textContent = example;
@@ -577,6 +607,7 @@ function stopMathExercise() {
   setMathStage("prep");
   mathForm.reset();
   if (hadActive) {
+    recordStoppedExercise("math");
     mathFeedback.textContent = "Упражнение остановлено.";
     mathFeedback.className = "feedback";
   }
@@ -617,7 +648,7 @@ function syncMathControls() {
   mathOperationEl.disabled = hasActiveTask;
   mathMulLimitEl.disabled = hasActiveTask;
   mathTotalRoundsEl.disabled = hasActiveTask;
-  mathSubmitBtn.disabled = state.math.answer === null || !mathAnswer.value.trim();
+  mathSubmitBtn.disabled = state.math.answer === null;
   mathStopBtn.disabled = state.math.answer === null && !state.math.startedAt;
   mathAnswer.disabled = state.math.answer === null;
 }
@@ -912,6 +943,7 @@ function stopNumberExercise() {
   numReviewEl.hidden = true;
   numReviewEl.innerHTML = "";
   if (hadActive) {
+    recordStoppedExercise("numbers");
     numFeedback.textContent = "Упражнение остановлено.";
     numFeedback.className = "feedback";
   }
@@ -965,6 +997,8 @@ function renderNumberReview(reviewRows) {
 }
 
 function syncNumberControls() {
+  const isFinalRound = state.numbers.seriesIndex >= state.numbers.totalRounds;
+  numSubmitBtn.textContent = isFinalRound ? "Проверить" : "Дальше";
   numStartBtn.disabled = state.numbers.seriesActive;
   numDifficultyEl.disabled = state.numbers.seriesActive;
   numCustomToggleBtn.disabled = state.numbers.seriesActive;
@@ -1116,7 +1150,7 @@ function buildExamQueue() {
   const wordPool = wordConfig.isComplex ? wordPoolRuComplex : wordPoolRuSimple;
   const schulteSize = difficulty === "easy" ? 4 : difficulty === "medium" ? 5 : 6;
   const baldaLength = difficulty === "easy" ? 3 : difficulty === "medium" ? 4 : 5;
-  const baldaChains = state.balda.chains[baldaLength] || state.balda.chains[5];
+  const baldaChains = getPlayableBaldaChains(baldaLength);
 
   const tasks = [
     buildMathTask({ operation: mathOperation, bounds: mathBounds }),
@@ -2306,6 +2340,7 @@ function stopWordExercise() {
   wordReviewEl.hidden = true;
   wordReviewEl.innerHTML = "";
   if (hadActive) {
+    recordStoppedExercise("words");
     wordFeedback.textContent = "Упражнение остановлено.";
     wordFeedback.className = "feedback";
   }
@@ -2325,6 +2360,81 @@ function setWordStage(stage) {
   wordsPanelEl.classList.remove("word-stage-prep", "word-stage-task", "word-stage-result");
   wordsPanelEl.classList.add(`word-stage-${stage}`);
   state.words.stage = stage;
+  setTrainerStage(stage === "prep" ? 1 : stage === "task" ? 2 : 3);
+}
+
+const guessWordPool = ["дедушка", "фонарь", "путешествие", "малина", "самолёт", "библиотека", "карандаш", "облако", "костёр", "черепаха"];
+const guessWordPanelEl = document.getElementById("guess-word-panel");
+const guessWordPercentEl = document.getElementById("guess-word-percent");
+const guessWordPreviewPercentEl = document.getElementById("guess-word-preview-percent");
+const guessWordStartBtn = document.getElementById("guess-word-start");
+const guessWordMaskEl = document.getElementById("guess-word-mask");
+const guessWordValueEl = document.getElementById("guess-word-value");
+const guessWordCountEl = document.getElementById("guess-word-count");
+const guessWordForm = document.getElementById("guess-word-form");
+const guessWordAnswerEl = document.getElementById("guess-word-answer");
+const guessWordFeedbackEl = document.getElementById("guess-word-feedback");
+
+guessWordPercentEl.addEventListener("change", () => {
+  guessWordPreviewPercentEl.textContent = `${guessWordPercentEl.value}%`;
+});
+guessWordStartBtn.addEventListener("click", startGuessWordRound);
+document.getElementById("guess-word-again").addEventListener("click", resetGuessWordExercise);
+document.getElementById("guess-word-stop").addEventListener("click", stopGuessWordExercise);
+guessWordForm.addEventListener("submit", (event) => {
+  event.preventDefault();
+  if (!state.guessWord.active) return;
+  const expected = state.guessWord.words[state.guessWord.index];
+  const actual = normalizeWordToken(guessWordAnswerEl.value);
+  if (!actual) {
+    guessWordAnswerEl.placeholder = "Введи слово";
+    guessWordAnswerEl.classList.add("is-invalid");
+    return;
+  }
+  const correct = actual === normalizeWordToken(expected);
+  applyModeResult("guess-word", correct);
+  state.guessWord.active = false;
+  guessWordFeedbackEl.innerHTML = `<span class="math-result-title">${correct ? "Верно!" : "Неверно"}</span><span class="math-result-answer">${correct ? "Слово угадано" : `Правильный ответ: ${expected}`}</span>`;
+  guessWordFeedbackEl.className = `feedback ${correct ? "ok" : "bad"}`;
+  setGuessWordStage("result");
+});
+guessWordAnswerEl.addEventListener("input", () => guessWordAnswerEl.classList.remove("is-invalid"));
+
+function startGuessWordRound() {
+  state.guessWord.words = shuffle(guessWordPool).slice(0, 10);
+  state.guessWord.index = 0;
+  state.guessWord.active = true;
+  guessWordFeedbackEl.textContent = "";
+  guessWordAnswerEl.value = "";
+  renderGuessWordTask();
+  setGuessWordStage("task");
+  guessWordAnswerEl.focus();
+}
+
+function renderGuessWordTask() {
+  const word = state.guessWord.words[state.guessWord.index] || "";
+  guessWordValueEl.textContent = word;
+  guessWordMaskEl.style.setProperty("--guess-word-hidden", `${guessWordPercentEl.value}%`);
+  guessWordCountEl.textContent = `Слово ${state.guessWord.index + 1} из ${state.guessWord.words.length}`;
+}
+
+function stopGuessWordExercise() {
+  if (state.guessWord.active) recordStoppedExercise("guess-word");
+  state.guessWord.active = false;
+  setGuessWordStage("prep");
+}
+
+function resetGuessWordExercise() {
+  state.guessWord.active = false;
+  guessWordFeedbackEl.textContent = "";
+  guessWordAnswerEl.value = "";
+  setGuessWordStage("prep");
+}
+
+function setGuessWordStage(stage) {
+  guessWordPanelEl.classList.remove("guess-word-stage-prep", "guess-word-stage-task", "guess-word-stage-result");
+  guessWordPanelEl.classList.add(`guess-word-stage-${stage}`);
+  state.guessWord.stage = stage;
   setTrainerStage(stage === "prep" ? 1 : stage === "task" ? 2 : 3);
 }
 
@@ -2461,6 +2571,9 @@ function syncWordControls() {
 const baldaStartBtn = document.getElementById("balda-start");
 const baldaDifficultyEl = document.getElementById("balda-difficulty");
 const baldaDifficultyWrap = document.getElementById("balda-difficulty-wrap");
+const baldaPreviewLengthEl = document.getElementById("balda-preview-length");
+const baldaPreviewStepsEl = document.getElementById("balda-preview-steps");
+const baldaPreviewExamplesEl = document.getElementById("balda-preview-examples");
 const baldaCustomToggleBtn = document.getElementById("balda-custom-toggle");
 const baldaCustomSettingsEl = document.getElementById("balda-custom-settings");
 const baldaStopBtn = document.getElementById("balda-stop");
@@ -2470,11 +2583,21 @@ const baldaForm = document.getElementById("balda-form");
 const baldaLadderEl = document.getElementById("balda-ladder");
 const baldaFeedbackEl = document.getElementById("balda-feedback");
 const baldaStartWordEl = document.getElementById("balda-start-word");
+const baldaResultFeedbackEl = document.getElementById("balda-result-feedback");
+const baldaAgainBtn = document.getElementById("balda-again");
 
 baldaStartBtn.addEventListener("click", startBaldaGame);
 baldaCustomToggleBtn.addEventListener("click", toggleCustomBaldaSettings);
+baldaDifficultyEl.addEventListener("change", updateBaldaDifficultyPreview);
 baldaStopBtn.addEventListener("click", stopBaldaGame);
+baldaAgainBtn.addEventListener("click", resetBaldaExercise);
 baldaForm.addEventListener("submit", checkBaldaStep);
+baldaLadderEl.addEventListener("input", (event) => {
+  const input = event.target.closest(".balda-word-input");
+  if (!input) return;
+  input.classList.remove("is-invalid");
+  input.placeholder = "Введи следующее слово";
+});
 
 function getBaldaWordLength() {
   if (!baldaCustomSettingsEl.hidden) {
@@ -2484,6 +2607,27 @@ function getBaldaWordLength() {
   const wordLengths = { easy: 3, medium: 4, hard: 5 };
   return wordLengths[baldaDifficultyEl.value] || wordLengths.easy;
 }
+
+function updateBaldaDifficultyPreview() {
+  const wordLength = getBaldaWordLength();
+  const createPill = (text) => {
+    const element = document.createElement("span");
+    element.textContent = text;
+    return element;
+  };
+  const letterLabel = wordLength === 5 ? "букв" : "буквы";
+  const previewChain = state.balda.chains[wordLength]?.[0] || [];
+  baldaPreviewLengthEl.replaceChildren(createPill(`${wordLength} ${letterLabel}`));
+  baldaPreviewStepsEl.replaceChildren(createPill(String(wordLength)));
+  baldaPreviewExamplesEl.replaceChildren(createPill(previewChain.join(" → ")));
+}
+
+function getPlayableBaldaChains(wordLength) {
+  const chains = state.balda.chains[wordLength] || state.balda.chains[5];
+  return chains.length > 1 ? chains.slice(1) : chains;
+}
+
+updateBaldaDifficultyPreview();
 
 function toggleCustomBaldaSettings() {
   setCustomBaldaSettingsVisible(baldaCustomSettingsEl.hidden);
@@ -2500,12 +2644,15 @@ function setCustomBaldaSettingsVisible(visible) {
 function startBaldaGame() {
   stopBaldaTimer();
   const selectedLength = getBaldaWordLength();
-  const availableChains = state.balda.chains[selectedLength] || state.balda.chains[5];
+  const availableChains = getPlayableBaldaChains(selectedLength);
   state.balda.chain = availableChains[randomInt(0, availableChains.length - 1)];
   state.balda.currentStep = 0;
   state.balda.active = true;
+  setBaldaStage("task");
   baldaFeedbackEl.textContent = "";
   baldaFeedbackEl.className = "feedback";
+  baldaResultFeedbackEl.textContent = "";
+  baldaResultFeedbackEl.className = "feedback";
   baldaForm.hidden = false;
   baldaStartBtn.disabled = true;
   baldaDifficultyEl.disabled = true;
@@ -2554,15 +2701,15 @@ function checkBaldaStep(event) {
   const previous = state.balda.chain[nextIndex - 1];
   const expected = state.balda.chain[nextIndex];
 
-  if (!value) return showBaldaError("Введи слово для следующего ряда.", input);
-  if (!/^[а-я]+$/i.test(value)) return showBaldaError("Используй только русские буквы.", input);
+  if (!value) return showBaldaError("Введи слово для следующего ряда", input);
+  if (!/^[а-я]+$/i.test(value)) return showBaldaError("Используй только русские буквы", input);
   if (value.length !== previous.length) {
-    return showBaldaError(`В слове должно быть ${previous.length} букв.`, input);
+    return showBaldaError(`В слове должно быть ${previous.length} букв`, input);
   }
   const changedLetters = [...value].filter((letter, index) => letter !== previous[index]).length;
-  if (changedLetters === 0) return showBaldaError("Нужно изменить одну букву.", input);
-  if (changedLetters !== 1) return showBaldaError("Можно изменить только одну букву.", input);
-  if (value !== expected) return showBaldaError("Такое слово не подходит для этой цепочки. Попробуй другой вариант.", input);
+  if (changedLetters === 0) return showBaldaError("Нужно изменить одну букву", input);
+  if (changedLetters !== 1) return showBaldaError("Можно изменить только одну букву", input);
+  if (value !== expected) return showBaldaError("Не подходит. Попробуй другое слово", input);
 
   state.balda.currentStep = nextIndex;
   baldaFeedbackEl.textContent = "";
@@ -2577,8 +2724,10 @@ function checkBaldaStep(event) {
 }
 
 function showBaldaError(message, input) {
-  baldaFeedbackEl.textContent = `Ошибка. ${message}`;
-  baldaFeedbackEl.className = "feedback bad";
+  baldaFeedbackEl.textContent = "";
+  baldaFeedbackEl.className = "feedback";
+  input.value = "";
+  input.placeholder = message;
   input.classList.add("is-invalid");
   input.focus();
 }
@@ -2610,9 +2759,18 @@ function finishBaldaGame() {
   baldaCheckBtn.disabled = true;
   baldaWordLengthEl.disabled = false;
   baldaStopBtn.disabled = true;
-  baldaFeedbackEl.textContent = "Верно!";
-  baldaFeedbackEl.className = "feedback ok";
   applyModeResult("balda", true, { timeSec: tookSec });
+  const bestTimeSec = state.progress.balda.bestTimeSec;
+  baldaResultFeedbackEl.innerHTML = `
+    <span class="math-result-title">Верно!</span>
+    <span class="math-result-answer">Цепочка пройдена полностью</span>
+    <span class="math-result-details">
+      <span class="math-result-stat math-result-time"><span>Время</span><strong>${formatSeconds(tookSec)}</strong></span>
+      <span class="math-result-stat math-result-record"><span>Рекорд</span><strong>${formatSeconds(bestTimeSec)}</strong></span>
+    </span>
+  `;
+  baldaResultFeedbackEl.className = "feedback ok";
+  setBaldaStage("result");
 }
 
 function stopBaldaGame() {
@@ -2629,10 +2787,26 @@ function stopBaldaGame() {
   baldaWordLengthEl.disabled = false;
   baldaStopBtn.disabled = true;
   if (wasActive) {
-    applyModeResult("balda", false, { timeSec: tookSec });
-    baldaFeedbackEl.textContent = "Упражнение остановлено.";
+    recordStoppedExercise("balda");
+    baldaFeedbackEl.textContent = "";
     baldaFeedbackEl.className = "feedback";
   }
+  setBaldaStage("prep");
+}
+
+function resetBaldaExercise() {
+  stopBaldaGame();
+  baldaResultFeedbackEl.textContent = "";
+  baldaResultFeedbackEl.className = "feedback";
+  baldaStartBtn.focus();
+}
+
+function setBaldaStage(stage) {
+  const baldaPanelEl = document.getElementById("balda-panel");
+  baldaPanelEl.classList.remove("balda-stage-prep", "balda-stage-task", "balda-stage-result");
+  baldaPanelEl.classList.add(`balda-stage-${stage}`);
+  state.balda.stage = stage;
+  setTrainerStage(stage === "prep" ? 1 : stage === "task" ? 2 : 3);
 }
 
 async function loadBaldaChainsFromCsv() {
@@ -2666,13 +2840,14 @@ async function loadBaldaChainsFromCsv() {
     [3, 4, 5].forEach((length) => {
       if (loadedChains[length].length) state.balda.chains[length] = loadedChains[length];
     });
+    updateBaldaDifficultyPreview();
   } catch (error) {
     console.warn("Используются встроенные цепочки для «Балды»:", error);
   }
 }
 
 function isValidBaldaChain(chain, wordLength) {
-  if (chain.length < 2) return false;
+  if (chain.length !== wordLength) return false;
   return chain.every((word, index) => {
     if (!new RegExp(`^[а-я]{${wordLength}}$`, "i").test(word)) return false;
     if (index === 0) return true;
@@ -2680,10 +2855,8 @@ function isValidBaldaChain(chain, wordLength) {
   });
 }
 
-const attentionImageInput = document.getElementById("attention-image-input");
-const attentionUploadTriggerBtn = document.getElementById("attention-upload-trigger");
+const attentionDifficultyEl = document.getElementById("attention-difficulty");
 const attentionShowSecondsEl = document.getElementById("attention-show-seconds");
-const attentionRandomBtn = document.getElementById("attention-random");
 const attentionStartBtn = document.getElementById("attention-start");
 const attentionStopBtn = document.getElementById("attention-stop");
 const attentionCompareBtn = document.getElementById("attention-compare");
@@ -2693,38 +2866,52 @@ const attentionAnswerEl = document.getElementById("attention-answer");
 const attentionFeedbackEl = document.getElementById("attention-feedback");
 const attentionCompareResultEl = document.getElementById("attention-compare-result");
 const attentionCompareDefaultLabel = attentionCompareBtn.textContent;
-const attentionRandomDefaultLabel = attentionRandomBtn.textContent;
+const attentionPreviewDurationEl = document.getElementById("attention-preview-duration");
+const attentionPreviewFocusEl = document.getElementById("attention-preview-focus");
 
-attentionImageInput.addEventListener("change", handleAttentionImageUpload);
-attentionUploadTriggerBtn.addEventListener("click", () => attentionImageInput.click());
-attentionRandomBtn.addEventListener("click", loadRandomAttentionImage);
 attentionStartBtn.addEventListener("click", startAttentionRound);
 attentionStopBtn.addEventListener("click", stopAttentionExercise);
 attentionCompareBtn.addEventListener("click", compareAttentionAnswer);
 attentionAnswerEl.addEventListener("input", syncAttentionDescribeAvailability);
-
-function handleAttentionImageUpload(event) {
-  const [file] = event.target.files || [];
-  if (!file) {
+attentionShowSecondsEl.addEventListener("change", updateAttentionPreview);
+attentionDifficultyEl.addEventListener("change", () => {
+  updateAttentionPreview();
+  if (state.attention.file) {
     clearAttentionMedia();
-    syncAttentionDescribeAvailability();
-    return;
+    loadRandomAttentionImage();
   }
+});
 
-  applyAttentionFile(file, URL.createObjectURL(file), "Загруженное фото");
+function updateAttentionPreview() {
+  attentionPreviewDurationEl.textContent = `${attentionShowSecondsEl.value} сек.`;
+  const focusByDifficulty = {
+    easy: "Крупные предметы и основные цвета",
+    medium: "Предметы, цвета и расположение",
+    hard: "Мелкие детали, оттенки и взаимное расположение",
+  };
+  attentionPreviewFocusEl.textContent = focusByDifficulty[attentionDifficultyEl.value] || focusByDifficulty.easy;
 }
 
+function setAttentionStage(stage) {
+  const attentionPanelEl = document.getElementById("attention-panel");
+  attentionPanelEl.classList.remove("attention-stage-prep", "attention-stage-task", "attention-stage-result");
+  attentionPanelEl.classList.add(`attention-stage-${stage}`);
+  state.attention.stage = stage;
+  setTrainerStage(stage === "prep" ? 1 : stage === "task" ? 2 : 3);
+}
+
+updateAttentionPreview();
+
 async function loadRandomAttentionImage() {
-  if (state.attention.randomLoading) return;
+  if (state.attention.randomLoading || state.attention.file) return;
 
   state.attention.randomLoading = true;
-  attentionRandomBtn.textContent = "Подбираю...";
   attentionFeedbackEl.textContent = "";
   attentionFeedbackEl.className = "feedback";
   syncAttentionDescribeAvailability();
 
   try {
-    const response = await fetch("/api/random-attention-image");
+    const response = await fetch(`/api/random-attention-image?difficulty=${encodeURIComponent(attentionDifficultyEl.value)}`);
     const payload = await parseJsonSafely(response);
     if (!response.ok) {
       throw new Error(payload?.error || "Не удалось получить случайное фото.");
@@ -2750,7 +2937,6 @@ async function loadRandomAttentionImage() {
     attentionFeedbackEl.className = "feedback bad";
   } finally {
     state.attention.randomLoading = false;
-    attentionRandomBtn.textContent = attentionRandomDefaultLabel;
     syncAttentionDescribeAvailability();
   }
 }
@@ -2771,6 +2957,7 @@ function applyAttentionFile(file, imageUrl, sourceLabel) {
     state.attention.visible = true;
     showAttentionImage();
     attentionStartBtn.hidden = false;
+    setAttentionStage("prep");
     attentionFeedbackEl.textContent = "";
     attentionFeedbackEl.className = "feedback";
     syncAttentionDescribeAvailability();
@@ -2825,6 +3012,7 @@ function startAttentionRound() {
   clearAttentionHideTimer();
   state.attention.timeLeft = Number(attentionShowSecondsEl.value) || 10;
   state.attention.visible = true;
+  setAttentionStage("task");
   showAttentionImage();
   startAttentionTimer();
   attentionFeedbackEl.textContent = "";
@@ -2895,6 +3083,7 @@ async function compareAttentionAnswer() {
     const formData = new FormData();
     formData.append("image", state.attention.file);
     formData.append("notes", notes);
+    formData.append("difficulty", attentionDifficultyEl.value);
 
     const response = await fetch("/api/compare-attention", {
       method: "POST",
@@ -2921,6 +3110,7 @@ async function compareAttentionAnswer() {
         </span>
       </span>`;
     attentionFeedbackEl.className = "feedback ok";
+    setAttentionStage("result");
   } catch (error) {
     attentionCompareResultEl.hidden = true;
     attentionCompareResultEl.innerHTML = "";
@@ -3003,8 +3193,8 @@ function stopAttentionExercise() {
   state.attention.sourceLabel = "";
   state.attention.completed = false;
   state.attention.descriptionReady = false;
+  setAttentionStage("prep");
   state.attention.loadToken += 1;
-  attentionImageInput.value = "";
   attentionStartBtn.hidden = true;
   hideAttentionStage();
   attentionFeedbackEl.textContent = "";
@@ -3012,9 +3202,9 @@ function stopAttentionExercise() {
   attentionCompareResultEl.hidden = true;
   attentionCompareResultEl.innerHTML = "";
   attentionCompareBtn.textContent = attentionCompareDefaultLabel;
-  attentionRandomBtn.textContent = attentionRandomDefaultLabel;
   if (hadActive) {
-    attentionFeedbackEl.textContent = "Упражнение остановлено.";
+    recordStoppedExercise("attention");
+    attentionFeedbackEl.textContent = "";
     attentionFeedbackEl.className = "feedback";
   }
   syncAttentionDescribeAvailability();
@@ -3055,6 +3245,7 @@ schulteSizeEl.addEventListener("change", () => {
 });
 schulteLettersEl.addEventListener("change", () => {
   state.schulte.useLetters = schulteLettersEl.checked;
+  state.schulte.symbolMode = schulteLettersEl.checked ? "mixed" : "numbers";
   if (!state.schulte.active) renderSchulteBoard();
 });
 schulteStartBtn.addEventListener("click", startSchulteRound);
@@ -3069,6 +3260,7 @@ function getSchulteConfig() {
     return {
       size: Number(schulteSizeEl.value) || 5,
       useLetters: schulteLettersEl.checked,
+      symbolMode: schulteLettersEl.checked ? "mixed" : "numbers",
     };
   }
 
@@ -3080,7 +3272,8 @@ function getSchulteConfig() {
   const preset = presets[schulteDifficultyEl.value] || presets.easy;
   return {
     ...preset,
-    useLetters: schulteSymbolModeEl.value === "mixed",
+    useLetters: schulteSymbolModeEl.value !== "numbers",
+    symbolMode: schulteSymbolModeEl.value,
   };
 }
 
@@ -3090,32 +3283,38 @@ const schulteDifficultyPreviews = {
     cells: "16",
     numberExamples: ["1", "8", "16"],
     mixedExamples: ["1", "А", "8"],
+    letterExamples: ["А", "З", "П"],
   },
   medium: {
     size: "5 × 5",
     cells: "25",
     numberExamples: ["1", "13", "25"],
     mixedExamples: ["1", "А", "12"],
+    letterExamples: ["А", "М", "У"],
   },
   hard: {
     size: "6 × 6",
     cells: "36",
     numberExamples: ["1", "18", "36"],
     mixedExamples: ["1", "А", "18"],
+    letterExamples: ["А", "Р", "Я"],
   },
 };
 
 function updateSchulteDifficultyPreview() {
   const preview = schulteDifficultyPreviews[schulteDifficultyEl.value] || schulteDifficultyPreviews.easy;
-  const useLetters = schulteSymbolModeEl.value === "mixed";
+  const symbolMode = schulteSymbolModeEl.value;
   const createPill = (text) => {
     const element = document.createElement("span");
     element.textContent = text;
     return element;
   };
   schultePreviewSizeEl.replaceChildren(createPill(preview.size));
-  schultePreviewElementsEl.replaceChildren(createPill(useLetters ? "Числа и буквы" : "Только числа"));
-  const examples = useLetters ? preview.mixedExamples : preview.numberExamples;
+  const modeLabel = symbolMode === "mixed" ? "Числа и буквы" : symbolMode === "letters" ? "Только буквы" : "Только числа";
+  schultePreviewElementsEl.replaceChildren(createPill(modeLabel));
+  const examples = symbolMode === "mixed"
+    ? preview.mixedExamples
+    : symbolMode === "letters" ? preview.letterExamples : preview.numberExamples;
   schultePreviewExamplesEl.replaceChildren(...examples.map(createPill));
 }
 
@@ -3134,6 +3333,7 @@ function startSchulteRound() {
   const config = getSchulteConfig();
   state.schulte.size = config.size;
   state.schulte.useLetters = config.useLetters;
+  state.schulte.symbolMode = config.symbolMode;
   state.schulte.values = shuffle(
     Array.from({ length: state.schulte.size * state.schulte.size }, (_, index) => index + 1),
   );
@@ -3156,7 +3356,7 @@ function renderSchulteBoard() {
     schulteBoardWrapEl.hidden = true;
     schulteBoardEl.hidden = true;
     schulteNextEl.hidden = true;
-    schulteNextEl.textContent = `${state.schulte.useLetters ? "Следующий символ" : "Следующее число"}: --`;
+    schulteNextEl.textContent = `${getSchulteNextLabel()}: --`;
     return;
   }
 
@@ -3172,7 +3372,7 @@ function renderSchulteBoard() {
     const displayValue = formatSchulteValue(value);
     button.textContent = displayValue;
     button.setAttribute("role", "gridcell");
-    button.setAttribute("aria-label", state.schulte.useLetters ? `Символ ${displayValue}` : `Число ${value}`);
+    button.setAttribute("aria-label", state.schulte.useLetters ? `Буква ${displayValue}` : `Число ${value}`);
     button.addEventListener("click", () => handleSchulteCellClick(button));
     schulteBoardEl.appendChild(button);
   });
@@ -3270,7 +3470,7 @@ function stopSchulteTimer() {
 }
 
 function updateSchulteProgress(isCompleted = false) {
-  const label = state.schulte.useLetters ? "Следующий символ" : "Следующее число";
+  const label = getSchulteNextLabel();
   const value = isCompleted || !state.schulte.values.length
     ? "--"
     : formatSchulteValue(state.schulte.nextValue);
@@ -3278,9 +3478,15 @@ function updateSchulteProgress(isCompleted = false) {
   schulteNextEl.textContent = `${label}: ${value}`;
 }
 
+function getSchulteNextLabel() {
+  if (state.schulte.symbolMode === "letters") return "Следующая буква";
+  return state.schulte.useLetters ? "Следующий символ" : "Следующее число";
+}
+
 function formatSchulteValue(value) {
   if (!state.schulte.useLetters) return String(value);
   const russianAlphabet = "АБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ";
+  if (state.schulte.symbolMode === "letters") return russianAlphabet[value - 1] || String(value);
   if (value % 2 === 1) return String(Math.ceil(value / 2));
   return russianAlphabet[value / 2 - 1] || String(value);
 }
@@ -3290,6 +3496,7 @@ function resetSchulteExercise() {
   const config = getSchulteConfig();
   state.schulte.size = config.size;
   state.schulte.useLetters = config.useLetters;
+  state.schulte.symbolMode = config.symbolMode;
   state.schulte.values = [];
   state.schulte.nextValue = 1;
   state.schulte.errors = 0;
@@ -3309,6 +3516,7 @@ function stopSchulteExercise() {
   const config = getSchulteConfig();
   state.schulte.size = config.size;
   state.schulte.useLetters = config.useLetters;
+  state.schulte.symbolMode = config.symbolMode;
   state.schulte.values = [];
   state.schulte.nextValue = 1;
   state.schulte.errors = 0;
@@ -3316,6 +3524,7 @@ function stopSchulteExercise() {
   schulteTimerEl.textContent = "Таймер: 0.0с";
   renderSchulteBoard();
   if (hadActive) {
+    recordStoppedExercise("schulte");
     schulteFeedbackEl.textContent = "Упражнение остановлено.";
     schulteFeedbackEl.className = "feedback";
   } else {
@@ -3377,6 +3586,14 @@ function applyModeResult(mode, success, extra = {}) {
   persist();
   renderProgress();
   saveRemoteAttempt(mode, success, extra);
+}
+
+function recordStoppedExercise(mode) {
+  const bucket = state.progress[mode];
+  if (!bucket) return;
+  bucket.stopped = (bucket.stopped || 0) + 1;
+  persist();
+  renderProgress();
 }
 
 function addResultToProgress(progress, mode, success, extra = {}, at = new Date().toISOString()) {
@@ -3522,6 +3739,7 @@ function renderProgress() {
   const math = state.progress.math;
   const numbers = state.progress.numbers;
   const words = state.progress.words;
+  const guessWord = state.progress["guess-word"];
   const memory = state.progress.memory;
   const balda = state.progress.balda;
   const attention = state.progress.attention;
@@ -3567,6 +3785,13 @@ function renderProgress() {
         ["Попытки", words.attempts],
       ],
     },
+    "guess-word": {
+      label: "Угадай слово",
+      shortLabel: "Слово",
+      correct: guessWord.correct,
+      attempts: guessWord.attempts,
+      metrics: [],
+    },
     memory: {
       label: "Запоминание чисел",
       correct: memory.correct,
@@ -3606,9 +3831,13 @@ function renderProgress() {
       ],
     },
   };
-  const modeOrder = ["numbers", "words", "memory", "math", "balda", "attention", "schulte"];
+  Object.entries(modeMap).forEach(([mode, item]) => {
+    item.stopped = state.progress[mode].stopped || 0;
+  });
+  const modeOrder = ["numbers", "words", "guess-word", "memory", "math", "balda", "attention", "schulte"];
   const allAttempts = modeOrder.reduce((sum, mode) => sum + modeMap[mode].attempts, 0);
   const allCorrect = modeOrder.reduce((sum, mode) => sum + modeMap[mode].correct, 0);
+  const allStopped = modeOrder.reduce((sum, mode) => sum + modeMap[mode].stopped, 0);
   const selectedMode = document.getElementById("progress-mode").value;
   const recentEntries = state.progress.sessions
     .filter((entry) => selectedMode === "all" || entry.mode === selectedMode)
@@ -3622,19 +3851,19 @@ function renderProgress() {
         correct: allCorrect,
         attempts: allAttempts,
         metrics: [
-          ["Всего попыток", allAttempts],
-          ["Верно", allCorrect],
-          ["Подряд без ошибок", currentStreak],
-          ["Последняя", lastAttempt ? formatShortDate(lastAttempt.at) : "--"],
+          ["Верно законченных упражнений", allCorrect],
+          ["Неверно законченных упражнений", allAttempts - allCorrect],
+          ["Кол-во остановленных упражнений", allStopped],
+          ["Упражнений подряд без ошибок", currentStreak],
         ],
       }
     : modeMap[selectedMode];
   if (selectedMode !== "all") {
     selected.metrics = [
-      ["Подряд без ошибок", currentStreak],
-      ["Верно", selected.correct],
-      ["Попытки", selected.attempts],
-      ["Последняя", lastAttempt ? formatShortDate(lastAttempt.at) : "--"],
+      ["Упражнений подряд без ошибок", currentStreak],
+      ["Верно законченных упражнений", selected.correct],
+      ["Неверно законченных упражнений", selected.attempts - selected.correct],
+      ["Кол-во остановленных упражнений", selected.stopped],
     ];
   }
   const selectedAcc = percentage(selected.correct, selected.attempts);
@@ -3642,12 +3871,14 @@ function renderProgress() {
   document.getElementById("progress-main-value").textContent = `${selectedAcc}%`;
   document.getElementById("progress-main-label").textContent =
     selectedMode === "all" ? "общая точность" : "точность упражнения";
-  document.getElementById("progress-ring-value").textContent = `${selectedAcc}%`;
-  document.getElementById("progress-ring-fill").parentElement.style.setProperty("--progress-angle", `${selectedAcc * 3.6}deg`);
-  document.getElementById("progress-bar-label").textContent =
-    selectedMode === "schulte" ? "Пройденные раунды" : "Верные ответы";
+  document.getElementById("progress-summary-note").textContent = selected.attempts
+    ? `${selected.correct} верных из ${selected.attempts} попыток`
+    : "Пока нет завершённых раундов";
+  document.getElementById("progress-bar-label").textContent = "Верно законченных упражнений";
   document.getElementById("progress-bar-value").textContent = `${selected.correct} из ${selected.attempts}`;
-  document.getElementById("progress-bar-fill").style.width = `${selectedAcc}%`;
+  const progressFill = document.getElementById("progress-bar-fill");
+  progressFill.style.width = `${selectedAcc}%`;
+  progressFill.style.background = "linear-gradient(90deg, #e85d3f 0%, #ef9b48 48%, #36a487 100%)";
 
   const metricsEl = document.getElementById("progress-metrics");
   metricsEl.innerHTML = "";
@@ -3666,6 +3897,10 @@ function renderProgress() {
   compareEl.innerHTML = "";
   compareEl.hidden = selectedMode !== "all";
   if (selectedMode === "all") {
+    const compareTitle = document.createElement("h3");
+    compareTitle.className = "exercise-compare-title";
+    compareTitle.textContent = "Точность по упражнениям";
+    compareEl.appendChild(compareTitle);
     modeOrder.forEach((mode) => {
       const item = modeMap[mode];
       const acc = percentage(item.correct, item.attempts);
@@ -3751,6 +3986,7 @@ function loadProgress(storageKey = progressStorageKey()) {
       math: { ...defaults.math, ...(parsed.math || {}) },
       numbers: { ...defaults.numbers, ...(parsed.numbers || {}) },
       words: { ...defaults.words, ...(parsed.words || {}) },
+      "guess-word": { ...defaults["guess-word"], ...(parsed["guess-word"] || {}) },
       memory: { ...defaults.memory, ...(parsed.memory || {}) },
       balda: { ...defaults.balda, ...(parsed.balda || {}) },
       attention: { ...defaults.attention, ...(parsed.attention || {}) },
@@ -3854,17 +4090,12 @@ function syncAttentionDescribeAvailability() {
   const attentionLocked = state.attention.completed;
   const attentionSourceLocked = Boolean(state.attention.file) || attentionLocked;
   const attentionHasStarted = Boolean(state.attention.startedAt) || Boolean(state.attention.notes);
-  attentionUploadTriggerBtn.disabled =
-    attentionSourceLocked || state.attention.randomLoading || state.attention.loadingDescription || state.attention.comparing;
-  attentionImageInput.disabled = attentionUploadTriggerBtn.disabled;
   attentionStartBtn.disabled =
     !state.attention.file || attentionHasStarted || attentionLocked || state.attention.comparing;
   attentionAnswerEl.disabled =
     !attentionHasStarted || attentionLocked || state.attention.comparing;
   attentionCompareBtn.disabled =
     attentionLocked || !state.attention.file || !attentionAnswerEl.value.trim() || state.attention.comparing || state.attention.randomLoading;
-  attentionRandomBtn.disabled =
-    attentionSourceLocked || state.attention.randomLoading || state.attention.loadingDescription || state.attention.comparing;
   attentionStopBtn.disabled =
     !state.attention.file
     && !state.attention.imageUrl

@@ -41,7 +41,7 @@ const server = http.createServer(async (req, res) => {
       await sendWebResponseToNode(res, response);
       return;
     }
-    if (req.method === "GET" && req.url === "/api/random-attention-image") {
+    if (req.method === "GET" && req.url?.startsWith("/api/random-attention-image")) {
       const response = await handleRandomAttentionImageRequest(nodeRequestToWebRequest(req));
       await sendWebResponseToNode(res, response);
       return;
