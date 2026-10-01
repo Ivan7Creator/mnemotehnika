@@ -8,11 +8,12 @@ const defaults = {
   numbers: { attempts: 0, correct: 0, stopped: 0, bestLength: 0, streak: 0, bestTimeSec: null },
   words: { attempts: 0, correct: 0, stopped: 0, bestCount: 0, streak: 0, bestTimeSec: null },
   "guess-word": { attempts: 0, correct: 0, stopped: 0, streak: 0, bestStreak: 0 },
+  "what-word": { attempts: 0, correct: 0, stopped: 0, streak: 0, bestStreak: 0, bestTimeSec: null },
   memory: { attempts: 0, correct: 0, stopped: 0, streak: 0, bestStreak: 0 },
   balda: { attempts: 0, correct: 0, stopped: 0, streak: 0, bestStreak: 0, bestTimeSec: null },
   attention: { attempts: 0, correct: 0, stopped: 0, streak: 0, bestStreak: 0 },
   schulte: { attempts: 0, correct: 0, stopped: 0, bestStreak: 0, streak: 0, bestTimeSec: null, bestSize: 0 },
-  exam: { bestTimeSec: null },
+  exam: { bestTimeSec: null, levels: {} },
   sessions: [],
 };
 
@@ -59,6 +60,7 @@ const state = {
     stage: "prep",
   },
   guessWord: { words: [], index: 0, active: false, startedAt: null, stage: "prep" },
+  whatWord: { words: [], index: 0, active: false, correct: 0, reviewRows: [], startedAt: null, stage: "prep" },
   balda: {
     chain: ["маска", "миска", "мишка", "мышка", "мышца"],
     chains: {
@@ -183,6 +185,7 @@ const panels = {
   numbers: document.getElementById("numbers-panel"),
   words: document.getElementById("words-panel"),
   "guess-word": document.getElementById("guess-word-panel"),
+  "what-word": document.getElementById("what-word-panel"),
   attention: document.getElementById("attention-panel"),
   schulte: document.getElementById("schulte-panel"),
   balda: document.getElementById("balda-panel"),
@@ -247,12 +250,13 @@ function openTrainerPage(key) {
   if (key === "number-series") setNumberStage(state.numbers.phase);
   if (key === "words") setWordStage(state.words.stage);
   if (key === "guess-word") setGuessWordStage(state.guessWord.stage);
+  if (key === "what-word") setWhatWordStage(state.whatWord.stage);
   if (key === "balda") setBaldaStage(state.balda.stage);
   if (key === "attention") {
     setAttentionStage(state.attention.stage);
-    if (!state.attention.file && !state.attention.randomLoading) loadRandomAttentionImage();
   }
   if (key === "schulte") setSchulteStage(state.schulte.stage);
+  if (key === "exam") setExamStage(state.exam.phase);
   document.title = title ? `${title} — Mnemonic Lab` : "Mnemonic Lab";
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
@@ -261,6 +265,15 @@ function setTrainerStage(stage) {
   trainerSteps.forEach((step, index) => {
     step.classList.toggle("active", index + 1 === stage);
   });
+}
+
+function setExamStage(phase) {
+  const examPanelEl = document.getElementById("exam-panel");
+  const stage = phase === "done" ? "result" : phase === "idle" ? "prep" : "task";
+  examPanelEl.classList.remove("exam-stage-prep", "exam-stage-task", "exam-stage-result");
+  examPanelEl.classList.add(`exam-stage-${stage}`);
+  examPanelEl.classList.toggle("exam-is-transitioning", phase === "transition");
+  setTrainerStage(stage === "result" ? 3 : stage === "prep" ? 1 : 2);
 }
 
 function openTrainerCatalog() {
@@ -309,6 +322,7 @@ const mathTaskEl = document.getElementById("math-task");
 const mathPanelEl = document.getElementById("math-panel");
 const mathForm = document.getElementById("math-form");
 const mathAnswer = document.getElementById("math-answer");
+const mathAnswerValidationEl = document.getElementById("math-answer-validation");
 const mathFeedback = document.getElementById("math-feedback");
 const mathSubmitBtn = mathForm.querySelector('button[type="submit"]');
 const mathTimerEl = document.getElementById("math-timer");
@@ -345,6 +359,7 @@ mathOperationEl.addEventListener("change", updateCustomMathControls);
 mathAnswer.addEventListener("input", () => {
   mathAnswer.classList.remove("is-invalid");
   mathAnswer.placeholder = "Введи ответ";
+  clearMathInputError();
   syncMathControls();
 });
 
@@ -352,8 +367,8 @@ mathForm.addEventListener("submit", (event) => {
   event.preventDefault();
   if (state.math.answer === null) return;
   const rawValue = (mathAnswer.value || "").trim();
-  if (!rawValue) return showMathInputError("Введи ответ");
-  if (!/^\d+$/.test(rawValue)) return showMathInputError("Введи целое число");
+  if (!rawValue) return showMathInputError("Введи ответ в поле ввода");
+  if (!/^\d+$/.test(rawValue)) return showMathInputError("Используй только цифры от 0 до 9");
   const value = Number(rawValue);
   const correct = value === state.math.answer;
   if (correct) state.math.correctInSeries += 1;
@@ -374,11 +389,14 @@ mathForm.addEventListener("submit", (event) => {
 });
 
 function showMathInputError(message) {
-  mathAnswer.value = "";
-  mathAnswer.placeholder = message;
+  mathAnswerValidationEl.textContent = message;
   mathAnswer.classList.add("is-invalid");
   mathAnswer.focus();
   syncMathControls();
+}
+
+function clearMathInputError() {
+  mathAnswerValidationEl.textContent = "";
 }
 
 function getMathTaskConfig() {
@@ -506,6 +524,7 @@ function generateMathTask() {
   mathReviewEl.hidden = true;
   mathReviewEl.innerHTML = "";
   mathFeedback.textContent = "";
+  clearMathInputError();
   mathSeriesProgressEl.hidden = false;
   startMathTimer();
   setMathStage("task");
@@ -523,6 +542,7 @@ function showNextMathTask() {
   mathTaskEl.hidden = false;
   mathTaskEl.textContent = task.expression.replace("*", "×");
   mathTaskEl.classList.remove("challenge-hint");
+  clearMathInputError();
   mathAnswer.focus();
   syncMathControls();
 }
@@ -604,6 +624,7 @@ function stopMathExercise() {
   setMathTaskPlaceholder("Нажми «Решать»");
   setMathStage("prep");
   mathForm.reset();
+  clearMathInputError();
   if (hadActive) {
     recordStoppedExercise("math");
     mathFeedback.textContent = "Упражнение остановлено.";
@@ -622,6 +643,7 @@ function resetMathExercise() {
   mathReviewEl.hidden = true;
   mathReviewEl.innerHTML = "";
   mathForm.reset();
+  clearMathInputError();
   mathFeedback.textContent = "";
   mathFeedback.className = "feedback";
   setMathTaskPlaceholder("Нажми «Решать»");
@@ -646,7 +668,7 @@ function syncMathControls() {
   mathOperationEl.disabled = hasActiveTask;
   mathMulLimitEl.disabled = hasActiveTask;
   mathTotalRoundsEl.disabled = hasActiveTask;
-  mathSubmitBtn.disabled = state.math.answer === null;
+  mathSubmitBtn.disabled = state.math.answer === null || !mathAnswer.value.trim();
   mathStopBtn.disabled = state.math.answer === null && !state.math.startedAt;
   mathAnswer.disabled = state.math.answer === null;
 }
@@ -661,6 +683,7 @@ const numTaskEl = document.getElementById("num-task");
 const numForm = document.getElementById("num-form");
 const numFeedback = document.getElementById("num-feedback");
 const numAnswer = document.getElementById("num-answer");
+const numAnswerValidationEl = document.getElementById("num-answer-validation");
 const numSubmitBtn = numForm.querySelector('button[type="submit"]');
 const numTotalRoundsEl = document.getElementById("num-total-rounds");
 const numDigitsCountEl = document.getElementById("num-digits-count");
@@ -687,7 +710,10 @@ numAgainBtn.addEventListener("click", resetNumberExercise);
 numCustomToggleBtn.addEventListener("click", toggleCustomNumberSettings);
 numNextBtn.addEventListener("click", runNextNumberRound);
 numStopBtn.addEventListener("click", stopNumberExercise);
-numAnswer.addEventListener("input", syncNumberControls);
+  numAnswer.addEventListener("input", () => {
+  clearNumberAnswerValidation();
+  syncNumberControls();
+});
 numDifficultyEl.addEventListener("change", updateNumberDifficultyPreview);
 numTotalRoundsEl.addEventListener("change", () => {
   state.numbers.totalRounds = Number(numTotalRoundsEl.value) || 6;
@@ -699,7 +725,13 @@ numTotalRoundsEl.addEventListener("change", () => {
 numForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   if (!state.numbers.seriesActive || !state.numbers.awaitingAnswer || !state.numbers.value) return;
-  const cleanInput = (numAnswer.value || "").replace(/\D/g, "");
+  const validation = validateNumberAnswer();
+  if (!validation.valid) {
+    showNumberAnswerValidation(validation.message);
+    numAnswer.focus();
+    return;
+  }
+  const cleanInput = numAnswer.value.trim();
   const expectedValue = state.numbers.value;
   const correct = cleanInput === expectedValue;
   if (correct) state.numbers.correctInSeries += 1;
@@ -718,6 +750,7 @@ numForm.addEventListener("submit", async (event) => {
   state.numbers.awaitingAnswer = false;
   state.numbers.value = "";
   numForm.reset();
+  clearNumberAnswerValidation();
   syncNumberControls();
   if (state.numbers.seriesIndex >= state.numbers.totalRounds) {
     finishNumberSeries();
@@ -757,6 +790,25 @@ function startNumberSeries() {
   setNumberStage("task");
   runNextNumberRound();
   syncNumberControls();
+}
+
+function validateNumberAnswer() {
+  const value = numAnswer.value.trim();
+  if (!value) return { valid: false, message: "Введи числовой ряд в поле ввода" };
+  if (/\D/.test(value)) {
+    return { valid: false, message: "Используй только цифры от 0 до 9" };
+  }
+  return { valid: true, message: "" };
+}
+
+function showNumberAnswerValidation(message) {
+  numAnswerValidationEl.textContent = message;
+  numAnswer.setAttribute("aria-invalid", "true");
+}
+
+function clearNumberAnswerValidation() {
+  numAnswerValidationEl.textContent = "";
+  numAnswer.removeAttribute("aria-invalid");
 }
 
 function getNumberSeriesConfig() {
@@ -853,6 +905,7 @@ async function runNextNumberRound() {
   numSeriesProgressEl.textContent = `Ряд: ${state.numbers.seriesIndex}/${state.numbers.totalRounds}`;
   numNextBtn.disabled = true;
   numAnswer.value = "";
+  clearNumberAnswerValidation();
 
   if (!state.numbers.seriesActive) return;
   numTaskEl.textContent = value;
@@ -938,6 +991,7 @@ function stopNumberExercise() {
   numNextBtn.disabled = true;
   numNextBtn.hidden = true;
   numForm.reset();
+  clearNumberAnswerValidation();
   numReviewEl.hidden = true;
   numReviewEl.innerHTML = "";
   if (hadActive) {
@@ -1004,7 +1058,10 @@ function syncNumberControls() {
   numDigitsCountEl.disabled = state.numbers.seriesActive;
   numShowSecondsEl.disabled = state.numbers.seriesActive;
   numSubmitBtn.disabled =
-    !state.numbers.seriesActive || !state.numbers.awaitingAnswer || !state.numbers.value || !numAnswer.value.trim();
+    !state.numbers.seriesActive
+    || !state.numbers.awaitingAnswer
+    || !state.numbers.value
+    || !numAnswer.value.trim();
   numStopBtn.disabled = !state.numbers.seriesActive && !state.numbers.startedAt;
   numAnswer.disabled = !state.numbers.seriesActive || !state.numbers.awaitingAnswer || !state.numbers.value;
 }
@@ -1057,12 +1114,47 @@ const examProgressEl = document.getElementById("exam-progress");
 const examTimerEl = document.getElementById("exam-timer");
 const examBestTimeEl = document.getElementById("exam-best-time");
 const examResultMetricsEl = document.getElementById("exam-result-metrics");
+const examLevelStatusEl = document.getElementById("exam-level-status");
+
+const examLevelOrder = ["easy", "medium", "hard", "expert"];
+const examLevelLabels = { easy: "Лёгкий", medium: "Средний", hard: "Высокий", expert: "Эксперт" };
+
+function isExamLevelUnlocked(level) {
+  const index = examLevelOrder.indexOf(level);
+  return index <= 0 || Boolean(state.progress.exam.levels?.[examLevelOrder[index - 1]]);
+}
+
+function syncExamLevelOptions() {
+  [...examDifficultyEl.options].forEach((option) => {
+    option.disabled = !isExamLevelUnlocked(option.value);
+    option.textContent = examLevelLabels[option.value];
+  });
+  if (!isExamLevelUnlocked(examDifficultyEl.value)) examDifficultyEl.value = "easy";
+  const unlocked = examLevelOrder.filter(isExamLevelUnlocked).length;
+  examLevelStatusEl.innerHTML = examLevelOrder.map((level) => {
+    const unlocked = isExamLevelUnlocked(level);
+    return `<span class="meta-chip ${unlocked ? "is-unlocked" : "is-locked"}">${unlocked ? "✓" : "🔒"} ${examLevelLabels[level]}</span>`;
+  }).join("");
+  examLevelStatusEl.setAttribute("aria-label", `Открыто уровней: ${unlocked} из ${examLevelOrder.length}`);
+}
 
 examStartBtn.addEventListener("click", startExam);
 examSkipBtn.addEventListener("click", skipExamTask);
 examStopBtn.addEventListener("click", stopExamExercise);
-examAnswer.addEventListener("input", syncExamControls);
-examDifficultyEl.addEventListener("change", updateExamStats);
+examAnswer.addEventListener("input", () => {
+  clearExamInputError();
+  syncExamControls();
+});
+examTaskEl.addEventListener("input", (event) => {
+  const input = event.target.closest(".exam-balda-word-input");
+  if (!input) return;
+  input.classList.remove("is-invalid");
+  const validation = examTaskEl.querySelector(".exam-balda-validation");
+  if (validation) validation.textContent = "";
+  syncExamControls();
+});
+examDifficultyEl.addEventListener("change", () => { syncExamLevelOptions(); updateExamStats(); });
+syncExamLevelOptions();
 
 examForm.addEventListener("submit", async (event) => {
   event.preventDefault();
@@ -1073,27 +1165,114 @@ examForm.addEventListener("submit", async (event) => {
   let correct = false;
   let expected = "";
   let actual = rawValue;
+  let reviewRows = [];
+
+  if (task.kind !== "balda") {
+    const validation = validateExamTextInput(task.kind, rawValue);
+    if (!validation.valid) return showExamInputError(validation.message);
+  }
 
   if (task.kind === "math") {
-    correct = Number(rawValue) === task.answer;
-    expected = String(task.answer);
+    const round = task.rounds[task.roundIndex];
+    const roundCorrect = Number(rawValue) === round.answer;
+    task.answers.push({
+      expression: round.expression.replace("*", "×"),
+      expected: String(round.answer),
+      actual: rawValue,
+      correct: roundCorrect,
+    });
+
+    if (task.roundIndex < task.rounds.length - 1) {
+      task.roundIndex += 1;
+      examFeedback.textContent = "";
+      examFeedback.className = "feedback";
+      examForm.reset();
+      presentExamMathTask(task);
+      updateExamStats();
+      syncExamControls();
+      return;
+    }
+
+    correct = task.answers.every((answer) => answer.correct);
+    expected = task.answers.map((answer) => `${answer.expression} = ${answer.expected}`).join(" / ");
+    actual = task.answers.map((answer) => `${answer.expression} = ${answer.actual}`).join(" / ");
+    reviewRows = task.answers.map((answer, index) => ({
+      index: index + 1,
+      expected: `${answer.expression} = ${answer.expected}`,
+      actual: answer.actual,
+      correct: answer.correct,
+    }));
   } else if (task.kind === "numbers") {
-    const actualRows = rawValue.match(/\d+/g) || [];
-    correct = arraysEqual(actualRows, task.values);
-    expected = task.values.join(" / ");
-    actual = actualRows.join(" / ");
+    const expectedRow = task.values[task.roundIndex];
+    const actualRow = (rawValue.match(/\d+/) || [""])[0];
+    const rowCorrect = actualRow === expectedRow;
+    task.answers.push({ expected: expectedRow, actual: actualRow, correct: rowCorrect });
+
+    if (task.roundIndex < task.values.length - 1) {
+      task.roundIndex += 1;
+      state.exam.phase = "showing";
+      examFeedback.textContent = "";
+      examFeedback.className = "feedback";
+      examForm.reset();
+      presentExamNumberTask(task);
+      updateExamStats();
+      syncExamControls();
+      return;
+    }
+
+    correct = task.answers.every((answer) => answer.correct);
+    expected = task.answers.map((answer) => answer.expected).join(" / ");
+    actual = task.answers.map((answer) => answer.actual).join(" / ");
+    reviewRows = task.answers.map((answer, index) => ({
+      index: index + 1,
+      expected: answer.expected,
+      actual: answer.actual,
+      correct: answer.correct,
+    }));
   } else if (task.kind === "words") {
     const actualWords = normalizeWords(rawValue);
     const expectedWords = task.words.map(normalizeWordToken);
     correct = arraysEqual(actualWords, expectedWords);
     expected = task.words.join(" / ");
     actual = actualWords.join(" / ");
+    reviewRows = task.words.map((word, index) => ({
+      index: index + 1,
+      expected: word,
+      actual: actualWords[index] || "Пропущено",
+      correct: actualWords[index] === expectedWords[index],
+    }));
   } else if (task.kind === "balda") {
-    const actualWords = normalizeWords(rawValue);
-    const expectedWords = task.chain.slice(1).map(normalizeWordToken);
-    correct = arraysEqual(actualWords, expectedWords);
-    expected = task.chain.slice(1).join(" / ");
-    actual = actualWords.join(" / ");
+    const nextIndex = task.stepIndex + 1;
+    const input = examTaskEl.querySelector(`[data-exam-balda-step="${nextIndex}"]`);
+    const value = normalizeWordToken(input?.value || "");
+    const previous = task.chain[nextIndex - 1];
+    const expectedWord = task.chain[nextIndex];
+
+    if (!input || !value) return showExamBaldaError("Введи следующее слово", input);
+    if (!/^[а-я]+$/i.test(value)) return showExamBaldaError("Используй только русские буквы", input);
+    if (value.length !== previous.length) return showExamBaldaError(`В слове должно быть ${previous.length} букв`, input);
+    const changedLetters = [...value].filter((letter, index) => letter !== previous[index]).length;
+    if (changedLetters === 0) return showExamBaldaError("Нужно изменить одну букву", input);
+    if (changedLetters !== 1) return showExamBaldaError("Можно изменить только одну букву", input);
+    if (value !== expectedWord) return showExamBaldaError("Не подходит. Попробуй другое слово", input);
+
+    task.answers.push({ expected: expectedWord, actual: value, correct: true });
+    task.stepIndex = nextIndex;
+    if (task.stepIndex < task.chain.length - 1) {
+      renderExamBaldaLadder(task);
+      syncExamControls();
+      return;
+    }
+
+    correct = true;
+    expected = task.answers.map((answer) => answer.expected).join(" / ");
+    actual = task.answers.map((answer) => answer.actual).join(" / ");
+    reviewRows = task.answers.map((answer, index) => ({
+      index: index + 1,
+      expected: answer.expected,
+      actual: answer.actual,
+      correct: true,
+    }));
   }
 
   state.exam.results.push({
@@ -1103,6 +1282,7 @@ examForm.addEventListener("submit", async (event) => {
     expected,
     actual,
     correct,
+    reviewRows,
   });
   if (correct) state.exam.correctCount += 1;
 
@@ -1110,6 +1290,8 @@ examForm.addEventListener("submit", async (event) => {
   examFeedback.className = "feedback";
   examForm.reset();
   state.exam.phase = "transition";
+  setExamStage("transition");
+  setExamTaskPlaceholder("");
   updateExamStats();
   syncExamControls();
 
@@ -1138,7 +1320,7 @@ function buildExamQueue() {
     expert: { totalRounds: 6, digitsPerRound: 6, showSeconds: 0.5 },
   };
   const wordPresets = {
-    easy: { count: 10, showSeconds: 5, isComplex: false },
+    easy: { count: 2, showSeconds: 2, isComplex: false },
     medium: { count: 20, showSeconds: 4, isComplex: false },
     hard: { count: 10, showSeconds: 3, isComplex: true },
     expert: { count: 20, showSeconds: 2, isComplex: true },
@@ -1151,7 +1333,15 @@ function buildExamQueue() {
   const baldaChains = getPlayableBaldaChains(baldaLength);
 
   const tasks = [
-    buildMathTask({ operation: mathOperation, bounds: mathBounds }),
+    {
+      kind: "math",
+      rounds: Array.from(
+        { length: 4 },
+        () => buildMathTask({ operation: mathOperation, bounds: mathBounds }),
+      ),
+      roundIndex: 0,
+      answers: [],
+    },
     {
       kind: "numbers",
       values: Array.from(
@@ -1159,6 +1349,8 @@ function buildExamQueue() {
         () => generateDigits(numberConfig.digitsPerRound, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]),
       ),
       showSeconds: numberConfig.showSeconds,
+      roundIndex: 0,
+      answers: [],
     },
     {
       kind: "words",
@@ -1175,15 +1367,16 @@ function buildExamQueue() {
     {
       kind: "balda",
       chain: [...baldaChains[randomInt(0, baldaChains.length - 1)]],
+      stepIndex: 0,
+      answers: [],
     },
   ];
 
-  return shuffle(difficulty === "expert"
-    ? tasks.filter((task) => task.kind === "numbers" || task.kind === "words")
-    : tasks);
+  return tasks;
 }
 
 function startExam() {
+  if (!isExamLevelUnlocked(examDifficultyEl.value)) return;
   stopExamTimer();
   state.exam.queue = buildExamQueue();
   state.exam.active = true;
@@ -1193,6 +1386,7 @@ function startExam() {
   state.exam.revealToken += 1;
   state.exam.correctCount = 0;
   state.exam.results = [];
+  setExamStage("showing");
   examSummaryEl.hidden = true;
   examSummaryEl.innerHTML = "";
   examReviewEl.hidden = true;
@@ -1219,11 +1413,14 @@ function runNextExamTask() {
   const task = state.exam.queue[state.exam.currentIndex];
   state.exam.currentTask = task;
   state.exam.phase = task.kind === "math" || task.kind === "balda" ? "answering" : "showing";
+  setExamStage(state.exam.phase);
   examFeedback.textContent = "";
   examFeedback.className = "feedback";
   examForm.reset();
+  examForm.classList.toggle("is-balda-task", task.kind === "balda");
   examSummaryEl.hidden = true;
   examReviewEl.hidden = true;
+  setExamTaskPlaceholder("");
   updateExamStats();
 
   if (task.kind === "math") presentExamMathTask(task);
@@ -1236,26 +1433,27 @@ function runNextExamTask() {
 }
 
 function presentExamMathTask(task) {
-  examTaskEl.textContent = task.expression;
+  clearExamInputError();
+  examTaskEl.classList.remove("exam-balda-task");
+  examTaskEl.textContent = task.rounds[task.roundIndex].expression.replace("*", "×");
   examTaskEl.classList.remove("challenge-hint", "mono", "words");
   examAnswer.focus();
 }
 
 async function presentExamNumberTask(task) {
+  clearExamInputError();
+  examTaskEl.classList.remove("exam-balda-task");
   const revealToken = state.exam.revealToken;
+  const index = task.roundIndex;
   examTaskEl.classList.remove("challenge-hint");
   examTaskEl.classList.add("mono");
+  examTaskEl.textContent = `Ряд ${index + 1}/${task.values.length}: ${task.values[index]}`;
   syncExamControls();
 
-  for (let index = 0; index < task.values.length; index += 1) {
-    if (!isCurrentExamReveal(task, revealToken)) return;
-    examTaskEl.textContent = `Ряд ${index + 1}/${task.values.length}: ${task.values[index]}`;
-    await sleep(task.showSeconds * 1000);
-  }
-
+  await sleep(task.showSeconds * 1000);
   if (!isCurrentExamReveal(task, revealToken)) return;
   state.exam.phase = "answering";
-  examTaskEl.textContent = "Введи показанные ряды по порядку";
+  examTaskEl.textContent = `Введи ${index + 1}-й ряд`;
   examTaskEl.classList.add("challenge-hint");
   examTaskEl.classList.remove("mono");
   examAnswer.focus();
@@ -1263,6 +1461,8 @@ async function presentExamNumberTask(task) {
 }
 
 async function presentExamWordsTask(task) {
+  clearExamInputError();
+  examTaskEl.classList.remove("exam-balda-task");
   const revealToken = state.exam.revealToken;
   examTaskEl.classList.remove("challenge-hint", "mono");
   examTaskEl.classList.add("words");
@@ -1284,14 +1484,85 @@ async function presentExamWordsTask(task) {
 }
 
 function presentExamBaldaTask(task) {
-  examTaskEl.textContent = `Начальное слово — ${task.chain[0]}`;
+  clearExamInputError();
+  examTaskEl.classList.add("exam-balda-task");
   examTaskEl.classList.remove("challenge-hint", "mono", "words");
+  examTaskEl.innerHTML = `
+    <p class="exam-balda-start-word">Начальное слово — ${escapeHtml(task.chain[0])}</p>
+    <div class="balda-ladder exam-balda-ladder"></div>
+    <p class="field-validation exam-balda-validation" aria-live="polite"></p>
+  `;
+  renderExamBaldaLadder(task);
+}
+
+function renderExamBaldaLadder(task) {
+  const ladder = examTaskEl.querySelector(".exam-balda-ladder");
+  if (!ladder) return;
+  ladder.innerHTML = task.chain.slice(1).map((word, rowIndex) => {
+    const index = rowIndex + 1;
+    const completed = index <= task.stepIndex;
+    const current = index === task.stepIndex + 1;
+    return `
+      <div class="balda-row ${completed ? "is-complete" : ""} ${current ? "is-current" : ""}">
+        <span class="balda-row-index">${index}</span>
+        <input
+          class="balda-word-input exam-balda-word-input"
+          data-exam-balda-step="${index}"
+          type="text"
+          maxlength="${word.length}"
+          autocomplete="off"
+          spellcheck="false"
+          placeholder="Введи следующее слово"
+          value="${completed ? escapeHtml(task.answers[rowIndex]?.actual || word) : ""}"
+          ${current ? "" : "disabled"}
+          aria-label="Слово для шага ${index}"
+        />
+      </div>`;
+  }).join("");
+  ladder.querySelector(`[data-exam-balda-step="${task.stepIndex + 1}"]`)?.focus();
+}
+
+function showExamBaldaError(message, input) {
+  const validation = examTaskEl.querySelector(".exam-balda-validation");
+  if (validation) validation.textContent = message;
+  if (input) {
+    input.classList.add("is-invalid");
+    input.focus();
+  }
+}
+
+function validateExamTextInput(kind, value) {
+  if (!value) return { valid: false, message: "Введи ответ в поле ввода" };
+  if (kind === "math" || kind === "numbers") {
+    return /^\d+$/.test(value)
+      ? { valid: true, message: "" }
+      : { valid: false, message: "Используй только цифры от 0 до 9" };
+  }
+  if (kind === "words") {
+    const words = value.split(/\s+/).filter(Boolean);
+    return words.length && words.every((word) => /^[а-яё]+$/i.test(word))
+      ? { valid: true, message: "" }
+      : { valid: false, message: "Используй только русские слова, разделяя их пробелом или новой строкой" };
+  }
+  return { valid: true, message: "" };
+}
+
+function showExamInputError(message) {
+  examFeedback.textContent = message;
+  examFeedback.className = "feedback bad";
+  examAnswer.classList.add("is-invalid");
   examAnswer.focus();
+}
+
+function clearExamInputError() {
+  examFeedback.textContent = "";
+  examFeedback.className = "feedback";
+  examAnswer.classList.remove("is-invalid");
 }
 
 function presentExamSchulteTask(task) {
   state.exam.phase = "interacting";
-  examTaskEl.classList.remove("challenge-hint", "mono", "words");
+  examTaskEl.classList.remove("challenge-hint", "mono", "words", "exam-balda-task");
   examTaskEl.innerHTML = "";
 
   const board = document.createElement("div");
@@ -1341,9 +1612,12 @@ async function completeExamSchulteTask(task) {
     expected: "Таблица пройдена",
     actual: "Таблица пройдена",
     correct: true,
+    reviewRows: [{ index: 1, expected: "Таблица пройдена", actual: "Таблица пройдена", correct: true }],
   });
   state.exam.correctCount += 1;
   state.exam.phase = "transition";
+  setExamStage("transition");
+  setExamTaskPlaceholder("");
   updateExamStats();
   syncExamControls();
   await sleep(650);
@@ -1354,13 +1628,22 @@ async function completeExamSchulteTask(task) {
 function skipExamTask() {
   if (!state.exam.active || !state.exam.currentTask || state.exam.phase === "transition") return;
   state.exam.revealToken += 1;
-  const [skippedTask] = state.exam.queue.splice(state.exam.currentIndex, 1);
+  const skippedTask = state.exam.currentTask;
   if (!skippedTask) return;
-  state.exam.queue.push(skippedTask);
-  state.exam.currentIndex -= 1;
+  state.exam.results.push({
+    index: state.exam.results.length + 1,
+    kind: skippedTask.kind,
+    prompt: getExamTaskPrompt(skippedTask),
+    expected: "",
+    actual: "Пропущено",
+    correct: false,
+    skipped: true,
+    reviewRows: [{ index: 1, expected: "—", actual: "Пропущено", correct: false }],
+  });
   state.exam.currentTask = null;
   state.exam.phase = "transition";
   examForm.reset();
+  setExamTaskPlaceholder("");
   runNextExamTask();
 }
 
@@ -1382,7 +1665,7 @@ function arraysEqual(left, right) {
 }
 
 function getExamTaskPrompt(task) {
-  if (task.kind === "math") return task.expression;
+  if (task.kind === "math") return `${task.rounds.length} примера`;
   if (task.kind === "numbers") return `${task.values.length} ряда`;
   if (task.kind === "words") return `${task.words.length} слов`;
   if (task.kind === "schulte") return `${task.size} × ${task.size}${task.useLetters ? ", числа и буквы" : ""}`;
@@ -1429,12 +1712,19 @@ function finishExam() {
 
   const prevBest = state.progress.exam.bestTimeSec ?? Number.POSITIVE_INFINITY;
   state.progress.exam.bestTimeSec = Math.min(prevBest, tookSec);
+  const difficulty = examDifficultyEl.value;
+  if (totalTasks === 5 && state.exam.correctCount === 5) {
+    state.progress.exam.levels = { ...(state.progress.exam.levels || {}), [difficulty]: true };
+  }
   persist();
+  syncExamLevelOptions();
   updateExamBestTime();
 
   state.exam.active = false;
   state.exam.currentTask = null;
   state.exam.phase = "done";
+  examForm.classList.remove("is-balda-task");
+  setExamStage("done");
   examTaskEl.textContent = "Экзамен завершен";
   examTaskEl.classList.add("challenge-hint");
   examTaskEl.classList.remove("mono");
@@ -1460,9 +1750,11 @@ function stopExamExercise(options = {}) {
   state.exam.currentIndex = -1;
   state.exam.currentTask = null;
   state.exam.phase = "idle";
+  setExamStage("idle");
   state.exam.correctCount = 0;
   state.exam.results = [];
   examForm.reset();
+  examForm.classList.remove("is-balda-task");
   examSummaryEl.hidden = true;
   examSummaryEl.innerHTML = "";
   examReviewEl.hidden = true;
@@ -1479,44 +1771,57 @@ function stopExamExercise(options = {}) {
 }
 
 function updateExamStats() {
-  const defaultTotal = examDifficultyEl.value === "expert" ? 2 : 5;
+  const defaultTotal = 5;
   const totalTasks = state.exam.queue.length || defaultTotal;
   const currentTaskNumber = state.exam.currentTask
-    ? state.exam.results.length + 1
+    ? state.exam.currentIndex + 1
     : state.exam.phase === "done"
       ? totalTasks
       : 0;
-  examProgressEl.textContent = `Задание: ${currentTaskNumber}/${totalTasks}`;
+  const modeLabels = {
+    math: "Счёт в уме",
+    numbers: "Числовой ряд",
+    words: "Запоминание слов",
+    schulte: "Таблицы Шульте",
+    balda: "Балда",
+  };
+  const modeLabel = modeLabels[state.exam.currentTask?.kind] || "Упражнение";
+  const mathRound = state.exam.currentTask?.kind === "math"
+    ? ` (пример ${state.exam.currentTask.roundIndex + 1}/${state.exam.currentTask.rounds.length})`
+    : state.exam.currentTask?.kind === "numbers"
+      ? ` (ряд ${state.exam.currentTask.roundIndex + 1}/${state.exam.currentTask.values.length})`
+      : "";
+  examProgressEl.textContent = `Упражнение №${currentTaskNumber}/${totalTasks} — ${modeLabel}${mathRound}`;
 }
 
 function syncExamControls() {
-  examResultMetricsEl.hidden = state.exam.phase !== "done";
+  examResultMetricsEl.hidden = true;
   const readyForAnswer =
     state.exam.active
     && state.exam.phase === "answering"
     && Boolean(state.exam.currentTask);
   examStartBtn.disabled = state.exam.active;
   examDifficultyEl.disabled = state.exam.active;
-  examSubmitBtn.disabled = !readyForAnswer || !examAnswer.value.trim();
+  const taskKind = state.exam.currentTask?.kind;
+  const baldaInput = examTaskEl.querySelector(".exam-balda-word-input:not(:disabled)");
+  const hasAnswer = taskKind === "balda" ? Boolean(baldaInput?.value.trim()) : Boolean(examAnswer.value.trim());
+  examSubmitBtn.disabled = !readyForAnswer || !hasAnswer;
   examSkipBtn.disabled = !state.exam.active
     || !state.exam.currentTask
     || state.exam.phase === "transition";
   examStopBtn.disabled = !state.exam.active && !state.exam.startedAt;
   examAnswer.disabled = !readyForAnswer;
-  const taskKind = state.exam.currentTask?.kind;
   examAnswer.placeholder = taskKind === "numbers"
-    ? "Введи ряды по порядку через пробел или с новой строки"
+    ? "Введи показанный ряд"
     : taskKind === "words"
       ? "Введи слова по порядку через пробел или с новой строки"
-      : taskKind === "balda"
-        ? "Введи цепочку слов после начального слова"
-        : "Введи ответ";
+      : "Введи ответ";
 }
 
 function setExamTaskPlaceholder(text) {
   examTaskEl.textContent = text;
   examTaskEl.classList.add("challenge-hint");
-  examTaskEl.classList.remove("mono");
+  examTaskEl.classList.remove("mono", "words", "exam-balda-task");
 }
 
 function updateExamBestTime() {
@@ -1534,33 +1839,44 @@ function renderExamReview(results) {
     schulte: "Таблицы Шульте",
     balda: "Балда",
   };
-  const rows = [];
-  for (const row of results) {
-    const actual = row.actual || "Пропуск";
+  const cards = results.map((row) => {
+    const actual = row.actual || "Пропущено";
     const modeLabel = modeLabels[row.kind] || "Упражнение";
-    rows.push(`
-      <div class="num-review-row ${row.correct ? "is-ok" : "is-bad"}">
-        <div class="num-review-row-title">Задание ${row.index} • ${modeLabel} • ${row.prompt}</div>
-        <div class="num-review-columns">
-          <div class="num-review-col">
-            <span class="num-review-label">Правильно</span>
-            <span class="num-chip expected">${row.expected}</span>
+    const status = row.correct ? "Верно!" : "Неверно";
+    const reviewRows = row.reviewRows?.length
+      ? row.reviewRows
+      : [{ index: 1, expected: row.expected || "—", actual, correct: row.correct }];
+    return `
+      <article class="exam-review-card ${row.correct ? "is-ok" : "is-bad"}">
+        <header class="exam-review-card-head">
+          <h3>${modeLabel}</h3>
+          <span class="exam-review-status">${status}</span>
+        </header>
+        ${row.kind === "schulte" ? "" : `<div class="word-review-grid exam-review-rows">${reviewRows.map((reviewRow) => `
+          <div class="word-review-row ${reviewRow.correct ? "is-ok" : "is-bad"}">
+            <div class="word-review-index">${reviewRow.index}</div>
+            <div class="word-review-columns">
+              <div class="word-review-col">
+                <span class="word-review-label">Правильный ответ</span>
+                <span class="word-chip expected">${escapeHtml(reviewRow.expected)}</span>
+              </div>
+              <div class="word-review-col">
+                <span class="word-review-label">Твой ответ</span>
+                <span class="word-chip actual ${reviewRow.correct ? "ok" : "bad"}">${escapeHtml(reviewRow.actual)}</span>
+              </div>
+            </div>
           </div>
-          <div class="num-review-col">
-            <span class="num-review-label">Твой ответ</span>
-            <span class="num-chip actual ${row.correct ? "ok" : "bad"}">${actual}</span>
-          </div>
-        </div>
-      </div>
-    `);
-  }
+        `).join("")}</div>`}
+      </article>
+    `;
+  });
 
   examReviewEl.innerHTML = `
-    <div class="num-review-head">
+    <div class="exam-review-head">
       <strong>Разбор экзамена</strong>
-      <span>Сравнение твоих ответов с правильными по каждому заданию.</span>
+      <span>Каждое упражнение — в отдельной карточке с результатом и ответами.</span>
     </div>
-    <div class="num-review-grid">${rows.join("")}</div>
+    <div class="exam-review-grid">${cards.join("")}</div>
   `;
   examReviewEl.hidden = false;
 }
@@ -2059,6 +2375,7 @@ const wordTaskEl = document.getElementById("word-task");
 const wordForm = document.getElementById("word-form");
 const wordFeedback = document.getElementById("word-feedback");
 const wordAnswer = document.getElementById("word-answer");
+const wordAnswerValidationEl = document.getElementById("word-answer-validation");
 const wordSubmitBtn = wordForm.querySelector('button[type="submit"]');
 const wordReviewEl = document.getElementById("word-review");
 const wordStartBtn = document.getElementById("word-start");
@@ -2070,7 +2387,10 @@ wordStartBtn.addEventListener("click", startWordRound);
 wordAgainBtn.addEventListener("click", resetWordExercise);
 wordCustomToggleBtn.addEventListener("click", toggleCustomWordSettings);
 wordStopBtn.addEventListener("click", stopWordExercise);
-wordAnswer.addEventListener("input", syncWordControls);
+wordAnswer.addEventListener("input", () => {
+  clearWordInputError();
+  syncWordControls();
+});
 wordLevelEl.addEventListener("change", updateWordDifficultyPreview);
 wordLanguageEl.addEventListener("change", updateWordDifficultyPreview);
 
@@ -2081,6 +2401,18 @@ wordForm.addEventListener("submit", (event) => {
     wordFeedback.textContent = "Дождись окончания показа слов.";
     wordFeedback.className = "feedback bad";
     return;
+  }
+
+  const rawValue = wordAnswer.value.trim();
+  const language = wordLanguageEl.value === "en" ? "en" : "ru";
+  const allowedPattern = language === "en"
+    ? /^[a-z\s,;'-]+$/i
+    : /^[а-яё\s,;'-]+$/i;
+  if (!rawValue) {
+    return showWordInputError("Введи слова в поле ввода");
+  }
+  if (!allowedPattern.test(rawValue)) {
+    return showWordInputError("Используй только слова и разделители: пробел, запятая или новая строка");
   }
 
   const inputWords = normalizeWords(wordAnswer.value);
@@ -2111,9 +2443,22 @@ wordForm.addEventListener("submit", (event) => {
   state.words.revealedCount = 0;
   setWordTaskPlaceholder();
   wordForm.reset();
+  clearWordInputError();
   setWordStage("result");
   syncWordControls();
 });
+
+function showWordInputError(message) {
+  wordAnswerValidationEl.textContent = message;
+  wordAnswer.setAttribute("aria-invalid", "true");
+  wordAnswer.focus();
+  syncWordControls();
+}
+
+function clearWordInputError() {
+  wordAnswerValidationEl.textContent = "";
+  wordAnswer.removeAttribute("aria-invalid");
+}
 
 function startWordRound() {
   clearWordRevealTimer();
@@ -2141,6 +2486,7 @@ function startWordRound() {
   startWordTimer();
   setWordStage("task");
   wordForm.reset();
+  clearWordInputError();
   revealNextWord();
   startWordRevealSequence();
   syncWordControls();
@@ -2220,6 +2566,7 @@ function updateWordDifficultyPreview() {
   if (!wordCustomSettingsEl.hidden) return;
   const preview = wordDifficultyPreviews[wordLevelEl.value] || wordDifficultyPreviews.easy;
   const language = wordLanguageEl.value === "en" ? "en" : "ru";
+  const exampleWords = preview[language];
   const createPill = (text) => {
     const element = document.createElement("span");
     element.textContent = text;
@@ -2229,7 +2576,8 @@ function updateWordDifficultyPreview() {
   wordPreviewTypeEl.replaceChildren(createPill(preview.type));
   wordPreviewDurationEl.replaceChildren(createPill(preview.duration));
   wordPreviewLanguageEl.replaceChildren(createPill(language === "ru" ? "Русский" : "Английский"));
-  wordPreviewExamplesEl.replaceChildren(...preview[language].map((word) => {
+  wordPreviewExamplesEl.classList.toggle("has-long-words", exampleWords.some((word) => word.length >= 10));
+  wordPreviewExamplesEl.replaceChildren(...exampleWords.map((word) => {
     const element = document.createElement("span");
     element.textContent = word;
     return element;
@@ -2335,6 +2683,7 @@ function stopWordExercise() {
   state.words.revealedCount = 0;
   setWordTaskPlaceholder();
   wordForm.reset();
+  clearWordInputError();
   wordReviewEl.hidden = true;
   wordReviewEl.innerHTML = "";
   if (hadActive) {
@@ -2412,7 +2761,13 @@ function startGuessWordRound() {
 function renderGuessWordTask() {
   const word = state.guessWord.words[state.guessWord.index] || "";
   guessWordValueEl.textContent = word;
-  guessWordMaskEl.style.setProperty("--guess-word-hidden", `${guessWordPercentEl.value}%`);
+  const hiddenPercent = Number(guessWordPercentEl.value) || 80;
+  const hasDescender = /[бдзуфцщрgyjpq]/i.test(word);
+  const descenderCompensation = hasDescender ? Math.min(10, hiddenPercent * 0.15) : 0;
+  guessWordMaskEl.style.setProperty(
+    "--guess-word-hidden",
+    `${Math.max(0, hiddenPercent - descenderCompensation)}%`,
+  );
   guessWordCountEl.textContent = `Слово ${state.guessWord.index + 1} из ${state.guessWord.words.length}`;
 }
 
@@ -2435,6 +2790,164 @@ function setGuessWordStage(stage) {
   state.guessWord.stage = stage;
   setTrainerStage(stage === "prep" ? 1 : stage === "task" ? 2 : 3);
 }
+
+let whatWordPools = {
+  easy: ["карандаш", "малина", "корова", "машина", "дорога", "ромашка", "помидор", "телефон", "молоко", "подарок"],
+  medium: ["библиотека", "самолёт", "путешествие", "зеркало", "календарь", "профессия", "природа", "воскресенье", "апельсин", "университет"],
+  hard: ["воображение", "последовательность", "взаимодействие", "достопримечательность", "целеустремлённость", "самосовершенствование", "неопределённость", "производительность", "мировоззрение", "интеллектуальность"],
+};
+const whatWordPanelEl = document.getElementById("what-word-panel");
+const whatWordDifficultyEl = document.getElementById("what-word-difficulty");
+const whatWordCountEl = document.getElementById("what-word-count");
+const whatWordPreviewCountEl = document.getElementById("what-word-preview-count");
+const whatWordPreviewExamplesEl = document.getElementById("what-word-preview-examples");
+const whatWordStartBtn = document.getElementById("what-word-start");
+const whatWordConsonantsEl = document.getElementById("what-word-consonants");
+const whatWordProgressEl = document.getElementById("what-word-progress");
+const whatWordForm = document.getElementById("what-word-form");
+const whatWordAnswerEl = document.getElementById("what-word-answer");
+const whatWordSubmitBtn = document.getElementById("what-word-submit");
+const whatWordValidationEl = document.getElementById("what-word-validation");
+const whatWordFeedbackEl = document.getElementById("what-word-feedback");
+const whatWordReviewEl = document.getElementById("what-word-review");
+const whatWordSkipBtn = document.getElementById("what-word-skip");
+
+function consonantsOnly(word) {
+  return word.replace(/[аеёиоуыэюя]/gi, "");
+}
+
+function updateWhatWordPreview() {
+  const level = whatWordDifficultyEl.value;
+  whatWordPreviewCountEl.textContent = whatWordCountEl.value;
+  whatWordPreviewExamplesEl.replaceChildren(...whatWordPools[level].slice(0, 3).map((word) => {
+    const example = document.createElement("span");
+    example.textContent = consonantsOnly(word);
+    return example;
+  }));
+}
+
+function renderWhatWordTask() {
+  const word = state.whatWord.words[state.whatWord.index] || "";
+  whatWordConsonantsEl.textContent = consonantsOnly(word);
+  whatWordProgressEl.textContent = `Слово ${state.whatWord.index + 1} из ${state.whatWord.words.length}`;
+  whatWordAnswerEl.value = "";
+  whatWordValidationEl.textContent = "";
+  whatWordSubmitBtn.textContent = state.whatWord.index === state.whatWord.words.length - 1 ? "Проверить" : "Дальше";
+  whatWordAnswerEl.focus();
+}
+
+async function loadWhatWordPools() {
+  try {
+    const response = await fetch("./data/what-word.csv", { cache: "no-store" });
+    if (!response.ok) throw new Error(`Не удалось загрузить CSV: ${response.status}`);
+    const rows = (await response.text()).replace(/^\uFEFF/, "").trim().split(/\r?\n/).slice(1);
+    const nextPools = { easy: [], medium: [], hard: [] };
+    rows.forEach((row) => {
+      const [difficulty, word] = row.split(",").map((value) => value.trim());
+      if (nextPools[difficulty] && word) nextPools[difficulty].push(word);
+    });
+    if (Object.values(nextPools).every((pool) => pool.length >= 10)) {
+      whatWordPools = nextPools;
+      updateWhatWordPreview();
+    }
+  } catch (error) {
+    console.warn("Не удалось загрузить слова для упражнения «Что за слово?», используются встроенные данные.", error);
+  }
+}
+
+function startWhatWordExercise() {
+  const count = Number(whatWordCountEl.value) || 5;
+  state.whatWord.words = shuffle(whatWordPools[whatWordDifficultyEl.value] || whatWordPools.easy).slice(0, count);
+  state.whatWord.index = 0;
+  state.whatWord.correct = 0;
+  state.whatWord.reviewRows = [];
+  state.whatWord.startedAt = Date.now();
+  state.whatWord.active = true;
+  whatWordFeedbackEl.textContent = "";
+  whatWordReviewEl.hidden = true;
+  whatWordReviewEl.innerHTML = "";
+  renderWhatWordTask();
+  setWhatWordStage("task");
+}
+
+function renderWhatWordReview(rows) {
+  whatWordReviewEl.innerHTML = `<div class="word-review-head"><strong>Разбор упражнения</strong></div><div class="word-review-grid">${rows.map((row, index) => `<div class="word-review-row ${row.correct ? "is-ok" : "is-bad"}"><div class="word-review-index">${index + 1}</div><div class="word-review-columns"><div class="word-review-col"><span class="word-review-label">Правильный ответ</span><span class="word-chip expected">${consonantsOnly(row.expected)} → ${row.expected}</span></div><div class="word-review-col"><span class="word-review-label">Твой ответ</span><span class="word-chip actual ${row.correct ? "ok" : "bad"}">${row.actual || "Пропуск"}</span></div></div></div>`).join("")}</div>`;
+  whatWordReviewEl.hidden = false;
+}
+
+function finishWhatWordExercise() {
+  const total = state.whatWord.words.length;
+  const success = state.whatWord.correct === total;
+  const tookSec = state.whatWord.startedAt ? (Date.now() - state.whatWord.startedAt) / 1000 : 0;
+  state.whatWord.startedAt = null;
+  applyModeResult("what-word", success, { span: state.whatWord.correct, timeSec: tookSec });
+  const bestTimeSec = state.progress["what-word"].bestTimeSec;
+  whatWordFeedbackEl.innerHTML = `<span class="math-result-title">${success ? "Верно!" : "Неверно"}</span><span class="math-result-answer">Правильных ответов: ${state.whatWord.correct}/${total}</span><span class="math-result-details"><span class="math-result-stat math-result-time"><span>Время</span><strong>${formatSeconds(tookSec)}</strong></span><span class="math-result-stat math-result-record"><span>Рекорд</span><strong>${formatSeconds(bestTimeSec)}</strong></span></span>`;
+  whatWordFeedbackEl.className = `feedback ${success ? "ok" : "bad"}`;
+  renderWhatWordReview(state.whatWord.reviewRows);
+  state.whatWord.active = false;
+  setWhatWordStage("result");
+}
+
+function advanceWhatWord(actual) {
+  const expected = state.whatWord.words[state.whatWord.index];
+  const correct = actual === normalizeWordToken(expected);
+  state.whatWord.reviewRows.push({ expected, actual, correct });
+  if (correct) state.whatWord.correct += 1;
+  state.whatWord.index += 1;
+  if (state.whatWord.index >= state.whatWord.words.length) finishWhatWordExercise();
+  else renderWhatWordTask();
+}
+
+function stopWhatWordExercise() {
+  if (state.whatWord.active) recordStoppedExercise("what-word");
+  state.whatWord.active = false;
+  state.whatWord.startedAt = null;
+  whatWordAnswerEl.value = "";
+  whatWordValidationEl.textContent = "";
+  setWhatWordStage("prep");
+}
+
+function resetWhatWordExercise() {
+  state.whatWord.active = false;
+  state.whatWord.startedAt = null;
+  whatWordFeedbackEl.textContent = "";
+  whatWordReviewEl.hidden = true;
+  whatWordReviewEl.innerHTML = "";
+  setWhatWordStage("prep");
+  whatWordStartBtn.focus();
+}
+
+function setWhatWordStage(stage) {
+  whatWordPanelEl.classList.remove("what-word-stage-prep", "what-word-stage-task", "what-word-stage-result");
+  whatWordPanelEl.classList.add(`what-word-stage-${stage}`);
+  state.whatWord.stage = stage;
+  setTrainerStage(stage === "prep" ? 1 : stage === "task" ? 2 : 3);
+}
+
+whatWordDifficultyEl.addEventListener("change", updateWhatWordPreview);
+whatWordCountEl.addEventListener("change", updateWhatWordPreview);
+whatWordStartBtn.addEventListener("click", startWhatWordExercise);
+document.getElementById("what-word-stop").addEventListener("click", stopWhatWordExercise);
+document.getElementById("what-word-again").addEventListener("click", resetWhatWordExercise);
+whatWordSkipBtn.addEventListener("click", () => {
+  if (!state.whatWord.active) return;
+  advanceWhatWord("");
+});
+whatWordAnswerEl.addEventListener("input", () => { whatWordValidationEl.textContent = ""; });
+whatWordForm.addEventListener("submit", (event) => {
+  event.preventDefault();
+  if (!state.whatWord.active) return;
+  const actual = normalizeWordToken(whatWordAnswerEl.value);
+  if (!actual) {
+    whatWordValidationEl.textContent = "Введи полное слово.";
+    whatWordAnswerEl.focus();
+    return;
+  }
+  advanceWhatWord(actual);
+});
+updateWhatWordPreview();
+loadWhatWordPools();
 
 function renderWordReview(inputWords, originalWords) {
   const rows = [];
@@ -2579,6 +3092,7 @@ const baldaCheckBtn = document.getElementById("balda-check");
 const baldaWordLengthEl = document.getElementById("balda-word-length");
 const baldaForm = document.getElementById("balda-form");
 const baldaLadderEl = document.getElementById("balda-ladder");
+const baldaValidationEl = document.getElementById("balda-validation");
 const baldaFeedbackEl = document.getElementById("balda-feedback");
 const baldaStartWordEl = document.getElementById("balda-start-word");
 const baldaResultFeedbackEl = document.getElementById("balda-result-feedback");
@@ -2595,6 +3109,8 @@ baldaLadderEl.addEventListener("input", (event) => {
   if (!input) return;
   input.classList.remove("is-invalid");
   input.placeholder = "Введи следующее слово";
+  baldaValidationEl.textContent = "";
+  syncBaldaCheckButton();
 });
 
 function getBaldaWordLength() {
@@ -2649,13 +3165,14 @@ function startBaldaGame() {
   setBaldaStage("task");
   baldaFeedbackEl.textContent = "";
   baldaFeedbackEl.className = "feedback";
+  baldaValidationEl.textContent = "";
   baldaResultFeedbackEl.textContent = "";
   baldaResultFeedbackEl.className = "feedback";
   baldaForm.hidden = false;
   baldaStartBtn.disabled = true;
   baldaDifficultyEl.disabled = true;
   baldaCustomToggleBtn.disabled = true;
-  baldaCheckBtn.disabled = false;
+  baldaCheckBtn.disabled = true;
   baldaWordLengthEl.disabled = true;
   baldaStopBtn.disabled = false;
   baldaStartWordEl.textContent = `Начальное слово — ${state.balda.chain[0]}`;
@@ -2687,6 +3204,12 @@ function renderBaldaLadder() {
         />
       </div>`;
   }).join("");
+  syncBaldaCheckButton();
+}
+
+function syncBaldaCheckButton() {
+  const input = baldaLadderEl.querySelector(`[data-balda-step="${state.balda.currentStep + 1}"]`);
+  baldaCheckBtn.disabled = !state.balda.active || !input || !input.value.trim();
 }
 
 function checkBaldaStep(event) {
@@ -2712,6 +3235,7 @@ function checkBaldaStep(event) {
   state.balda.currentStep = nextIndex;
   baldaFeedbackEl.textContent = "";
   baldaFeedbackEl.className = "feedback";
+  baldaValidationEl.textContent = "";
   renderBaldaLadder();
 
   if (nextIndex === state.balda.chain.length - 1) {
@@ -2724,8 +3248,7 @@ function checkBaldaStep(event) {
 function showBaldaError(message, input) {
   baldaFeedbackEl.textContent = "";
   baldaFeedbackEl.className = "feedback";
-  input.value = "";
-  input.placeholder = message;
+  baldaValidationEl.textContent = message;
   input.classList.add("is-invalid");
   input.focus();
 }
@@ -2781,7 +3304,7 @@ function stopBaldaGame() {
   baldaStartBtn.disabled = false;
   baldaDifficultyEl.disabled = false;
   baldaCustomToggleBtn.disabled = false;
-  baldaCheckBtn.disabled = false;
+  baldaCheckBtn.disabled = true;
   baldaWordLengthEl.disabled = false;
   baldaStopBtn.disabled = true;
   if (wasActive) {
@@ -2854,7 +3377,6 @@ function isValidBaldaChain(chain, wordLength) {
 }
 
 const attentionDifficultyEl = document.getElementById("attention-difficulty");
-const attentionShowSecondsEl = document.getElementById("attention-show-seconds");
 const attentionStartBtn = document.getElementById("attention-start");
 const attentionStopBtn = document.getElementById("attention-stop");
 const attentionCompareBtn = document.getElementById("attention-compare");
@@ -2871,23 +3393,23 @@ attentionStartBtn.addEventListener("click", startAttentionRound);
 attentionStopBtn.addEventListener("click", stopAttentionExercise);
 attentionCompareBtn.addEventListener("click", compareAttentionAnswer);
 attentionAnswerEl.addEventListener("input", syncAttentionDescribeAvailability);
-attentionShowSecondsEl.addEventListener("change", updateAttentionPreview);
 attentionDifficultyEl.addEventListener("change", () => {
   updateAttentionPreview();
-  if (state.attention.file) {
-    clearAttentionMedia();
-    loadRandomAttentionImage();
-  }
+  if (state.attention.file) clearAttentionMedia();
 });
 
 function updateAttentionPreview() {
-  attentionPreviewDurationEl.textContent = `${attentionShowSecondsEl.value} сек.`;
+  attentionPreviewDurationEl.textContent = `${getAttentionShowSeconds()} сек.`;
   const focusByDifficulty = {
     easy: "Крупные предметы и основные цвета",
     medium: "Предметы, цвета и расположение",
     hard: "Мелкие детали, оттенки и взаимное расположение",
   };
   attentionPreviewFocusEl.textContent = focusByDifficulty[attentionDifficultyEl.value] || focusByDifficulty.easy;
+}
+
+function getAttentionShowSeconds() {
+  return { easy: 10, medium: 7, hard: 3 }[attentionDifficultyEl.value] || 10;
 }
 
 function setAttentionStage(stage) {
@@ -2923,7 +3445,7 @@ async function loadRandomAttentionImage() {
       payload.imageDataUrl,
       `${payload.themeKey || "attention-random"}.jpg`,
     );
-    applyAttentionFile(
+    await applyAttentionFile(
       randomFile,
       payload.imageDataUrl,
       payload.themeLabel ? `Случайное фото: ${payload.themeLabel}` : "Случайное фото",
@@ -2950,26 +3472,28 @@ function applyAttentionFile(file, imageUrl, sourceLabel) {
   state.attention.descriptionReady = false;
   state.attention.loadToken += 1;
   const currentLoadToken = state.attention.loadToken;
-  attentionPreviewEl.onload = () => {
-    if (state.attention.loadToken !== currentLoadToken) return;
-    state.attention.visible = true;
-    showAttentionImage();
-    attentionStartBtn.hidden = false;
-    setAttentionStage("prep");
+  return new Promise((resolve, reject) => {
+    attentionPreviewEl.onload = () => {
+      if (state.attention.loadToken !== currentLoadToken) return;
+      state.attention.visible = true;
+      showAttentionImage();
+      setAttentionStage("prep");
+      attentionFeedbackEl.textContent = "";
+      attentionFeedbackEl.className = "feedback";
+      syncAttentionDescribeAvailability();
+      resolve();
+    };
+    attentionPreviewEl.onerror = () => reject(new Error("Не удалось загрузить фотографию."));
+    attentionPreviewEl.src = imageUrl;
+    attentionPreviewEl.hidden = false;
+    attentionStageEl.hidden = false;
+    attentionAnswerEl.value = "";
     attentionFeedbackEl.textContent = "";
     attentionFeedbackEl.className = "feedback";
+    attentionCompareResultEl.hidden = true;
+    attentionCompareResultEl.innerHTML = "";
     syncAttentionDescribeAvailability();
-  };
-  attentionPreviewEl.src = imageUrl;
-  attentionPreviewEl.hidden = false;
-  attentionStageEl.hidden = false;
-  attentionAnswerEl.value = "";
-  attentionStartBtn.hidden = true;
-  attentionFeedbackEl.textContent = "";
-  attentionFeedbackEl.className = "feedback";
-  attentionCompareResultEl.hidden = true;
-  attentionCompareResultEl.innerHTML = "";
-  syncAttentionDescribeAvailability();
+  });
 }
 
 function hideAttentionStage() {
@@ -2996,19 +3520,22 @@ function clearAttentionMedia() {
   state.attention.completed = false;
   state.attention.descriptionReady = false;
   state.attention.startedAt = null;
-  attentionStartBtn.hidden = true;
   hideAttentionStage();
   attentionAnswerEl.value = "";
   attentionCompareResultEl.hidden = true;
   attentionCompareResultEl.innerHTML = "";
 }
 
-function startAttentionRound() {
-  if (!state.attention.imageUrl) return;
+async function startAttentionRound() {
+  if (state.attention.randomLoading) return;
+  if (!state.attention.imageUrl) {
+    await loadRandomAttentionImage();
+    if (!state.attention.imageUrl) return;
+  }
 
   stopAttentionTimer();
   clearAttentionHideTimer();
-  state.attention.timeLeft = Number(attentionShowSecondsEl.value) || 10;
+  state.attention.timeLeft = getAttentionShowSeconds();
   state.attention.visible = true;
   setAttentionStage("task");
   showAttentionImage();
@@ -3193,7 +3720,6 @@ function stopAttentionExercise() {
   state.attention.descriptionReady = false;
   setAttentionStage("prep");
   state.attention.loadToken += 1;
-  attentionStartBtn.hidden = true;
   hideAttentionStage();
   attentionFeedbackEl.textContent = "";
   attentionAnswerEl.value = "";
@@ -3628,6 +4154,10 @@ function addResultToProgress(progress, mode, success, extra = {}, at = new Date(
       updateWordBestTime();
     }
   }
+  if (mode === "what-word" && extra.timeSec) {
+    const prev = bucket.bestTimeSec ?? Number.POSITIVE_INFINITY;
+    bucket.bestTimeSec = Math.min(prev, extra.timeSec);
+  }
   if (mode === "balda" && success && extra.timeSec) {
     const prev = bucket.bestTimeSec ?? Number.POSITIVE_INFINITY;
     bucket.bestTimeSec = Math.min(prev, extra.timeSec);
@@ -3738,7 +4268,7 @@ function renderProgress() {
   const numbers = state.progress.numbers;
   const words = state.progress.words;
   const guessWord = state.progress["guess-word"];
-  const memory = state.progress.memory;
+  const whatWord = state.progress["what-word"];
   const balda = state.progress.balda;
   const attention = state.progress.attention;
   const schulte = state.progress.schulte;
@@ -3750,6 +4280,8 @@ function renderProgress() {
       correct: math.correct,
       attempts: math.attempts,
       best: formatSeconds(math.bestTimeSec),
+      recordLabel: "Рекорд",
+      recordValue: formatSeconds(math.bestTimeSec),
       metrics: [
         ["Серия", math.streak || 0],
         ["Лучшая серия", math.bestStreak || 0],
@@ -3763,6 +4295,8 @@ function renderProgress() {
       correct: numbers.correct,
       attempts: numbers.attempts,
       best: formatSeconds(numbers.bestTimeSec),
+      recordLabel: "Рекорд",
+      recordValue: formatSeconds(numbers.bestTimeSec),
       metrics: [
         ["Серия", numbers.streak || 0],
         ["Лучший ряд", numbers.bestLength || 0],
@@ -3776,6 +4310,8 @@ function renderProgress() {
       correct: words.correct,
       attempts: words.attempts,
       best: formatSeconds(words.bestTimeSec),
+      recordLabel: "Рекорд",
+      recordValue: formatSeconds(words.bestTimeSec),
       metrics: [
         ["Серия", words.streak || 0],
         ["Лучший объем", words.bestCount || 0],
@@ -3788,20 +4324,32 @@ function renderProgress() {
       shortLabel: "Слово",
       correct: guessWord.correct,
       attempts: guessWord.attempts,
+      recordValue: "--",
+      recordLabel: "Лучшая серия",
+      recordValue: guessWord.bestStreak || "--",
       metrics: [],
     },
-    memory: {
-      label: "Запоминание чисел",
-      correct: memory.correct,
-      attempts: memory.attempts,
+    "what-word": {
+      label: "Что за слово?",
+      shortLabel: "Слово",
+      correct: whatWord.correct,
+      attempts: whatWord.attempts,
+      best: formatSeconds(whatWord.bestTimeSec),
+      recordLabel: "Рекорд",
+      recordValue: formatSeconds(whatWord.bestTimeSec),
       metrics: [
-        ["Лучшая серия", memory.bestStreak || 0],
+        ["Серия", whatWord.streak || 0],
+        ["Лучшая серия", whatWord.bestStreak || 0],
+        ["Рекорд", formatSeconds(whatWord.bestTimeSec)],
+        ["Попытки", whatWord.attempts],
       ],
     },
     balda: {
       label: "Балда",
       correct: balda.correct,
       attempts: balda.attempts,
+      recordLabel: "Рекорд",
+      recordValue: formatSeconds(balda.bestTimeSec),
       metrics: [
         ["Лучшая серия", balda.bestStreak || 0],
         ["Рекорд", formatSeconds(balda.bestTimeSec)],
@@ -3811,6 +4359,9 @@ function renderProgress() {
       label: "Детали на фото",
       correct: attention.correct,
       attempts: attention.attempts,
+      recordValue: "--",
+      recordLabel: "Лучшая серия",
+      recordValue: attention.bestStreak || "--",
       metrics: [
         ["Лучшая серия", attention.bestStreak || 0],
       ],
@@ -3821,6 +4372,8 @@ function renderProgress() {
       correct: schulte.correct,
       attempts: schulte.attempts,
       best: formatSeconds(schulte.bestTimeSec),
+      recordLabel: "Рекорд",
+      recordValue: formatSeconds(schulte.bestTimeSec),
       metrics: [
         ["Пройдено", schulte.correct || 0],
         ["Лучшая серия", schulte.bestStreak || 0],
@@ -3831,13 +4384,15 @@ function renderProgress() {
   };
   Object.entries(modeMap).forEach(([mode, item]) => {
     item.stopped = state.progress[mode].stopped || 0;
+    item.bestStreak = state.progress[mode].bestStreak || 0;
   });
-  const modeOrder = ["numbers", "words", "guess-word", "memory", "math", "balda", "attention", "schulte"];
+  const modeOrder = ["numbers", "words", "guess-word", "what-word", "math", "balda", "attention", "schulte"];
   const allAttempts = modeOrder.reduce((sum, mode) => sum + modeMap[mode].attempts, 0);
   const allCorrect = modeOrder.reduce((sum, mode) => sum + modeMap[mode].correct, 0);
   const allStopped = modeOrder.reduce((sum, mode) => sum + modeMap[mode].stopped, 0);
   const selectedMode = document.getElementById("progress-mode").value;
   const recentEntries = state.progress.sessions
+    .filter((entry) => modeOrder.includes(entry.mode))
     .filter((entry) => selectedMode === "all" || entry.mode === selectedMode)
     .sort((a, b) => new Date(b.at) - new Date(a.at));
   const lastAttempt = recentEntries[0];
@@ -3906,6 +4461,15 @@ function renderProgress() {
       row.className = "exercise-row";
       const title = document.createElement("strong");
       title.textContent = item.label;
+      const stats = document.createElement("span");
+      stats.className = "exercise-row-stats";
+      const record = document.createElement("span");
+      record.className = "exercise-row-record";
+      record.textContent = `Рекорд: ${item.recordValue}`;
+      const streak = document.createElement("span");
+      streak.className = "exercise-row-streak";
+      streak.textContent = `Лучшая серия: ${item.bestStreak}`;
+      stats.append(record, streak);
       const bar = document.createElement("div");
       bar.className = "exercise-row-bar";
       const fill = document.createElement("span");
@@ -3914,7 +4478,7 @@ function renderProgress() {
       const value = document.createElement("span");
       value.className = "exercise-row-value";
       value.textContent = `${acc}%`;
-      row.append(title, bar, value);
+      row.append(title, stats, bar, value);
       compareEl.appendChild(row);
     });
   }
@@ -3985,11 +4549,12 @@ function loadProgress(storageKey = progressStorageKey()) {
       numbers: { ...defaults.numbers, ...(parsed.numbers || {}) },
       words: { ...defaults.words, ...(parsed.words || {}) },
       "guess-word": { ...defaults["guess-word"], ...(parsed["guess-word"] || {}) },
+      "what-word": { ...defaults["what-word"], ...(parsed["what-word"] || {}) },
       memory: { ...defaults.memory, ...(parsed.memory || {}) },
       balda: { ...defaults.balda, ...(parsed.balda || {}) },
       attention: { ...defaults.attention, ...(parsed.attention || {}) },
       schulte: { ...defaults.schulte, ...(parsed.schulte || {}) },
-      exam: { ...defaults.exam, ...(parsed.exam || {}) },
+      exam: { ...defaults.exam, ...(parsed.exam || {}), levels: { ...defaults.exam.levels, ...(parsed.exam?.levels || {}) } },
       sessions: Array.isArray(parsed.sessions) ? parsed.sessions : [],
     };
   } catch {
@@ -4089,7 +4654,10 @@ function syncAttentionDescribeAvailability() {
   const attentionSourceLocked = Boolean(state.attention.file) || attentionLocked;
   const attentionHasStarted = Boolean(state.attention.startedAt) || Boolean(state.attention.notes);
   attentionStartBtn.disabled =
-    !state.attention.file || attentionHasStarted || attentionLocked || state.attention.comparing;
+    state.attention.randomLoading || attentionHasStarted || attentionLocked || state.attention.comparing;
+  attentionStartBtn.textContent = state.attention.randomLoading && !state.attention.file
+    ? "Загрузка фото…"
+    : "Решать";
   attentionAnswerEl.disabled =
     !attentionHasStarted || attentionLocked || state.attention.comparing;
   attentionCompareBtn.disabled =

@@ -209,6 +209,18 @@ body {
   box-shadow: 0 12px 30px rgba(196, 75, 50, 0.12);
 }
 
+.tab-btn.trainer-card:disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
+  filter: grayscale(0.75);
+}
+
+.tab-btn.trainer-card:disabled:hover {
+  transform: none;
+  border-color: var(--line);
+  box-shadow: none;
+}
+
 .trainer-card-visual {
   grid-column: 1;
   grid-row: 1;
@@ -748,6 +760,16 @@ body.trainer-home .trainer-breadcrumbs {
   background: rgba(196, 75, 50, 0.1);
 }
 
+.tab-btn.trainer-drawer-link:disabled,
+.tab-btn.trainer-drawer-link:disabled:hover,
+.tab-btn.trainer-drawer-link:disabled.active {
+  color: rgba(32, 26, 23, 0.42);
+  background: transparent;
+  cursor: not-allowed;
+  filter: grayscale(0.75);
+  opacity: 0.58;
+}
+
 .trainer-drawer-home > span,
 .trainer-drawer-link[data-tab="number-series"] > span {
   background: linear-gradient(145deg, #f5e9cf, #dfece5);
@@ -1003,7 +1025,19 @@ body.trainer-page-open .panel.active > .panel-head {
   border: 1px solid var(--line);
   background: var(--card);
   backdrop-filter: blur(6px);
-  padding: 1.25rem;
+  padding: 1.25rem 1.25rem 2rem;
+}
+
+/* Одинаковый финальный отступ у карточек подготовки, задания и результата. */
+.math-action-controls,
+.num-action-controls,
+.word-action-controls,
+.schulte-action-controls,
+.guess-word-controls,
+.balda-action-controls,
+#attention-action-controls,
+.exam-action-controls {
+  margin-bottom: 0 !important;
 }
 
 .panel.active {
@@ -1415,6 +1449,115 @@ label {
   margin: 0 0 0.75rem;
 }
 
+.what-word-controls {
+  display: grid;
+  gap: 0.8rem;
+  margin: 0.9rem 0 0;
+}
+
+.what-word-mode-row {
+  display: grid;
+  width: 340px;
+  max-width: 100%;
+  box-sizing: border-box;
+  margin: 0.9rem auto 0;
+  justify-content: stretch;
+  justify-items: stretch;
+  overflow: visible;
+}
+
+.controls.what-word-mode-row label {
+  display: grid;
+  grid-template-columns: 132px minmax(0, 1fr);
+  width: 100%;
+  align-items: center;
+  justify-items: start;
+}
+
+.controls.what-word-mode-row select {
+  width: 100%;
+  min-width: 0;
+}
+
+.what-word-preview-tags span {
+  background: rgba(61, 115, 105, 0.1);
+  color: rgba(37, 82, 74, 0.92);
+}
+
+.what-word-start-row {
+  display: flex;
+  justify-content: center;
+  padding-top: 0.9rem;
+  border-top: 1px solid var(--line);
+}
+
+.what-word-task {
+  margin: 1rem 0;
+}
+
+.what-word-series-progress {
+  margin: 0.5rem 0;
+  color: rgba(32, 26, 23, 0.68);
+  text-align: center;
+  font-weight: 700;
+}
+
+.what-word-challenge {
+  font-size: clamp(1.15rem, 2.4vw, 1.6rem);
+  font-weight: 700;
+  letter-spacing: 0.13em;
+  overflow-wrap: anywhere;
+}
+
+#what-word-form {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+#what-word-form input,
+#what-word-form .field-validation {
+  grid-column: 1 / -1;
+}
+
+#what-word-form .btn {
+  width: 100%;
+}
+
+#what-word-panel.what-word-stage-prep .what-word-task,
+#what-word-panel.what-word-stage-prep #what-word-form,
+#what-word-panel.what-word-stage-prep #what-word-stop,
+#what-word-panel:not(.what-word-stage-result) #what-word-result {
+  display: none;
+}
+
+#what-word-panel.what-word-stage-task .what-word-controls,
+#what-word-panel.what-word-stage-task .what-word-mode-row,
+#what-word-panel.what-word-stage-task .exercise-help,
+#what-word-panel.what-word-stage-task #what-word-result,
+#what-word-panel.what-word-stage-result .what-word-controls,
+#what-word-panel.what-word-stage-result .what-word-mode-row,
+#what-word-panel.what-word-stage-result .exercise-help,
+#what-word-panel.what-word-stage-result .what-word-task,
+#what-word-panel.what-word-stage-result #what-word-form,
+#what-word-panel.what-word-stage-result #what-word-stop {
+  display: none !important;
+}
+
+#what-word-panel .btn-stop {
+  position: relative;
+  margin-top: 1.55rem;
+}
+
+#what-word-panel .btn-stop::before {
+  position: absolute;
+  top: -0.8rem;
+  right: 0;
+  left: 0;
+  height: 1px;
+  content: "";
+  background: var(--line);
+}
+
 .word-action-controls {
   display: grid;
   gap: 0.8rem;
@@ -1808,6 +1951,7 @@ label {
 
 #balda-preview-examples span:last-child {
   grid-column: 1 / -1;
+  text-align: center;
 }
 
 .balda-custom-choice[hidden] {
@@ -1894,30 +2038,18 @@ label {
   width: 100%;
   min-height: 48px;
   border-radius: 999px;
-  font-size: 1.05rem;
-  font-weight: 650;
+  font-size: 1rem;
+  font-weight: 400;
 }
 
 .balda-word-input.is-invalid {
   border-color: rgba(181, 51, 47, 0.5);
   background: rgba(181, 51, 47, 0.06);
-  font-size: 0.78rem;
-}
-
-.balda-word-input.is-invalid::placeholder {
-  color: #a63b35;
-  opacity: 1;
 }
 
 #math-answer.is-invalid {
   border-color: rgba(181, 51, 47, 0.5);
   background: rgba(181, 51, 47, 0.06);
-  font-size: 0.78rem;
-}
-
-#math-answer.is-invalid::placeholder {
-  color: #a63b35;
-  opacity: 1;
 }
 
 .balda-row.is-complete .balda-word-input {
@@ -1978,6 +2110,7 @@ label {
 
 .attention-preview-examples span:last-child {
   grid-column: 1 / -1;
+  text-align: center;
 }
 
 #attention-form {
@@ -2063,9 +2196,168 @@ label {
   cursor: not-allowed;
 }
 
-.exam-progress-chip {
-  order: 3;
-  margin-left: auto;
+#exam-progress {
+  margin: 0.5rem 0;
+  color: rgba(32, 26, 23, 0.68);
+  text-align: center;
+  font-weight: 700;
+}
+
+/* Экзамен использует те же три экрана, что и остальные тренажёры:
+   настройка, выполнение и результат. */
+#exam-panel.exam-stage-prep #exam-progress,
+#exam-panel.exam-stage-prep #exam-task,
+#exam-panel.exam-stage-prep #exam-form,
+#exam-panel.exam-stage-prep #exam-feedback,
+#exam-panel.exam-stage-prep #exam-result-metrics,
+#exam-panel.exam-stage-prep #exam-stop {
+  display: none;
+}
+
+#exam-panel.exam-stage-task .exam-help,
+#exam-panel.exam-stage-task .exam-action-controls,
+#exam-panel.exam-stage-task .exam-level-status,
+#exam-panel.exam-stage-task #exam-summary,
+#exam-panel.exam-stage-task #exam-review,
+#exam-panel.exam-stage-result .exam-help,
+#exam-panel.exam-stage-result .exam-level-status,
+#exam-panel.exam-stage-result #exam-progress,
+#exam-panel.exam-stage-result #exam-task,
+#exam-panel.exam-stage-result #exam-form,
+#exam-panel.exam-stage-result #exam-feedback,
+#exam-panel.exam-stage-result #exam-stop {
+  display: none !important;
+}
+
+#exam-panel.exam-is-transitioning #exam-task {
+  visibility: hidden;
+}
+
+#exam-panel #exam-result-metrics {
+  display: none !important;
+}
+
+#exam-panel.exam-stage-result .exam-start-row .btn {
+  min-width: 190px;
+}
+
+.exam-action-controls {
+  display: grid;
+  gap: 0.8rem;
+  margin: 0.9rem 0 0.75rem;
+  padding: 0 1rem;
+}
+
+.exam-mode-row {
+  display: grid;
+  width: min(100%, 520px);
+  max-width: 100%;
+  box-sizing: border-box;
+  margin: 0 auto;
+  overflow: visible;
+}
+
+.controls.exam-mode-row label {
+  display: grid;
+  grid-template-columns: max-content minmax(240px, 1fr);
+  gap: 1rem;
+  width: 100%;
+  align-items: center;
+  justify-items: start;
+}
+
+.controls.exam-mode-row select {
+  width: 100%;
+  min-width: 0;
+}
+
+.exam-start-row {
+  display: flex;
+  justify-content: center;
+  padding-top: 0.9rem;
+  border-top: 1px solid var(--line);
+}
+
+.exam-start-row .btn {
+  min-width: 190px;
+}
+
+.exam-level-status {
+  justify-content: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin: 0;
+}
+
+.exam-level-status .meta-chip.is-unlocked { color: #2f6559; background: #e7f1e8; }
+.exam-level-status .meta-chip.is-locked { opacity: 0.6; }
+
+.exam-review-head {
+  display: grid;
+  gap: 0.25rem;
+  margin-bottom: 1rem;
+}
+
+.exam-review-head strong {
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 1.25rem;
+}
+
+.exam-review-head span {
+  color: rgba(32, 26, 23, 0.68);
+  line-height: 1.4;
+}
+
+.exam-review-grid {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.exam-review-card {
+  padding: 1rem;
+  border: 1px solid var(--line);
+  border-left: 4px solid rgba(181, 51, 47, 0.42);
+  border-radius: 16px;
+  background: rgba(255, 252, 246, 0.82);
+}
+
+.exam-review-card.is-ok {
+  border-left-color: rgba(42, 111, 99, 0.62);
+}
+
+.exam-review-card-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.exam-review-card h3,
+.exam-review-card p {
+  margin: 0;
+}
+
+.exam-review-card h3 {
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 1.05rem;
+}
+
+.exam-review-status {
+  color: #a0332f;
+  font-size: 0.92rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.exam-review-card.is-ok .exam-review-status {
+  color: #24594f;
+}
+
+.exam-review-rows {
+  margin-top: 0.9rem;
+}
+
+@media (max-width: 560px) {
 }
 
 .meta-chip {
@@ -2138,6 +2430,30 @@ textarea {
   width: 100%;
 }
 
+/* Единый визуальный разделитель перед завершением основных упражнений. */
+#math-panel .btn-stop,
+#number-series-panel .btn-stop,
+#words-panel .btn-stop,
+#schulte-panel .btn-stop,
+#balda-panel .btn-stop {
+  position: relative;
+  margin-top: 1.55rem;
+}
+
+#math-panel .btn-stop::before,
+#number-series-panel .btn-stop::before,
+#words-panel .btn-stop::before,
+#schulte-panel .btn-stop::before,
+#balda-panel .btn-stop::before {
+  position: absolute;
+  top: -0.8rem;
+  right: 0;
+  left: 0;
+  height: 1px;
+  content: "";
+  background: var(--line);
+}
+
 .challenge {
   margin: 1rem 0;
   min-height: 60px;
@@ -2170,6 +2486,47 @@ textarea {
   justify-items: center;
 }
 
+.exam-stage-task .exam-task {
+  min-height: 104px;
+}
+
+#exam-form.is-balda-task #exam-answer {
+  display: none;
+}
+
+.exam-balda-task {
+  display: block;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.exam-balda-start-word {
+  margin: 0 0 0.75rem;
+  padding: 1rem;
+  border: 1px dashed rgba(126, 111, 90, 0.36);
+  border-radius: 16px;
+  background: rgba(255, 252, 246, 0.7);
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.exam-balda-ladder {
+  margin: 0;
+  text-align: left;
+}
+
+.exam-balda-validation:empty {
+  display: none;
+}
+
+#exam-answer.is-invalid {
+  border-color: rgba(181, 51, 47, 0.5);
+  background: rgba(181, 51, 47, 0.06);
+}
+
 .exam-actions {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -2198,6 +2555,28 @@ textarea {
 .answer-form {
   display: grid;
   gap: 0.7rem;
+}
+
+.field-validation {
+  margin: -0.3rem 0 0;
+  color: #a63d2a;
+  font-size: 0.9rem;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.field-validation:empty {
+  display: none;
+}
+
+input[aria-invalid="true"] {
+  border-color: #b94732;
+  box-shadow: 0 0 0 3px rgba(185, 71, 50, 0.12);
+}
+
+textarea[aria-invalid="true"] {
+  border-color: #b94732;
+  box-shadow: 0 0 0 3px rgba(185, 71, 50, 0.12);
 }
 
 .hidden-file-input {
@@ -2988,7 +3367,7 @@ textarea {
 }
 
 .progress-filter select {
-  width: min(360px, 100%);
+  width: min(280px, 100%);
   background: #fffefb;
 }
 
@@ -3015,6 +3394,7 @@ textarea {
 .progress-hero-card {
   display: flex;
   align-items: baseline;
+  justify-content: center;
   gap: 0.75rem;
   min-height: 150px;
   padding: 1.35rem 1.5rem;
@@ -3047,8 +3427,10 @@ textarea {
 .progress-hero-card > div:first-child {
   display: flex;
   align-items: baseline;
+  justify-content: center;
   flex-wrap: wrap;
   column-gap: 0.75rem;
+  text-align: center;
 }
 
 .progress-hero-card .progress-summary-note {
@@ -3147,7 +3529,7 @@ textarea {
 
 .exercise-row {
   display: grid;
-  grid-template-columns: 180px 1fr 54px;
+  grid-template-columns: minmax(0, 1fr) auto;
   gap: 0.8rem;
   align-items: center;
   padding: 0.7rem 0.85rem;
@@ -3161,6 +3543,7 @@ textarea {
 }
 
 .exercise-row-bar {
+  grid-column: 1 / -1;
   height: 10px;
   overflow: hidden;
   border-radius: 999px;
@@ -3175,8 +3558,23 @@ textarea {
 }
 
 .exercise-row-value {
-  text-align: right;
+  grid-column: 1;
+  text-align: left;
   font-weight: 700;
+}
+
+.exercise-row-stats {
+  display: grid;
+  justify-items: end;
+  gap: 0.12rem;
+  text-align: right;
+}
+
+.exercise-row-record,
+.exercise-row-streak {
+  color: rgba(32, 26, 23, 0.62);
+  font-size: 0.85rem;
+  font-weight: 600;
 }
 
 .recent-panel {
@@ -3299,7 +3697,7 @@ textarea {
   }
 
   .exercise-row {
-    grid-template-columns: 150px 1fr 50px;
+    grid-template-columns: minmax(0, 1fr) auto;
   }
 
   .memory-layout {
@@ -3374,6 +3772,28 @@ textarea {
 
   .math-preview-examples span:last-child {
     grid-column: auto;
+  }
+
+  .attention-preview-examples {
+    grid-template-columns: 1fr;
+  }
+
+  .attention-preview-examples span:last-child {
+    grid-column: 1 / -1;
+  }
+
+  .word-preview-examples.has-long-words {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .word-preview-examples.has-long-words span {
+    text-align: center;
+  }
+
+  .word-preview-examples.has-long-words span:last-child:nth-child(odd) {
+    width: calc(50% - 0.25rem);
+    grid-column: 1 / -1;
+    justify-self: center;
   }
 
   /* На телефоне настройки не должны прижиматься к правому краю. */
