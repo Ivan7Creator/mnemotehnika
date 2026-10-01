@@ -69,6 +69,7 @@ const state = {
       5: [["маска", "миска", "мишка", "мышка", "мышца"]],
     },
     currentStep: 0,
+    reviewRows: [],
     active: false,
     startedAt: null,
     timerId: null,
@@ -325,6 +326,7 @@ const mathAnswer = document.getElementById("math-answer");
 const mathAnswerValidationEl = document.getElementById("math-answer-validation");
 const mathFeedback = document.getElementById("math-feedback");
 const mathSubmitBtn = mathForm.querySelector('button[type="submit"]');
+const mathSkipBtn = document.getElementById("math-skip");
 const mathTimerEl = document.getElementById("math-timer");
 const mathBestTimeEl = document.getElementById("math-best-time");
 const mathDifficultyEl = document.getElementById("math-difficulty");
@@ -351,6 +353,10 @@ const mathHelpEl = document.getElementById("math-help");
 mathNewBtn.addEventListener("click", generateMathTask);
 mathAgainBtn.addEventListener("click", resetMathExercise);
 mathStopBtn.addEventListener("click", stopMathExercise);
+mathSkipBtn.addEventListener("click", () => {
+  if (state.math.answer === null) return;
+  advanceMathSeries("Пропуск", false);
+});
 mathCustomToggleBtn.addEventListener("click", toggleCustomMathSettings);
 mathDifficultyEl.addEventListener("change", updateMathDifficultyPreview);
 mathTotalRoundsEl.addEventListener("change", updateMathDifficultyPreview);
@@ -371,12 +377,16 @@ mathForm.addEventListener("submit", (event) => {
   if (!/^\d+$/.test(rawValue)) return showMathInputError("Используй только цифры от 0 до 9");
   const value = Number(rawValue);
   const correct = value === state.math.answer;
+  advanceMathSeries(value, correct);
+});
+
+function advanceMathSeries(actual, correct) {
   if (correct) state.math.correctInSeries += 1;
   state.math.reviewRows.push({
     index: state.math.seriesIndex,
     expression: mathTaskEl.textContent,
     expected: state.math.answer,
-    actual: value,
+    actual,
     correct,
   });
   mathForm.reset();
@@ -386,7 +396,7 @@ mathForm.addEventListener("submit", (event) => {
   } else {
     showNextMathTask();
   }
-});
+}
 
 function showMathInputError(message) {
   mathAnswerValidationEl.textContent = message;
@@ -669,6 +679,7 @@ function syncMathControls() {
   mathMulLimitEl.disabled = hasActiveTask;
   mathTotalRoundsEl.disabled = hasActiveTask;
   mathSubmitBtn.disabled = state.math.answer === null || !mathAnswer.value.trim();
+  mathSkipBtn.disabled = state.math.answer === null;
   mathStopBtn.disabled = state.math.answer === null && !state.math.startedAt;
   mathAnswer.disabled = state.math.answer === null;
 }
@@ -685,6 +696,7 @@ const numFeedback = document.getElementById("num-feedback");
 const numAnswer = document.getElementById("num-answer");
 const numAnswerValidationEl = document.getElementById("num-answer-validation");
 const numSubmitBtn = numForm.querySelector('button[type="submit"]');
+const numSkipBtn = document.getElementById("num-skip");
 const numTotalRoundsEl = document.getElementById("num-total-rounds");
 const numDigitsCountEl = document.getElementById("num-digits-count");
 const numShowSecondsEl = document.getElementById("num-show-seconds");
@@ -710,6 +722,10 @@ numAgainBtn.addEventListener("click", resetNumberExercise);
 numCustomToggleBtn.addEventListener("click", toggleCustomNumberSettings);
 numNextBtn.addEventListener("click", runNextNumberRound);
 numStopBtn.addEventListener("click", stopNumberExercise);
+numSkipBtn.addEventListener("click", () => {
+  if (!state.numbers.seriesActive || !state.numbers.awaitingAnswer || !state.numbers.value) return;
+  advanceNumberSeries("Пропуск");
+});
   numAnswer.addEventListener("input", () => {
   clearNumberAnswerValidation();
   syncNumberControls();
@@ -732,13 +748,17 @@ numForm.addEventListener("submit", async (event) => {
     return;
   }
   const cleanInput = numAnswer.value.trim();
+  advanceNumberSeries(cleanInput);
+});
+
+function advanceNumberSeries(actual) {
   const expectedValue = state.numbers.value;
-  const correct = cleanInput === expectedValue;
+  const correct = actual === expectedValue;
   if (correct) state.numbers.correctInSeries += 1;
   state.numbers.reviewRows.push({
     index: state.numbers.seriesIndex,
     expected: expectedValue,
-    actual: cleanInput,
+    actual,
     correct,
   });
 
@@ -757,7 +777,7 @@ numForm.addEventListener("submit", async (event) => {
     return;
   }
   runNextNumberRound();
-});
+}
 
 function startNumberSeries() {
   stopNumberTimer();
@@ -1062,6 +1082,7 @@ function syncNumberControls() {
     || !state.numbers.awaitingAnswer
     || !state.numbers.value
     || !numAnswer.value.trim();
+  numSkipBtn.disabled = !state.numbers.seriesActive || !state.numbers.awaitingAnswer || !state.numbers.value;
   numStopBtn.disabled = !state.numbers.seriesActive && !state.numbers.startedAt;
   numAnswer.disabled = !state.numbers.seriesActive || !state.numbers.awaitingAnswer || !state.numbers.value;
 }
@@ -2834,6 +2855,31 @@ function renderWhatWordTask() {
   whatWordValidationEl.textContent = "";
   whatWordSubmitBtn.textContent = state.whatWord.index === state.whatWord.words.length - 1 ? "Проверить" : "Дальше";
   whatWordAnswerEl.focus();
+  syncWhatWordControls();
+}
+
+function validateWhatWordInput() {
+  const value = whatWordAnswerEl.value.trim();
+  if (!value) return { valid: false, message: "" };
+  if (!/^[а-яё]+$/i.test(value)) {
+    return { valid: false, message: "Используй только русские буквы без пробелов и знаков" };
+  }
+  return { valid: true, message: "" };
+}
+
+function syncWhatWordControls({ showValidation = false } = {}) {
+  const validation = validateWhatWordInput();
+  const hasInput = Boolean(whatWordAnswerEl.value.trim());
+  whatWordSubmitBtn.disabled = !state.whatWord.active || !hasInput;
+  whatWordSkipBtn.disabled = !state.whatWord.active;
+  if (hasInput && !validation.valid && showValidation) {
+    whatWordValidationEl.textContent = validation.message;
+    whatWordAnswerEl.setAttribute("aria-invalid", "true");
+  } else if (!showValidation || validation.valid || !hasInput) {
+    whatWordValidationEl.textContent = "";
+    whatWordAnswerEl.removeAttribute("aria-invalid");
+  }
+  return validation;
 }
 
 async function loadWhatWordPools() {
@@ -2882,7 +2928,7 @@ function finishWhatWordExercise() {
   state.whatWord.startedAt = null;
   applyModeResult("what-word", success, { span: state.whatWord.correct, timeSec: tookSec });
   const bestTimeSec = state.progress["what-word"].bestTimeSec;
-  whatWordFeedbackEl.innerHTML = `<span class="math-result-title">${success ? "Верно!" : "Неверно"}</span><span class="math-result-answer">Правильных ответов: ${state.whatWord.correct}/${total}</span><span class="math-result-details"><span class="math-result-stat math-result-time"><span>Время</span><strong>${formatSeconds(tookSec)}</strong></span><span class="math-result-stat math-result-record"><span>Рекорд</span><strong>${formatSeconds(bestTimeSec)}</strong></span></span>`;
+  whatWordFeedbackEl.innerHTML = `<span class="math-result-title">${success ? "Верно!" : "Неверно"}</span><span class="math-result-answer">Правильных слов: ${state.whatWord.correct}/${total}</span><span class="math-result-details"><span class="math-result-stat math-result-time"><span>Время</span><strong>${formatSeconds(tookSec)}</strong></span><span class="math-result-stat math-result-record"><span>Рекорд</span><strong>${formatSeconds(bestTimeSec)}</strong></span></span>`;
   whatWordFeedbackEl.className = `feedback ${success ? "ok" : "bad"}`;
   renderWhatWordReview(state.whatWord.reviewRows);
   state.whatWord.active = false;
@@ -2905,6 +2951,7 @@ function stopWhatWordExercise() {
   state.whatWord.startedAt = null;
   whatWordAnswerEl.value = "";
   whatWordValidationEl.textContent = "";
+  syncWhatWordControls();
   setWhatWordStage("prep");
 }
 
@@ -2914,6 +2961,7 @@ function resetWhatWordExercise() {
   whatWordFeedbackEl.textContent = "";
   whatWordReviewEl.hidden = true;
   whatWordReviewEl.innerHTML = "";
+  syncWhatWordControls();
   setWhatWordStage("prep");
   whatWordStartBtn.focus();
 }
@@ -2934,13 +2982,24 @@ whatWordSkipBtn.addEventListener("click", () => {
   if (!state.whatWord.active) return;
   advanceWhatWord("");
 });
-whatWordAnswerEl.addEventListener("input", () => { whatWordValidationEl.textContent = ""; });
+whatWordAnswerEl.addEventListener("input", () => syncWhatWordControls());
 whatWordForm.addEventListener("submit", (event) => {
   event.preventDefault();
   if (!state.whatWord.active) return;
+  const validation = syncWhatWordControls({ showValidation: true });
+  if (!validation.valid) {
+    if (!whatWordAnswerEl.value.trim()) {
+      whatWordValidationEl.textContent = "Введи загаданное слово.";
+      whatWordAnswerEl.setAttribute("aria-invalid", "true");
+    }
+    whatWordAnswerEl.focus();
+    return;
+  }
   const actual = normalizeWordToken(whatWordAnswerEl.value);
-  if (!actual) {
-    whatWordValidationEl.textContent = "Введи полное слово.";
+  const expected = normalizeWordToken(state.whatWord.words[state.whatWord.index]);
+  if (actual !== expected) {
+    whatWordValidationEl.textContent = "Не подходит. Попробуй другое слово";
+    whatWordAnswerEl.setAttribute("aria-invalid", "true");
     whatWordAnswerEl.focus();
     return;
   }
@@ -3089,6 +3148,7 @@ const baldaCustomToggleBtn = document.getElementById("balda-custom-toggle");
 const baldaCustomSettingsEl = document.getElementById("balda-custom-settings");
 const baldaStopBtn = document.getElementById("balda-stop");
 const baldaCheckBtn = document.getElementById("balda-check");
+const baldaSkipBtn = document.getElementById("balda-skip");
 const baldaWordLengthEl = document.getElementById("balda-word-length");
 const baldaForm = document.getElementById("balda-form");
 const baldaLadderEl = document.getElementById("balda-ladder");
@@ -3096,6 +3156,7 @@ const baldaValidationEl = document.getElementById("balda-validation");
 const baldaFeedbackEl = document.getElementById("balda-feedback");
 const baldaStartWordEl = document.getElementById("balda-start-word");
 const baldaResultFeedbackEl = document.getElementById("balda-result-feedback");
+const baldaReviewEl = document.getElementById("balda-review");
 const baldaAgainBtn = document.getElementById("balda-again");
 
 baldaStartBtn.addEventListener("click", startBaldaGame);
@@ -3103,6 +3164,7 @@ baldaCustomToggleBtn.addEventListener("click", toggleCustomBaldaSettings);
 baldaDifficultyEl.addEventListener("change", updateBaldaDifficultyPreview);
 baldaStopBtn.addEventListener("click", stopBaldaGame);
 baldaAgainBtn.addEventListener("click", resetBaldaExercise);
+baldaSkipBtn.addEventListener("click", skipBaldaStep);
 baldaForm.addEventListener("submit", checkBaldaStep);
 baldaLadderEl.addEventListener("input", (event) => {
   const input = event.target.closest(".balda-word-input");
@@ -3161,6 +3223,7 @@ function startBaldaGame() {
   const availableChains = getPlayableBaldaChains(selectedLength);
   state.balda.chain = availableChains[randomInt(0, availableChains.length - 1)];
   state.balda.currentStep = 0;
+  state.balda.reviewRows = [];
   state.balda.active = true;
   setBaldaStage("task");
   baldaFeedbackEl.textContent = "";
@@ -3168,11 +3231,14 @@ function startBaldaGame() {
   baldaValidationEl.textContent = "";
   baldaResultFeedbackEl.textContent = "";
   baldaResultFeedbackEl.className = "feedback";
+  baldaReviewEl.hidden = true;
+  baldaReviewEl.innerHTML = "";
   baldaForm.hidden = false;
   baldaStartBtn.disabled = true;
   baldaDifficultyEl.disabled = true;
   baldaCustomToggleBtn.disabled = true;
   baldaCheckBtn.disabled = true;
+  baldaSkipBtn.disabled = false;
   baldaWordLengthEl.disabled = true;
   baldaStopBtn.disabled = false;
   baldaStartWordEl.textContent = `Начальное слово — ${state.balda.chain[0]}`;
@@ -3182,13 +3248,16 @@ function startBaldaGame() {
 }
 
 function renderBaldaLadder() {
-  const { chain, currentStep } = state.balda;
+  const { chain, currentStep, reviewRows } = state.balda;
   baldaLadderEl.innerHTML = chain.slice(1).map((word, rowIndex) => {
     const index = rowIndex + 1;
     const completed = index <= currentStep;
     const current = index === currentStep + 1;
+    const review = reviewRows.find((row) => row.index === index);
+    const skipped = completed && review && !review.correct;
+    const displayedValue = completed ? (skipped ? word : review?.actual || word) : "";
     return `
-      <div class="balda-row ${completed ? "is-complete" : ""} ${current ? "is-current" : ""}">
+      <div class="balda-row ${completed && !skipped ? "is-complete" : ""} ${skipped ? "is-skipped" : ""} ${current ? "is-current" : ""}">
         <span class="balda-row-index">${index}</span>
         <input
           class="balda-word-input"
@@ -3198,7 +3267,7 @@ function renderBaldaLadder() {
           autocomplete="off"
           spellcheck="false"
           placeholder="Введи следующее слово"
-          value="${completed ? word : ""}"
+          value="${displayedValue}"
           ${current ? "" : "disabled"}
           aria-label="Слово для ряда ${index}"
         />
@@ -3210,6 +3279,7 @@ function renderBaldaLadder() {
 function syncBaldaCheckButton() {
   const input = baldaLadderEl.querySelector(`[data-balda-step="${state.balda.currentStep + 1}"]`);
   baldaCheckBtn.disabled = !state.balda.active || !input || !input.value.trim();
+  baldaSkipBtn.disabled = !state.balda.active || !input;
 }
 
 function checkBaldaStep(event) {
@@ -3232,13 +3302,26 @@ function checkBaldaStep(event) {
   if (changedLetters !== 1) return showBaldaError("Можно изменить только одну букву", input);
   if (value !== expected) return showBaldaError("Не подходит. Попробуй другое слово", input);
 
-  state.balda.currentStep = nextIndex;
+  advanceBaldaStep({ index: nextIndex, expected, actual: value, correct: true });
+}
+
+function skipBaldaStep() {
+  if (!state.balda.active) return;
+  const nextIndex = state.balda.currentStep + 1;
+  const expected = state.balda.chain[nextIndex];
+  if (!expected) return;
+  advanceBaldaStep({ index: nextIndex, expected, actual: "Пропуск", correct: false });
+}
+
+function advanceBaldaStep(reviewRow) {
+  state.balda.reviewRows.push(reviewRow);
+  state.balda.currentStep = reviewRow.index;
   baldaFeedbackEl.textContent = "";
   baldaFeedbackEl.className = "feedback";
   baldaValidationEl.textContent = "";
   renderBaldaLadder();
 
-  if (nextIndex === state.balda.chain.length - 1) {
+  if (reviewRow.index === state.balda.chain.length - 1) {
     finishBaldaGame();
     return;
   }
@@ -3273,25 +3356,35 @@ function stopBaldaTimer() {
 
 function finishBaldaGame() {
   const tookSec = stopBaldaTimer();
+  const total = state.balda.chain.length - 1;
+  const correctCount = state.balda.reviewRows.filter((row) => row.correct).length;
+  const success = correctCount === total;
   state.balda.active = false;
   baldaStartBtn.disabled = false;
   baldaDifficultyEl.disabled = false;
   baldaCustomToggleBtn.disabled = false;
   baldaCheckBtn.disabled = true;
+  baldaSkipBtn.disabled = true;
   baldaWordLengthEl.disabled = false;
   baldaStopBtn.disabled = true;
-  applyModeResult("balda", true, { timeSec: tookSec });
+  applyModeResult("balda", success, { timeSec: tookSec });
   const bestTimeSec = state.progress.balda.bestTimeSec;
   baldaResultFeedbackEl.innerHTML = `
-    <span class="math-result-title">Верно!</span>
-    <span class="math-result-answer">Цепочка пройдена полностью</span>
+    <span class="math-result-title">${success ? "Верно!" : "Неверно"}</span>
+    <span class="math-result-answer">Угаданных слов: ${correctCount}/${total}</span>
     <span class="math-result-details">
       <span class="math-result-stat math-result-time"><span>Время</span><strong>${formatSeconds(tookSec)}</strong></span>
       <span class="math-result-stat math-result-record"><span>Рекорд</span><strong>${formatSeconds(bestTimeSec)}</strong></span>
     </span>
   `;
-  baldaResultFeedbackEl.className = "feedback ok";
+  baldaResultFeedbackEl.className = `feedback ${success ? "ok" : "bad"}`;
+  renderBaldaReview(state.balda.reviewRows);
   setBaldaStage("result");
+}
+
+function renderBaldaReview(rows) {
+  baldaReviewEl.innerHTML = `<div class="word-review-head"><strong>Разбор упражнения</strong></div><div class="word-review-grid">${rows.map((row) => `<div class="word-review-row ${row.correct ? "is-ok" : "is-bad"}"><div class="word-review-index">${row.index}</div><div class="word-review-columns"><div class="word-review-col"><span class="word-review-label">Правильный ответ</span><span class="word-chip expected">${row.expected}</span></div><div class="word-review-col"><span class="word-review-label">Твой ответ</span><span class="word-chip actual ${row.correct ? "ok" : "bad"}">${row.actual}</span></div></div></div>`).join("")}</div>`;
+  baldaReviewEl.hidden = false;
 }
 
 function stopBaldaGame() {
@@ -3299,12 +3392,14 @@ function stopBaldaGame() {
   const tookSec = stopBaldaTimer();
   state.balda.active = false;
   state.balda.currentStep = 0;
+  state.balda.reviewRows = [];
   baldaForm.hidden = true;
   baldaLadderEl.innerHTML = "";
   baldaStartBtn.disabled = false;
   baldaDifficultyEl.disabled = false;
   baldaCustomToggleBtn.disabled = false;
   baldaCheckBtn.disabled = true;
+  baldaSkipBtn.disabled = true;
   baldaWordLengthEl.disabled = false;
   baldaStopBtn.disabled = true;
   if (wasActive) {

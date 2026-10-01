@@ -220,9 +220,8 @@
         <details class="exercise-help math-help" id="math-help" open>
           <summary>Как проходит упражнение</summary>
           <ol>
-            <li>Выбери уровень сложности.</li>
-            <li>Задай количество примеров от 1 до 10 и нажми «Решать».</li>
-            <li>Вводи ответы по очереди. Результаты и разбор появятся в конце.</li>
+            <li>Выбери уровень сложности и кол-во примеров для счета.</li>
+            <li>Вводи ответы по очереди и проверь, правильно ли ты все посчитал.</li>
           </ol>
         </details>
         <div class="math-action-controls">
@@ -328,6 +327,7 @@
           />
           <p id="math-answer-validation" class="field-validation" aria-live="polite"></p>
           <button class="btn" type="submit">Дальше</button>
+          <button type="button" id="math-skip" class="btn btn-ghost">Пропустить</button>
         </form>
         <div id="math-result" class="math-result">
           <h3>Тренировка завершена</h3>
@@ -432,6 +432,7 @@
           />
           <p id="num-answer-validation" class="field-validation" aria-live="polite"></p>
           <button class="btn" type="submit">Проверить</button>
+          <button type="button" id="num-skip" class="btn btn-ghost">Пропустить</button>
         </form>
         <button type="button" id="num-stop" class="btn btn-stop">Закончить упражнение</button>
         <div id="num-result" class="math-result num-result">
@@ -970,8 +971,7 @@
           <summary>Как проходит упражнение</summary>
           <ol>
             <li>Выбери уровень сложности.</li>
-            <li>В каждом шаге меняй одну букву и вводи новое слово.</li>
-            <li>Дойди до финального слова и сравни своё время с рекордом.</li>
+            <li>В каждом шаге меняй одну букву и вводи новое слово, пока не дойдешь до финального.</li>
           </ol>
         </details>
         <div class="balda-action-controls">
@@ -1028,7 +1028,7 @@
           <div id="balda-start-word" class="challenge challenge-hint balda-start-word">Начальное слово — маска</div>
           <div id="balda-ladder" class="balda-ladder"></div>
           <p id="balda-validation" class="field-validation" aria-live="polite"></p>
-          <button id="balda-check" class="btn" type="submit">Проверить</button>
+          <div class="balda-form-actions"><button id="balda-check" class="btn" type="submit">Проверить</button><button id="balda-skip" class="btn btn-ghost" type="button">Пропустить</button></div>
         </form>
         <p id="balda-feedback" class="feedback"></p>
         <button type="button" id="balda-stop" class="btn btn-stop" disabled>Закончить упражнение</button>
@@ -1037,6 +1037,7 @@
           <div class="math-result-card">
             <p id="balda-result-feedback" class="feedback" aria-live="polite"></p>
           </div>
+          <div id="balda-review" class="word-review" hidden></div>
           <button type="button" id="balda-again" class="btn math-again-btn">Ещё упражнение</button>
         </div>
       </section>

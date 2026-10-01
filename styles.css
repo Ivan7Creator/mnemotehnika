@@ -1349,7 +1349,24 @@ label {
 }
 
 #math-form {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.75rem;
+}
+
+#math-form input,
+#math-form .field-validation,
+#num-form input,
+#num-form .field-validation {
+  grid-column: 1 / -1;
+}
+
+#math-form .btn,
+#num-form .btn {
+  width: 100%;
+}
+
+#num-form {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 #math-feedback:empty {
@@ -1989,6 +2006,16 @@ label {
   margin-top: 0.75rem;
 }
 
+.balda-form-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.balda-form-actions .btn {
+  width: 100%;
+}
+
 #balda-start-word {
   margin: 0;
 }
@@ -2056,6 +2083,13 @@ label {
   border-color: rgba(42, 111, 99, 0.2);
   background: rgba(42, 111, 99, 0.1);
   color: #24594f;
+}
+
+.balda-row.is-skipped .balda-word-input {
+  border-color: rgba(181, 51, 47, 0.18);
+  background: rgba(181, 51, 47, 0.1);
+  color: #a0332f;
+  font-weight: 700;
 }
 
 
