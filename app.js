@@ -11,7 +11,7 @@ const defaults = {
   "what-word": { attempts: 0, correct: 0, stopped: 0, streak: 0, bestStreak: 0, bestTimeSec: null },
   memory: { attempts: 0, correct: 0, stopped: 0, streak: 0, bestStreak: 0 },
   balda: { attempts: 0, correct: 0, stopped: 0, streak: 0, bestStreak: 0, bestTimeSec: null },
-  attention: { attempts: 0, correct: 0, stopped: 0, streak: 0, bestStreak: 0 },
+  attention: { attempts: 0, correct: 0, stopped: 0, streak: 0, bestStreak: 0, bestCount: 0, bestTotal: 0, bestTimeSec: null },
   schulte: { attempts: 0, correct: 0, stopped: 0, bestStreak: 0, streak: 0, bestTimeSec: null, bestSize: 0 },
   exam: { bestTimeSec: null, levels: {} },
   sessions: [],
@@ -59,7 +59,7 @@ const state = {
     revealTimerId: null,
     stage: "prep",
   },
-  guessWord: { words: [], index: 0, active: false, startedAt: null, stage: "prep" },
+  guessWord: { words: [], index: 0, active: false, correct: 0, startedAt: null, stage: "prep" },
   whatWord: { words: [], index: 0, active: false, correct: 0, reviewRows: [], startedAt: null, stage: "prep" },
   balda: {
     chain: ["маска", "миска", "мишка", "мышка", "мышца"],
@@ -1533,7 +1533,7 @@ function renderExamBaldaLadder(task) {
           maxlength="${word.length}"
           autocomplete="off"
           spellcheck="false"
-          placeholder="Введи следующее слово"
+          placeholder="Введи слово"
           value="${completed ? escapeHtml(task.answers[rowIndex]?.actual || word) : ""}"
           ${current ? "" : "disabled"}
           aria-label="Слово для шага ${index}"
@@ -2385,6 +2385,7 @@ const wordDifficultyPreviewEl = document.getElementById("word-difficulty-preview
 const wordPreviewCountEl = document.getElementById("word-preview-count");
 const wordPreviewTypeEl = document.getElementById("word-preview-type");
 const wordPreviewDurationEl = document.getElementById("word-preview-duration");
+const wordPreviewDurationLabelEl = document.getElementById("word-preview-duration-label");
 const wordPreviewLanguageEl = document.getElementById("word-preview-language");
 const wordPreviewExamplesEl = document.getElementById("word-preview-examples");
 const wordChoiceDividerEl = document.querySelector(".word-choice-divider");
@@ -2392,6 +2393,7 @@ const wordCustomToggleBtn = document.getElementById("word-custom-toggle");
 const wordCustomSettingsEl = document.getElementById("word-custom-settings");
 const wordTargetCountEl = document.getElementById("word-target-count");
 const wordShowSecondsEl = document.getElementById("word-show-seconds");
+const wordShowAllEl = document.getElementById("word-show-all");
 const wordTaskEl = document.getElementById("word-task");
 const wordForm = document.getElementById("word-form");
 const wordFeedback = document.getElementById("word-feedback");
@@ -2414,6 +2416,7 @@ wordAnswer.addEventListener("input", () => {
 });
 wordLevelEl.addEventListener("change", updateWordDifficultyPreview);
 wordLanguageEl.addEventListener("change", updateWordDifficultyPreview);
+wordShowAllEl.addEventListener("change", updateWordDifficultyPreview);
 
 wordForm.addEventListener("submit", (event) => {
   event.preventDefault();
@@ -2502,14 +2505,23 @@ function startWordRound() {
   wordReviewEl.hidden = true;
   wordReviewEl.innerHTML = "";
   wordTaskEl.hidden = false;
-  wordTaskEl.textContent = `Слова появляются автоматически каждые ${state.words.revealSeconds} сек.`;
+  wordTaskEl.textContent = wordShowAllEl.checked
+    ? `Все слова показаны на ${state.words.targetCount * state.words.revealSeconds} сек.`
+    : `Слова появляются автоматически каждые ${state.words.revealSeconds} сек.`;
   wordTaskEl.classList.add("challenge-hint");
   startWordTimer();
   setWordStage("task");
   wordForm.reset();
   clearWordInputError();
-  revealNextWord();
-  startWordRevealSequence();
+  if (wordShowAllEl.checked) {
+    state.words.revealedCount = state.words.targetCount;
+    wordTaskEl.textContent = state.words.value.join(" • ");
+    wordTaskEl.classList.remove("challenge-hint");
+    scheduleWordRecallTransition(state.words.targetCount * state.words.revealSeconds);
+  } else {
+    revealNextWord();
+    startWordRevealSequence();
+  }
   syncWordControls();
 }
 
@@ -2595,7 +2607,10 @@ function updateWordDifficultyPreview() {
   };
   wordPreviewCountEl.replaceChildren(createPill(preview.count));
   wordPreviewTypeEl.replaceChildren(createPill(preview.type));
-  wordPreviewDurationEl.replaceChildren(createPill(preview.duration));
+  const showAll = wordShowAllEl.checked;
+  const durationSeconds = Number.parseInt(preview.duration, 10) * Number.parseInt(preview.count, 10);
+  wordPreviewDurationLabelEl.textContent = showAll ? "Общее время показа" : "Время показа одного слова";
+  wordPreviewDurationEl.replaceChildren(createPill(showAll ? `${durationSeconds} сек.` : preview.duration));
   wordPreviewLanguageEl.replaceChildren(createPill(language === "ru" ? "Русский" : "Английский"));
   wordPreviewExamplesEl.classList.toggle("has-long-words", exampleWords.some((word) => word.length >= 10));
   wordPreviewExamplesEl.replaceChildren(...exampleWords.map((word) => {
@@ -2644,7 +2659,7 @@ function clearWordRevealTimer() {
   }
 }
 
-function scheduleWordRecallTransition() {
+function scheduleWordRecallTransition(delaySeconds = state.words.revealSeconds) {
   wordFeedback.textContent = "";
   wordFeedback.className = "feedback";
   syncWordControls();
@@ -2652,7 +2667,7 @@ function scheduleWordRecallTransition() {
   state.words.revealTimerId = setTimeout(() => {
     state.words.revealTimerId = null;
     finishWordMemorizing();
-  }, state.words.revealSeconds * 1000);
+  }, delaySeconds * 1000);
 }
 
 function finishWordMemorizing() {
@@ -2734,21 +2749,26 @@ function setWordStage(stage) {
 const guessWordPool = ["дедушка", "фонарь", "путешествие", "малина", "самолёт", "библиотека", "карандаш", "облако", "костёр", "черепаха"];
 const guessWordPanelEl = document.getElementById("guess-word-panel");
 const guessWordPercentEl = document.getElementById("guess-word-percent");
+const guessWordTargetCountEl = document.getElementById("guess-word-count");
 const guessWordPreviewPercentEl = document.getElementById("guess-word-preview-percent");
+const guessWordPreviewExamplesEl = document.getElementById("guess-word-preview-examples");
 const guessWordStartBtn = document.getElementById("guess-word-start");
 const guessWordMaskEl = document.getElementById("guess-word-mask");
 const guessWordValueEl = document.getElementById("guess-word-value");
-const guessWordCountEl = document.getElementById("guess-word-count");
+const guessWordCountEl = document.getElementById("guess-word-progress");
 const guessWordForm = document.getElementById("guess-word-form");
 const guessWordAnswerEl = document.getElementById("guess-word-answer");
 const guessWordFeedbackEl = document.getElementById("guess-word-feedback");
+const guessWordSkipBtn = document.getElementById("guess-word-skip");
 
 guessWordPercentEl.addEventListener("change", () => {
-  guessWordPreviewPercentEl.textContent = `${guessWordPercentEl.value}%`;
+  updateGuessWordPreview();
 });
+guessWordTargetCountEl.addEventListener("change", updateGuessWordPreview);
 guessWordStartBtn.addEventListener("click", startGuessWordRound);
 document.getElementById("guess-word-again").addEventListener("click", resetGuessWordExercise);
 document.getElementById("guess-word-stop").addEventListener("click", stopGuessWordExercise);
+guessWordSkipBtn.addEventListener("click", () => advanceGuessWord(false));
 guessWordForm.addEventListener("submit", (event) => {
   event.preventDefault();
   if (!state.guessWord.active) return;
@@ -2759,18 +2779,32 @@ guessWordForm.addEventListener("submit", (event) => {
     guessWordAnswerEl.classList.add("is-invalid");
     return;
   }
-  const correct = actual === normalizeWordToken(expected);
-  applyModeResult("guess-word", correct);
-  state.guessWord.active = false;
-  guessWordFeedbackEl.innerHTML = `<span class="math-result-title">${correct ? "Верно!" : "Неверно"}</span><span class="math-result-answer">${correct ? "Слово угадано" : `Правильный ответ: ${expected}`}</span>`;
-  guessWordFeedbackEl.className = `feedback ${correct ? "ok" : "bad"}`;
-  setGuessWordStage("result");
+  advanceGuessWord(actual === normalizeWordToken(expected));
 });
+
+function advanceGuessWord(correct) {
+  if (!state.guessWord.active) return;
+  if (correct) state.guessWord.correct += 1;
+  state.guessWord.index += 1;
+  if (state.guessWord.index < state.guessWord.words.length) {
+    guessWordAnswerEl.value = "";
+    guessWordAnswerEl.focus();
+    renderGuessWordTask();
+    return;
+  }
+  const success = state.guessWord.correct === state.guessWord.words.length;
+  applyModeResult("guess-word", success, { count: state.guessWord.correct });
+  state.guessWord.active = false;
+  guessWordFeedbackEl.innerHTML = `<span class="math-result-title">${success ? "Верно!" : "Неверно"}</span><span class="math-result-answer">Угадано слов: ${state.guessWord.correct}/${state.guessWord.words.length}</span>`;
+  guessWordFeedbackEl.className = `feedback ${success ? "ok" : "bad"}`;
+  setGuessWordStage("result");
+}
 guessWordAnswerEl.addEventListener("input", () => guessWordAnswerEl.classList.remove("is-invalid"));
 
 function startGuessWordRound() {
-  state.guessWord.words = shuffle(guessWordPool).slice(0, 10);
+  state.guessWord.words = shuffle(guessWordPool).slice(0, Number(guessWordTargetCountEl.value) || 5);
   state.guessWord.index = 0;
+  state.guessWord.correct = 0;
   state.guessWord.active = true;
   guessWordFeedbackEl.textContent = "";
   guessWordAnswerEl.value = "";
@@ -2782,13 +2816,7 @@ function startGuessWordRound() {
 function renderGuessWordTask() {
   const word = state.guessWord.words[state.guessWord.index] || "";
   guessWordValueEl.textContent = word;
-  const hiddenPercent = Number(guessWordPercentEl.value) || 80;
-  const hasDescender = /[бдзуфцщрgyjpq]/i.test(word);
-  const descenderCompensation = hasDescender ? Math.min(10, hiddenPercent * 0.15) : 0;
-  guessWordMaskEl.style.setProperty(
-    "--guess-word-hidden",
-    `${Math.max(0, hiddenPercent - descenderCompensation)}%`,
-  );
+  guessWordMaskEl.style.setProperty("--guess-word-hidden", `${Number(guessWordPercentEl.value) || 80}%`);
   guessWordCountEl.textContent = `Слово ${state.guessWord.index + 1} из ${state.guessWord.words.length}`;
 }
 
@@ -2800,10 +2828,30 @@ function stopGuessWordExercise() {
 
 function resetGuessWordExercise() {
   state.guessWord.active = false;
+  state.guessWord.correct = 0;
   guessWordFeedbackEl.textContent = "";
   guessWordAnswerEl.value = "";
   setGuessWordStage("prep");
 }
+
+function updateGuessWordPreview() {
+  const hiddenPercent = Number(guessWordPercentEl.value) || 80;
+  guessWordPreviewPercentEl.textContent = `${hiddenPercent}%`;
+  guessWordPreviewExamplesEl.replaceChildren(...guessWordPool.slice(0, 3).map((word) => {
+    const item = document.createElement("span");
+    item.className = "guess-word-preview-word";
+    const mask = document.createElement("div");
+    mask.className = "guess-word-preview-word-value";
+    const letters = document.createElement("i");
+    letters.style.setProperty("--guess-word-hidden", `${hiddenPercent}%`);
+    letters.textContent = word;
+    mask.appendChild(letters);
+    item.appendChild(mask);
+    return item;
+  }));
+}
+
+updateGuessWordPreview();
 
 function setGuessWordStage(stage) {
   guessWordPanelEl.classList.remove("guess-word-stage-prep", "guess-word-stage-task", "guess-word-stage-result");
@@ -2917,7 +2965,11 @@ function startWhatWordExercise() {
 }
 
 function renderWhatWordReview(rows) {
-  whatWordReviewEl.innerHTML = `<div class="word-review-head"><strong>Разбор упражнения</strong></div><div class="word-review-grid">${rows.map((row, index) => `<div class="word-review-row ${row.correct ? "is-ok" : "is-bad"}"><div class="word-review-index">${index + 1}</div><div class="word-review-columns"><div class="word-review-col"><span class="word-review-label">Правильный ответ</span><span class="word-chip expected">${consonantsOnly(row.expected)} → ${row.expected}</span></div><div class="word-review-col"><span class="word-review-label">Твой ответ</span><span class="word-chip actual ${row.correct ? "ok" : "bad"}">${row.actual || "Пропуск"}</span></div></div></div>`).join("")}</div>`;
+  const chipSizeClass = (value) => {
+    const length = String(value || "").length;
+    return length >= 24 ? " is-extra-compact" : length >= 16 ? " is-compact" : "";
+  };
+  whatWordReviewEl.innerHTML = `<div class="word-review-head"><strong>Разбор упражнения</strong></div><div class="word-review-grid">${rows.map((row, index) => `<div class="word-review-row ${row.correct ? "is-ok" : "is-bad"}"><div class="word-review-index">${index + 1}</div><div class="word-review-columns"><div class="word-review-col"><span class="word-review-label">Правильный ответ</span><span class="word-chip expected${chipSizeClass(row.expected)}">${row.expected}</span></div><div class="word-review-col"><span class="word-review-label">Твой ответ</span><span class="word-chip actual ${row.correct ? "ok" : "bad"}${chipSizeClass(row.actual)}">${row.actual || "Пропуск"}</span></div></div></div>`).join("")}</div>`;
   whatWordReviewEl.hidden = false;
 }
 
@@ -3133,6 +3185,7 @@ function syncWordControls() {
   wordDifficulty.disabled = state.words.running;
   wordTargetCountEl.disabled = state.words.running;
   wordShowSecondsEl.disabled = state.words.running;
+  wordShowAllEl.disabled = state.words.running;
   wordSubmitBtn.disabled = state.words.phase !== "recall" || !wordAnswer.value.trim();
   wordStopBtn.disabled = !state.words.running && !state.words.startedAt;
   wordAnswer.disabled = state.words.phase !== "recall";
@@ -3170,7 +3223,7 @@ baldaLadderEl.addEventListener("input", (event) => {
   const input = event.target.closest(".balda-word-input");
   if (!input) return;
   input.classList.remove("is-invalid");
-  input.placeholder = "Введи следующее слово";
+  input.placeholder = "Введи слово";
   baldaValidationEl.textContent = "";
   syncBaldaCheckButton();
 });
@@ -3266,7 +3319,7 @@ function renderBaldaLadder() {
           maxlength="${word.length}"
           autocomplete="off"
           spellcheck="false"
-          placeholder="Введи следующее слово"
+          placeholder="Введи слово"
           value="${displayedValue}"
           ${current ? "" : "disabled"}
           aria-label="Слово для ряда ${index}"
@@ -3474,6 +3527,7 @@ function isValidBaldaChain(chain, wordLength) {
 const attentionDifficultyEl = document.getElementById("attention-difficulty");
 const attentionStartBtn = document.getElementById("attention-start");
 const attentionStopBtn = document.getElementById("attention-stop");
+const attentionAgainBtn = document.getElementById("attention-again");
 const attentionCompareBtn = document.getElementById("attention-compare");
 const attentionStageEl = document.getElementById("attention-stage");
 const attentionPreviewEl = document.getElementById("attention-preview");
@@ -3486,6 +3540,10 @@ const attentionPreviewFocusEl = document.getElementById("attention-preview-focus
 
 attentionStartBtn.addEventListener("click", startAttentionRound);
 attentionStopBtn.addEventListener("click", stopAttentionExercise);
+attentionAgainBtn.addEventListener("click", () => {
+  stopAttentionExercise({ record: false });
+  attentionStartBtn.focus();
+});
 attentionCompareBtn.addEventListener("click", compareAttentionAnswer);
 attentionAnswerEl.addEventListener("input", syncAttentionDescribeAvailability);
 attentionDifficultyEl.addEventListener("change", () => {
@@ -3495,12 +3553,7 @@ attentionDifficultyEl.addEventListener("change", () => {
 
 function updateAttentionPreview() {
   attentionPreviewDurationEl.textContent = `${getAttentionShowSeconds()} сек.`;
-  const focusByDifficulty = {
-    easy: "Крупные предметы и основные цвета",
-    medium: "Предметы, цвета и расположение",
-    hard: "Мелкие детали, оттенки и взаимное расположение",
-  };
-  attentionPreviewFocusEl.textContent = focusByDifficulty[attentionDifficultyEl.value] || focusByDifficulty.easy;
+  attentionPreviewFocusEl.textContent = "Предметы, цвета, люди, расположение деталей и тд";
 }
 
 function getAttentionShowSeconds() {
@@ -3719,17 +3772,23 @@ async function compareAttentionAnswer() {
     state.attention.completed = true;
     const totalDetails = Number(payload?.totalDetails) || 0;
     const rememberedDetails = Number(payload?.rememberedDetails) || 0;
-    const success = totalDetails > 0 && rememberedDetails / totalDetails >= 0.6;
-    applyModeResult("attention", success, { count: rememberedDetails });
+    const success = totalDetails > 0 && rememberedDetails === totalDetails;
+    applyModeResult("attention", success, { count: rememberedDetails, total: totalDetails, timeSec: tookSec });
+    const attentionRecord = formatAttentionRecord(state.progress.attention);
     attentionFeedbackEl.innerHTML = `
-      <span class="math-result-title">Сравнение готово.</span>
+      <span class="math-result-title">${success ? "Верно!" : "Неверно"}</span>
+      <span class="math-result-answer">Внимательность: ${rememberedDetails} из ${totalDetails} деталей</span>
       <span class="math-result-details">
         <span class="math-result-stat math-result-time">
           <span>Время</span>
           <strong>${formatSeconds(tookSec)}</strong>
         </span>
+        <span class="math-result-stat math-result-record">
+          <span>Лучший результат</span>
+          <strong>${attentionRecord}</strong>
+        </span>
       </span>`;
-    attentionFeedbackEl.className = "feedback ok";
+    attentionFeedbackEl.className = `feedback ${success ? "ok" : "bad"}`;
     setAttentionStage("result");
   } catch (error) {
     attentionCompareResultEl.hidden = true;
@@ -3748,24 +3807,28 @@ function renderAttentionComparison(result) {
   const rememberedDetails = Number(result?.rememberedDetails) || 0;
   const matchedDetails = normalizeAttentionList(result?.matchedDetails);
   const missedDetails = normalizeAttentionList(result?.missedDetails);
+  const missingCount = Math.max(totalDetails - rememberedDetails, 0);
+  const shownMissedDetails = missedDetails.length
+    ? missedDetails
+    : missingCount ? [formatAttentionMissedFallback(missingCount)] : [];
   const extraDetails = normalizeAttentionList(result?.extraDetails);
-  const summary = String(result?.summary || "").trim();
-
+  const analyzedImage = state.attention.imageUrl
+    ? `<figure class="attention-compare-image"><img src="${escapeHtml(state.attention.imageUrl)}" alt="${escapeHtml(state.attention.sourceLabel || "Фото для упражнения на внимательность")}"></figure>`
+    : "";
   attentionCompareResultEl.innerHTML = `
     <div class="attention-compare-head">
-      <strong>Сравнение с твоим ответом</strong>
-      <span class="attention-score">Внимательность: ${rememberedDetails} из ${totalDetails || Math.max(rememberedDetails, 1)} деталей</span>
+      <strong>Разбор упражнения</strong>
     </div>
-    ${summary ? `<p class="attention-compare-summary">${escapeHtml(summary)}</p>` : ""}
+    ${analyzedImage}
     <div class="attention-compare-grid">
       <section class="attention-compare-col">
         <h4>Ты заметил</h4>
         ${renderAttentionList(matchedDetails, "AI не выделил совпадающих деталей.")}
       </section>
-      <section class="attention-compare-col">
+      ${shownMissedDetails.length ? `<section class="attention-compare-col">
         <h4>Ты пропустил</h4>
-        ${renderAttentionList(missedDetails, "Серьезных пропусков нет.")}
-      </section>
+        ${renderAttentionList(shownMissedDetails, "")}
+      </section>` : ""}
       <section class="attention-compare-col">
         <h4>Лишнее или спорное</h4>
         ${renderAttentionList(extraDetails, "Лишних деталей нет.")}
@@ -3787,7 +3850,12 @@ function normalizeAttentionList(items) {
     .filter(Boolean);
 }
 
-function stopAttentionExercise() {
+function formatAttentionMissedFallback(count) {
+  const detailWord = count === 1 ? "деталь" : count >= 2 && count <= 4 ? "детали" : "деталей";
+  return `Ещё ${count} ${detailWord} на фото.`;
+}
+
+function stopAttentionExercise({ record = true } = {}) {
   const hadActive =
     Boolean(state.attention.file)
     || Boolean(state.attention.imageUrl)
@@ -3821,7 +3889,7 @@ function stopAttentionExercise() {
   attentionCompareResultEl.hidden = true;
   attentionCompareResultEl.innerHTML = "";
   attentionCompareBtn.textContent = attentionCompareDefaultLabel;
-  if (hadActive) {
+  if (hadActive && record) {
     recordStoppedExercise("attention");
     attentionFeedbackEl.textContent = "";
     attentionFeedbackEl.className = "feedback";
@@ -4257,6 +4325,18 @@ function addResultToProgress(progress, mode, success, extra = {}, at = new Date(
     const prev = bucket.bestTimeSec ?? Number.POSITIVE_INFINITY;
     bucket.bestTimeSec = Math.min(prev, extra.timeSec);
   }
+  if (mode === "attention" && extra.timeSec) {
+    const count = extra.count || 0;
+    const total = extra.total || 0;
+    const isBetterScore = count > (bucket.bestCount || 0);
+    const isSameScoreFaster = count === (bucket.bestCount || 0)
+      && (bucket.bestTimeSec == null || extra.timeSec < bucket.bestTimeSec);
+    if (isBetterScore || isSameScoreFaster) {
+      bucket.bestCount = count;
+      bucket.bestTotal = total;
+      bucket.bestTimeSec = extra.timeSec;
+    }
+  }
   if (mode === "schulte" && success) {
     bucket.bestSize = Math.max(bucket.bestSize || 0, extra.size || 0);
     if (extra.timeSec) {
@@ -4454,11 +4534,11 @@ function renderProgress() {
       label: "Детали на фото",
       correct: attention.correct,
       attempts: attention.attempts,
-      recordValue: "--",
-      recordLabel: "Лучшая серия",
-      recordValue: attention.bestStreak || "--",
+      recordValue: formatAttentionRecord(attention),
+      recordLabel: "Лучший результат",
       metrics: [
         ["Лучшая серия", attention.bestStreak || 0],
+        ["Лучший результат", formatAttentionRecord(attention)],
       ],
     },
     schulte: {
@@ -4615,6 +4695,11 @@ function countSuccessStreak(entries) {
 
 function formatSeconds(value) {
   return Number.isFinite(value) ? `${value.toFixed(1)}с` : "--";
+}
+
+function formatAttentionRecord(record) {
+  if (!record?.bestCount || !record?.bestTotal || !Number.isFinite(record?.bestTimeSec)) return "--";
+  return `${record.bestCount}/${record.bestTotal} · ${formatSeconds(record.bestTimeSec)}`;
 }
 
 function formatShortDate(value) {

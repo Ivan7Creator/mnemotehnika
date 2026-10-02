@@ -106,7 +106,7 @@
             <span class="trainer-card-footer"><span class="trainer-card-start">Начать</span></span>
           </button>
           <button type="button" class="tab-btn trainer-card" data-tab="what-word" data-category="thinking">
-            <span class="trainer-card-visual" aria-hidden="true"><img class="trainer-card-icon" src="assets/trainer-icons/words.png" alt="" /></span>
+            <span class="trainer-card-visual" aria-hidden="true"><img class="trainer-card-icon" src="assets/trainer-icons/what-word.png" alt="" /></span>
             <span class="trainer-card-title">Что за слово?</span>
             <span class="trainer-card-description">Восстанавливай слова, добавляя гласные к показанным согласным.</span>
             <span class="trainer-card-footer"><span class="trainer-card-start">Начать</span></span>
@@ -198,10 +198,10 @@
             <p>Мышление</p>
             <button type="button" class="tab-btn trainer-drawer-link" data-tab="math"><span><img class="trainer-menu-icon" src="assets/trainer-icons/math.png" alt="" /></span>Счет в уме</button>
             <button type="button" class="tab-btn trainer-drawer-link" data-tab="balda"><span><img class="trainer-menu-icon" src="assets/trainer-icons/balda.png" alt="" /></span>Балда</button>
+            <button type="button" class="tab-btn trainer-drawer-link" data-tab="what-word"><span><img class="trainer-menu-icon" src="assets/trainer-icons/what-word.png" alt="" /></span>Что за слово?</button>
 
             <p>Внимание</p>
             <button type="button" class="tab-btn trainer-drawer-link" data-tab="guess-word"><span><img class="trainer-menu-icon" src="assets/trainer-icons/guess-word.png" alt="" /></span>Угадай слово</button>
-            <button type="button" class="tab-btn trainer-drawer-link" data-tab="what-word"><span><img class="trainer-menu-icon" src="assets/trainer-icons/words.png" alt="" /></span>Что за слово?</button>
             <button type="button" class="tab-btn trainer-drawer-link" data-tab="attention"><span><img class="trainer-menu-icon" src="assets/trainer-icons/attention.png" alt="" /></span>Детали на фото</button>
             <button type="button" class="tab-btn trainer-drawer-link" data-tab="schulte"><span><img class="trainer-menu-icon" src="assets/trainer-icons/schulte.png" alt="" /></span>Таблицы Шульте</button>
 
@@ -426,7 +426,7 @@
             id="num-answer"
             type="text"
             inputmode="numeric"
-            placeholder="Введи ответ"
+            placeholder="Введи ряд"
             autocomplete="off"
             aria-describedby="num-answer-validation"
           />
@@ -612,6 +612,11 @@
               </select>
             </label>
           </div>
+          <label class="word-show-all-toggle" for="word-show-all">
+            <input type="checkbox" id="word-show-all" />
+            <span class="word-show-all-switch" aria-hidden="true"></span>
+            <span class="word-show-all-copy"><strong>Показать все слова сразу</strong><small>Время показа сложится для всего набора</small></span>
+          </label>
           <details class="math-difficulty-preview word-difficulty-preview" id="word-difficulty-preview" open>
             <summary>Что будет в упражнении</summary>
             <div class="math-preview-content word-preview-content" aria-live="polite">
@@ -625,7 +630,7 @@
                   <div class="math-preview-tags math-preview-number-type" id="word-preview-type" aria-label="Тип слов"></div>
                 </div>
                 <div class="math-preview-line">
-                  <span class="math-preview-label">Время показа одного слова</span>
+                  <span class="math-preview-label" id="word-preview-duration-label">Время показа одного слова</span>
                   <div class="math-preview-tags math-preview-ranges" id="word-preview-duration" aria-label="Время показа одного слова"></div>
                 </div>
                 <div class="math-preview-line">
@@ -699,15 +704,15 @@
         </div>
         <details class="exercise-help" open>
           <summary>Как проходит упражнение</summary>
-          <ol><li>Выбери, какую часть слова скрыть.</li><li>Рассмотри слово за маской.</li><li>Введи ответ и проверь результат.</li></ol>
+          <ol><li>Выбери уровень сложности и кол-во слов для угадывания.</li><li>По скрытой части слова попытайся угадать, что это было за изначальное слово.</li></ol>
         </details>
         <div class="guess-word-controls">
-          <div class="controls guess-word-mode-row"><label>Скрыть<select id="guess-word-percent"><option value="70">70%</option><option value="80" selected>80%</option><option value="90">90%</option><option value="95">95%</option></select></label></div>
-          <details class="math-difficulty-preview" open><summary>Что будет в упражнении</summary><div class="math-preview-content"><div class="math-preview-copy"><div class="math-preview-line"><span class="math-preview-label">Скрытая часть</span><div class="math-preview-tags"><span id="guess-word-preview-percent">80%</span></div></div><div class="math-preview-line"><span class="math-preview-label">Слов в наборе</span><div class="math-preview-tags"><span>10</span></div></div></div><div class="math-preview-examples"><span>дедушка</span><span>фонарь</span><span>путешествие</span></div></div></details>
+          <div class="controls guess-word-mode-row"><label>Сложность<select id="guess-word-percent"><option value="70">Лёгкая</option><option value="80" selected>Средняя</option><option value="90">Высокая</option></select></label><label>Кол-во слов<select id="guess-word-count"><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5" selected>5</option><option value="6">6</option><option value="7">7</option><option value="8">8</option><option value="9">9</option><option value="10">10</option></select></label></div>
+          <details class="math-difficulty-preview" open><summary>Что будет в упражнении</summary><div class="math-preview-content"><div class="math-preview-copy"><div class="math-preview-line"><span class="math-preview-label">Процент скрытия слова</span><div class="math-preview-tags math-preview-ranges"><span id="guess-word-preview-percent">80%</span></div></div></div><div id="guess-word-preview-examples" class="math-preview-examples guess-word-preview-examples" aria-label="Примеры скрытых слов"></div></div></details>
           <div class="guess-word-start-row"><button type="button" id="guess-word-start" class="btn">Решать</button></div>
         </div>
-        <div class="guess-word-task" id="guess-word-task"><div id="guess-word-mask" class="guess-word-mask"><span id="guess-word-value">слово</span></div><p id="guess-word-count">Слово 1 из 10</p></div>
-        <form id="guess-word-form" class="answer-form" novalidate><input id="guess-word-answer" type="text" autocomplete="off" placeholder="Введи слово" /><button class="btn" type="submit">Проверить</button></form>
+        <div class="guess-word-task" id="guess-word-task"><div id="guess-word-mask" class="guess-word-mask"><span id="guess-word-value">слово</span></div><p id="guess-word-progress">Слово 1 из 10</p></div>
+        <form id="guess-word-form" class="answer-form" novalidate><input id="guess-word-answer" type="text" autocomplete="off" placeholder="Введи слово" /><button class="btn" type="submit">Дальше</button><button type="button" id="guess-word-skip" class="btn btn-ghost">Пропустить</button></form>
         <button type="button" id="guess-word-stop" class="btn btn-stop">Закончить упражнение</button>
         <div id="guess-word-result" class="math-result"><h3>Тренировка завершена</h3><div class="math-result-card"><p id="guess-word-feedback" class="feedback" aria-live="polite"></p></div><button type="button" id="guess-word-again" class="btn math-again-btn">Ещё упражнение</button></div>
       </section>
@@ -737,7 +742,7 @@
           <div class="what-word-start-row"><button type="button" id="what-word-start" class="btn">Решать</button></div>
         </div>
         <div class="what-word-task" id="what-word-task"><div id="what-word-progress" class="what-word-series-progress">Слово 1 из 5</div><div id="what-word-consonants" class="challenge what-word-challenge">крндш</div></div>
-        <form id="what-word-form" class="answer-form" novalidate><input id="what-word-answer" type="text" autocomplete="off" placeholder="Введи загаданное слово" /><p id="what-word-validation" class="field-validation" aria-live="polite"></p><button id="what-word-submit" class="btn" type="submit">Дальше</button><button type="button" id="what-word-skip" class="btn btn-ghost">Пропустить</button></form>
+        <form id="what-word-form" class="answer-form" novalidate><input id="what-word-answer" type="text" autocomplete="off" placeholder="Введи слово" /><p id="what-word-validation" class="field-validation" aria-live="polite"></p><button id="what-word-submit" class="btn" type="submit">Дальше</button><button type="button" id="what-word-skip" class="btn btn-ghost">Пропустить</button></form>
         <button type="button" id="what-word-stop" class="btn btn-stop">Закончить упражнение</button>
         <div id="what-word-result" class="math-result"><h3>Тренировка завершена</h3><div class="math-result-card"><p id="what-word-feedback" class="feedback" aria-live="polite"></p></div><div id="what-word-review" class="word-review" hidden></div><button type="button" id="what-word-again" class="btn math-again-btn">Ещё упражнение</button></div>
       </section>
@@ -750,7 +755,7 @@
         <details class="exercise-help attention-help" id="attention-help" open>
           <summary>Как проходит упражнение</summary>
           <ol>
-            <li>Выбери сложность — время показа настроится автоматически.</li>
+            <li>Выбери уровень сложности.</li>
             <li>Запомни детали случайного фото, пока оно на экране.</li>
             <li>Опиши увиденное и сравни ответ с анализом изображения.</li>
           </ol>
@@ -776,11 +781,11 @@
                 </div>
                 <div class="math-preview-line">
                   <span class="math-preview-label">Что запоминать</span>
-                  <div class="math-preview-tags math-preview-number-type"><span id="attention-preview-focus">Предметы, цвета и расположение</span></div>
+                  <div class="math-preview-tags math-preview-number-type"><span id="attention-preview-focus">Предметы, цвета, люди, расположение деталей и тд</span></div>
                 </div>
               </div>
               <div class="math-preview-examples attention-preview-examples" aria-label="Пример ответа">
-                <span>красная чашка у окна, зелёное растение, белая полка</span>
+                <span>На этом фото я вижу человека в костюме, на заднем фоне озеро, лес и тд</span>
               </div>
             </div>
           </details>
@@ -795,13 +800,16 @@
           <textarea
             id="attention-answer"
             rows="5"
-            placeholder="После просмотра опиши через запятую или в ряд, что ты заметил: предметы, цвета, людей, расположение деталей и т. д."
+            placeholder="Опиши через запятую, пробел, в ряд или текстом, что ты заметил: предметы, цвета, людей, расположение деталей и тд"
             disabled
           ></textarea>
           <button type="button" id="attention-compare" class="btn">Проверить</button>
         </form>
+        <div id="attention-result-card" class="math-result-card">
+          <p id="attention-feedback" class="feedback"></p>
+        </div>
         <div id="attention-compare-result" class="attention-compare" hidden></div>
-        <p id="attention-feedback" class="feedback"></p>
+        <button type="button" id="attention-again" class="btn math-again-btn">Ещё упражнение</button>
         <button type="button" id="attention-stop" class="btn btn-stop">Закончить упражнение</button>
       </section>
 
@@ -813,9 +821,8 @@
         <details class="exercise-help schulte-help" id="schulte-help" open>
           <summary>Как проходит упражнение</summary>
           <ol>
-            <li>Выбери уровень сложности.</li>
-            <li>Нажми «Решать» и находи элементы по порядку.</li>
-            <li>Заверши таблицу и сравни своё время с рекордом.</li>
+            <li>Выбери уровень сложности и какие будут элементы таблицы.</li>
+            <li>Последовательно нажимай на элементы, пока не завершишь таблицу.</li>
           </ol>
         </details>
         <div class="schulte-action-controls">
