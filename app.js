@@ -7,7 +7,7 @@ const defaults = {
   math: { attempts: 0, correct: 0, stopped: 0, bestStreak: 0, streak: 0, bestTimeSec: null },
   numbers: { attempts: 0, correct: 0, stopped: 0, bestLength: 0, streak: 0, bestTimeSec: null },
   words: { attempts: 0, correct: 0, stopped: 0, bestCount: 0, streak: 0, bestTimeSec: null },
-  "guess-word": { attempts: 0, correct: 0, stopped: 0, streak: 0, bestStreak: 0 },
+  "guess-word": { attempts: 0, correct: 0, stopped: 0, streak: 0, bestStreak: 0, bestTimeSec: null },
   "what-word": { attempts: 0, correct: 0, stopped: 0, streak: 0, bestStreak: 0, bestTimeSec: null },
   memory: { attempts: 0, correct: 0, stopped: 0, streak: 0, bestStreak: 0 },
   balda: { attempts: 0, correct: 0, stopped: 0, streak: 0, bestStreak: 0, bestTimeSec: null },
@@ -59,7 +59,7 @@ const state = {
     revealTimerId: null,
     stage: "prep",
   },
-  guessWord: { words: [], index: 0, active: false, correct: 0, startedAt: null, stage: "prep" },
+  guessWord: { words: [], index: 0, correct: 0, reviewRows: [], active: false, startedAt: null, stage: "prep" },
   whatWord: { words: [], index: 0, active: false, correct: 0, reviewRows: [], startedAt: null, stage: "prep" },
   balda: {
     chain: ["маска", "миска", "мишка", "мышка", "мышца"],
@@ -2759,6 +2759,7 @@ const guessWordCountEl = document.getElementById("guess-word-progress");
 const guessWordForm = document.getElementById("guess-word-form");
 const guessWordAnswerEl = document.getElementById("guess-word-answer");
 const guessWordFeedbackEl = document.getElementById("guess-word-feedback");
+const guessWordReviewEl = document.getElementById("guess-word-review");
 const guessWordSkipBtn = document.getElementById("guess-word-skip");
 
 guessWordPercentEl.addEventListener("change", () => {
@@ -2779,11 +2780,18 @@ guessWordForm.addEventListener("submit", (event) => {
     guessWordAnswerEl.classList.add("is-invalid");
     return;
   }
-  advanceGuessWord(actual === normalizeWordToken(expected));
+  advanceGuessWord(actual === normalizeWordToken(expected), guessWordAnswerEl.value.trim());
 });
 
-function advanceGuessWord(correct) {
+function advanceGuessWord(correct, actual = "Пропущено") {
   if (!state.guessWord.active) return;
+  const expected = state.guessWord.words[state.guessWord.index];
+  state.guessWord.reviewRows.push({
+    index: state.guessWord.index + 1,
+    expected,
+    actual: actual || "Пропущено",
+    correct,
+  });
   if (correct) state.guessWord.correct += 1;
   state.guessWord.index += 1;
   if (state.guessWord.index < state.guessWord.words.length) {
@@ -2793,10 +2801,14 @@ function advanceGuessWord(correct) {
     return;
   }
   const success = state.guessWord.correct === state.guessWord.words.length;
-  applyModeResult("guess-word", success, { count: state.guessWord.correct });
+  const tookSec = state.guessWord.startedAt ? (Date.now() - state.guessWord.startedAt) / 1000 : 0;
+  state.guessWord.startedAt = null;
+  applyModeResult("guess-word", success, { count: state.guessWord.correct, timeSec: tookSec });
+  const bestTimeSec = state.progress["guess-word"].bestTimeSec;
   state.guessWord.active = false;
-  guessWordFeedbackEl.innerHTML = `<span class="math-result-title">${success ? "Верно!" : "Неверно"}</span><span class="math-result-answer">Угадано слов: ${state.guessWord.correct}/${state.guessWord.words.length}</span>`;
+  guessWordFeedbackEl.innerHTML = `<span class="math-result-title">${success ? "Верно!" : "Неверно"}</span><span class="math-result-answer">Угадано слов: ${state.guessWord.correct}/${state.guessWord.words.length}</span><span class="math-result-details"><span class="math-result-stat math-result-time"><span>Время</span><strong>${formatSeconds(tookSec)}</strong></span><span class="math-result-stat math-result-record"><span>Рекорд</span><strong>${formatSeconds(bestTimeSec)}</strong></span></span>`;
   guessWordFeedbackEl.className = `feedback ${success ? "ok" : "bad"}`;
+  renderGuessWordReview();
   setGuessWordStage("result");
 }
 guessWordAnswerEl.addEventListener("input", () => guessWordAnswerEl.classList.remove("is-invalid"));
@@ -2805,8 +2817,12 @@ function startGuessWordRound() {
   state.guessWord.words = shuffle(guessWordPool).slice(0, Number(guessWordTargetCountEl.value) || 5);
   state.guessWord.index = 0;
   state.guessWord.correct = 0;
+  state.guessWord.reviewRows = [];
   state.guessWord.active = true;
+  state.guessWord.startedAt = Date.now();
   guessWordFeedbackEl.textContent = "";
+  guessWordReviewEl.hidden = true;
+  guessWordReviewEl.innerHTML = "";
   guessWordAnswerEl.value = "";
   renderGuessWordTask();
   setGuessWordStage("task");
@@ -2817,21 +2833,40 @@ function renderGuessWordTask() {
   const word = state.guessWord.words[state.guessWord.index] || "";
   guessWordValueEl.textContent = word;
   guessWordMaskEl.style.setProperty("--guess-word-hidden", `${Number(guessWordPercentEl.value) || 80}%`);
-  guessWordCountEl.textContent = `Слово ${state.guessWord.index + 1} из ${state.guessWord.words.length}`;
+  guessWordCountEl.textContent = `Слово: ${state.guessWord.index + 1}/${state.guessWord.words.length}`;
 }
 
 function stopGuessWordExercise() {
   if (state.guessWord.active) recordStoppedExercise("guess-word");
   state.guessWord.active = false;
+  state.guessWord.startedAt = null;
   setGuessWordStage("prep");
 }
 
 function resetGuessWordExercise() {
   state.guessWord.active = false;
+  state.guessWord.startedAt = null;
   state.guessWord.correct = 0;
+  state.guessWord.reviewRows = [];
   guessWordFeedbackEl.textContent = "";
+  guessWordReviewEl.hidden = true;
+  guessWordReviewEl.innerHTML = "";
   guessWordAnswerEl.value = "";
   setGuessWordStage("prep");
+}
+
+function renderGuessWordReview() {
+  guessWordReviewEl.innerHTML = `
+    <div class="word-review-head"><strong>Разбор упражнения</strong></div>
+    <div class="word-review-grid">${state.guessWord.reviewRows.map((row) => `
+      <div class="word-review-row ${row.correct ? "is-ok" : "is-bad"}">
+        <div class="word-review-index">${row.index}</div>
+        <div class="word-review-columns">
+          <div class="word-review-col"><span class="word-review-label">Правильный ответ</span><span class="word-chip expected">${escapeHtml(row.expected)}</span></div>
+          <div class="word-review-col"><span class="word-review-label">Твой ответ</span><span class="word-chip actual ${row.correct ? "ok" : "bad"}">${escapeHtml(row.actual)}</span></div>
+        </div>
+      </div>`).join("")}</div>`;
+  guessWordReviewEl.hidden = false;
 }
 
 function updateGuessWordPreview() {
@@ -2841,11 +2876,11 @@ function updateGuessWordPreview() {
     const item = document.createElement("span");
     item.className = "guess-word-preview-word";
     const mask = document.createElement("div");
-    mask.className = "guess-word-preview-word-value";
-    const letters = document.createElement("i");
-    letters.style.setProperty("--guess-word-hidden", `${hiddenPercent}%`);
-    letters.textContent = word;
-    mask.appendChild(letters);
+    mask.className = "guess-word-mask guess-word-preview-mask";
+    mask.style.setProperty("--guess-word-hidden", `${hiddenPercent}%`);
+    const value = document.createElement("em");
+    value.textContent = word;
+    mask.appendChild(value);
     item.appendChild(mask);
     return item;
   }));
@@ -4317,6 +4352,10 @@ function addResultToProgress(progress, mode, success, extra = {}, at = new Date(
       updateWordBestTime();
     }
   }
+  if (mode === "guess-word" && success && extra.timeSec) {
+    const prev = bucket.bestTimeSec ?? Number.POSITIVE_INFINITY;
+    bucket.bestTimeSec = Math.min(prev, extra.timeSec);
+  }
   if (mode === "what-word" && extra.timeSec) {
     const prev = bucket.bestTimeSec ?? Number.POSITIVE_INFINITY;
     bucket.bestTimeSec = Math.min(prev, extra.timeSec);
@@ -4499,10 +4538,13 @@ function renderProgress() {
       shortLabel: "Слово",
       correct: guessWord.correct,
       attempts: guessWord.attempts,
-      recordValue: "--",
-      recordLabel: "Лучшая серия",
-      recordValue: guessWord.bestStreak || "--",
-      metrics: [],
+      best: formatSeconds(guessWord.bestTimeSec),
+      recordLabel: "Рекорд",
+      recordValue: formatSeconds(guessWord.bestTimeSec),
+      metrics: [
+        ["Лучшая серия", guessWord.bestStreak || 0],
+        ["Рекорд", formatSeconds(guessWord.bestTimeSec)],
+      ],
     },
     "what-word": {
       label: "Что за слово?",
