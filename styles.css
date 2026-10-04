@@ -2071,6 +2071,8 @@ label {
 
 #guess-word-form input { grid-column: 1 / -1; }
 
+#guess-word-form .field-validation { grid-column: 1 / -1; }
+
 #guess-word-form .btn { width: 100%; }
 
 #guess-word-panel .btn-stop {
@@ -2801,6 +2803,16 @@ textarea {
 .field-validation:empty {
   display: none;
 }
+
+.leaderboard-card { padding: 1.2rem; border: 1px solid rgba(32, 26, 23, 0.1); border-radius: 20px; background: rgba(255, 255, 255, 0.62); }
+.leaderboard-filters { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; margin-bottom: 1rem; }
+.leaderboard-filters label { display: grid; gap: 0.4rem; font-weight: 700; }
+.leaderboard-filters select { width: 100%; }
+.leaderboard-list { display: grid; gap: 0.7rem; margin: 0; padding: 0; list-style: none; }
+.leaderboard-list li { display: grid; grid-template-columns: 2rem 1fr auto; gap: 0.75rem; align-items: center; padding: 0.8rem 1rem; border-radius: 14px; background: rgba(255, 255, 255, 0.75); }
+.leaderboard-rank { font-weight: 800; color: var(--accent, #b9563c); }
+.leaderboard-name { font-weight: 700; }
+.leaderboard-score { color: rgba(32, 26, 23, 0.65); font-size: 0.9rem; }
 
 input[aria-invalid="true"] {
   border-color: #b94732;

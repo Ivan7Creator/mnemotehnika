@@ -165,6 +165,11 @@
             </span>
             <span class="trainer-utility-action">Смотреть</span>
           </button>
+          <button type="button" class="tab-btn trainer-utility-btn trainer-utility-progress" data-tab="leaderboard">
+            <span class="trainer-utility-icon"><img class="trainer-utility-image" src="assets/trainer-icons/progress.png" alt="" /></span>
+            <span class="trainer-utility-copy"><strong>Таблица лидеров</strong><span>Сравнивай результаты с другими участниками.</span></span>
+            <span class="trainer-utility-action">Открыть</span>
+          </button>
         </div>
       </section>
 
@@ -208,6 +213,7 @@
             <p>Ещё</p>
             <button type="button" class="tab-btn trainer-drawer-link" data-tab="exam"><span><img class="trainer-menu-icon" src="assets/trainer-icons/exam.png" alt="" /></span>Экзамен</button>
             <button type="button" class="tab-btn trainer-drawer-link" data-tab="progress"><span><img class="trainer-menu-icon" src="assets/trainer-icons/progress.png" alt="" /></span>Мой прогресс</button>
+            <button type="button" class="tab-btn trainer-drawer-link" data-tab="leaderboard"><span><img class="trainer-menu-icon" src="assets/trainer-icons/progress.png" alt="" /></span>Таблица лидеров</button>
           </nav>
         </aside>
       </div>
@@ -597,7 +603,7 @@
             <label id="word-level-wrap">
               Сложность
               <select id="word-level">
-                <option value="easiest" selected>Легчайшая</option>
+                <option value="easiest" selected hidden>Легчайшая</option>
                 <option value="easy">Лёгкая</option>
                 <option value="medium">Средняя</option>
                 <option value="hard">Высокая</option>
@@ -712,7 +718,7 @@
           <div class="guess-word-start-row"><button type="button" id="guess-word-start" class="btn">Решать</button></div>
         </div>
         <div class="guess-word-task" id="guess-word-task"><p id="guess-word-progress">Слово: 1/5</p><div id="guess-word-mask" class="guess-word-mask"><span id="guess-word-value">слово</span></div></div>
-        <form id="guess-word-form" class="answer-form" novalidate><input id="guess-word-answer" type="text" autocomplete="off" placeholder="Введи слово" /><button class="btn" type="submit">Дальше</button><button type="button" id="guess-word-skip" class="btn btn-ghost">Пропустить</button></form>
+        <form id="guess-word-form" class="answer-form" novalidate><input id="guess-word-answer" type="text" autocomplete="off" placeholder="Введи слово" aria-describedby="guess-word-validation" /><p id="guess-word-validation" class="field-validation" aria-live="polite"></p><button class="btn" type="submit">Дальше</button><button type="button" id="guess-word-skip" class="btn btn-ghost">Пропустить</button></form>
         <button type="button" id="guess-word-stop" class="btn btn-stop">Закончить упражнение</button>
         <div id="guess-word-result" class="math-result"><h3>Тренировка завершена</h3><div class="math-result-card"><p id="guess-word-feedback" class="feedback" aria-live="polite"></p></div><div id="guess-word-review" class="word-review" hidden></div><button type="button" id="guess-word-again" class="btn math-again-btn">Ещё упражнение</button></div>
       </section>
@@ -1102,6 +1108,12 @@
           <ul id="recent-list" class="recent-list"></ul>
         </div>
         <button type="button" id="reset-progress" class="btn btn-ghost">Сбросить прогресс</button>
+      </section>
+
+      <section class="panel" id="leaderboard-panel">
+        <div class="panel-head"><h2>Таблица лидеров</h2><p>Общий рейтинг участников по успешным тренировкам.</p></div>
+        <div class="leaderboard-filters"><label>Упражнение<select id="leaderboard-exercise"><option value="all">Все упражнения</option><option value="math">Счёт в уме</option><option value="numbers">Числовой ряд</option><option value="words">Запоминание слов</option><option value="guess-word">Угадай слово</option><option value="what-word">Что за слово?</option><option value="balda">Балда</option><option value="attention">Детали на фото</option><option value="schulte">Таблицы Шульте</option></select></label><label>Сложность<select id="leaderboard-difficulty"><option value="all">Любая</option><option value="easy">Лёгкая</option><option value="medium">Средняя</option><option value="hard">Высокая</option><option value="expert">Экспертная</option><option value="unknown">Не указана</option></select></label></div>
+        <div class="leaderboard-card"><p id="leaderboard-status" class="feedback">Загружаю рейтинг…</p><ol id="leaderboard-list" class="leaderboard-list"></ol></div>
       </section>
     </main>
 

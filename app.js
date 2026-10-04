@@ -1,4 +1,5 @@
 const STORAGE_KEY = "mnemonic_lab_progress_v1";
+const PRIVATE_TESTER_EMAIL = "712.altair@gmail.com";
 const MEMORY_CARDS_KEY = "mnemonic_lab_memory_cards_v1";
 const LEGACY_MEMORY_PROFILES_KEY = "memory-number-cards-by-login";
 const LEGACY_MEMORY_CARDS_KEY = "memory-number-cards";
@@ -192,6 +193,7 @@ const panels = {
   balda: document.getElementById("balda-panel"),
   exam: document.getElementById("exam-panel"),
   progress: document.getElementById("progress-panel"),
+  leaderboard: document.getElementById("leaderboard-panel"),
 };
 
 tabs.forEach((tab) => {
@@ -240,6 +242,7 @@ function openTrainerPage(key) {
     panel.classList.toggle("active", name === key);
   });
   if (key === "progress") renderProgress();
+  if (key === "leaderboard") loadLeaderboard();
   const title = panels[key].querySelector(".panel-head h2")?.textContent?.trim();
   const description = panels[key].querySelector(".panel-head p")?.textContent?.trim();
   trainerCurrentName.textContent = title || "Тренажёр";
@@ -565,10 +568,10 @@ function finishMathSeries() {
   mathFeedback.innerHTML = `
     <span class="math-result-title">${success ? "Верно!" : "Неверно"}</span>
     <span class="math-result-answer">Правильных ответов: ${state.math.correctInSeries}/${state.math.totalRounds}</span>
-    <span class="math-result-details">
+    ${success ? `<span class="math-result-details">
       <span class="math-result-stat math-result-time"><span>Время</span><strong>${formatSeconds(tookSec)}</strong></span>
       <span class="math-result-stat math-result-record"><span>Рекорд</span><strong>${formatSeconds(bestTimeSec)}</strong></span>
-    </span>`;
+    </span>` : ""}`;
   mathFeedback.className = `feedback ${success ? "ok" : "bad"}`;
   renderMathReview();
   state.math.seriesActive = false;
@@ -976,10 +979,10 @@ function finishNumberSeries() {
   numFeedback.innerHTML = `
     <span class="math-result-title">${success ? "Верно!" : "Неверно"}</span>
     <span class="math-result-answer">Правильных рядов: ${state.numbers.correctInSeries}/${state.numbers.totalRounds}</span>
-    <span class="math-result-details">
+    ${success ? `<span class="math-result-details">
       <span class="math-result-stat math-result-time"><span>Время</span><strong>${formatSeconds(tookSec)}</strong></span>
       <span class="math-result-stat math-result-record"><span>Рекорд</span><strong>${formatSeconds(bestTimeSec)}</strong></span>
-    </span>
+    </span>` : ""}
   `;
   numFeedback.className = `feedback ${success ? "ok" : "bad"}`;
   renderNumberReview(state.numbers.reviewRows);
@@ -2454,10 +2457,10 @@ wordForm.addEventListener("submit", (event) => {
   wordFeedback.innerHTML = `
     <span class="math-result-title">${perfect ? "Верно!" : "Неверно"}</span>
     <span class="math-result-answer">Правильных слов: ${hitByPosition}/${expected.length}</span>
-    <span class="math-result-details">
+    ${perfect ? `<span class="math-result-details">
       <span class="math-result-stat math-result-time"><span>Время</span><strong>${formatSeconds(elapsedSec)}</strong></span>
       <span class="math-result-stat math-result-record"><span>Рекорд</span><strong>${formatSeconds(bestTimeSec)}</strong></span>
-    </span>
+    </span>` : ""}
   `;
   wordFeedback.className = `feedback ${perfect ? "ok" : "bad"}`;
   clearWordRevealTimer();
@@ -2746,7 +2749,7 @@ function setWordStage(stage) {
   setTrainerStage(stage === "prep" ? 1 : stage === "task" ? 2 : 3);
 }
 
-const guessWordPool = ["дедушка", "фонарь", "путешествие", "малина", "самолёт", "библиотека", "карандаш", "облако", "костёр", "черепаха"];
+let guessWordPool = ["дедушка", "фонарь", "путешествие", "малина", "самолёт", "библиотека", "карандаш", "облако", "костёр", "черепаха"];
 const guessWordPanelEl = document.getElementById("guess-word-panel");
 const guessWordPercentEl = document.getElementById("guess-word-percent");
 const guessWordTargetCountEl = document.getElementById("guess-word-count");
@@ -2758,6 +2761,8 @@ const guessWordValueEl = document.getElementById("guess-word-value");
 const guessWordCountEl = document.getElementById("guess-word-progress");
 const guessWordForm = document.getElementById("guess-word-form");
 const guessWordAnswerEl = document.getElementById("guess-word-answer");
+const guessWordValidationEl = document.getElementById("guess-word-validation");
+const guessWordSubmitBtn = guessWordForm.querySelector('button[type="submit"]');
 const guessWordFeedbackEl = document.getElementById("guess-word-feedback");
 const guessWordReviewEl = document.getElementById("guess-word-review");
 const guessWordSkipBtn = document.getElementById("guess-word-skip");
@@ -2773,15 +2778,40 @@ guessWordSkipBtn.addEventListener("click", () => advanceGuessWord(false));
 guessWordForm.addEventListener("submit", (event) => {
   event.preventDefault();
   if (!state.guessWord.active) return;
-  const expected = state.guessWord.words[state.guessWord.index];
-  const actual = normalizeWordToken(guessWordAnswerEl.value);
-  if (!actual) {
-    guessWordAnswerEl.placeholder = "Введи слово";
-    guessWordAnswerEl.classList.add("is-invalid");
+  const validation = validateGuessWordInput();
+  if (!validation.valid) {
+    showGuessWordInputError(validation.message);
+    guessWordAnswerEl.focus();
     return;
   }
+  const expected = state.guessWord.words[state.guessWord.index];
+  const actual = normalizeWordToken(guessWordAnswerEl.value);
   advanceGuessWord(actual === normalizeWordToken(expected), guessWordAnswerEl.value.trim());
 });
+
+function validateGuessWordInput() {
+  const value = guessWordAnswerEl.value.trim();
+  if (!value) return { valid: false, message: "Введи слово в поле ввода." };
+  if (!/^[а-яё]+$/i.test(value)) return { valid: false, message: "Используй только русские буквы без пробелов, цифр и знаков." };
+  return { valid: true, message: "" };
+}
+
+function showGuessWordInputError(message) {
+  guessWordValidationEl.textContent = message;
+  guessWordAnswerEl.setAttribute("aria-invalid", "true");
+  guessWordAnswerEl.classList.add("is-invalid");
+}
+
+function clearGuessWordInputError() {
+  guessWordValidationEl.textContent = "";
+  guessWordAnswerEl.removeAttribute("aria-invalid");
+  guessWordAnswerEl.classList.remove("is-invalid");
+  syncGuessWordSubmitState();
+}
+
+function syncGuessWordSubmitState() {
+  guessWordSubmitBtn.disabled = !state.guessWord.active || !guessWordAnswerEl.value.trim();
+}
 
 function advanceGuessWord(correct, actual = "Пропущено") {
   if (!state.guessWord.active) return;
@@ -2796,6 +2826,7 @@ function advanceGuessWord(correct, actual = "Пропущено") {
   state.guessWord.index += 1;
   if (state.guessWord.index < state.guessWord.words.length) {
     guessWordAnswerEl.value = "";
+    clearGuessWordInputError();
     guessWordAnswerEl.focus();
     renderGuessWordTask();
     return;
@@ -2806,12 +2837,12 @@ function advanceGuessWord(correct, actual = "Пропущено") {
   applyModeResult("guess-word", success, { count: state.guessWord.correct, timeSec: tookSec });
   const bestTimeSec = state.progress["guess-word"].bestTimeSec;
   state.guessWord.active = false;
-  guessWordFeedbackEl.innerHTML = `<span class="math-result-title">${success ? "Верно!" : "Неверно"}</span><span class="math-result-answer">Угадано слов: ${state.guessWord.correct}/${state.guessWord.words.length}</span><span class="math-result-details"><span class="math-result-stat math-result-time"><span>Время</span><strong>${formatSeconds(tookSec)}</strong></span><span class="math-result-stat math-result-record"><span>Рекорд</span><strong>${formatSeconds(bestTimeSec)}</strong></span></span>`;
+  guessWordFeedbackEl.innerHTML = `<span class="math-result-title">${success ? "Верно!" : "Неверно"}</span><span class="math-result-answer">Угадано слов: ${state.guessWord.correct}/${state.guessWord.words.length}</span>${success ? `<span class="math-result-details"><span class="math-result-stat math-result-time"><span>Время</span><strong>${formatSeconds(tookSec)}</strong></span><span class="math-result-stat math-result-record"><span>Рекорд</span><strong>${formatSeconds(bestTimeSec)}</strong></span></span>` : ""}`;
   guessWordFeedbackEl.className = `feedback ${success ? "ok" : "bad"}`;
   renderGuessWordReview();
   setGuessWordStage("result");
 }
-guessWordAnswerEl.addEventListener("input", () => guessWordAnswerEl.classList.remove("is-invalid"));
+guessWordAnswerEl.addEventListener("input", clearGuessWordInputError);
 
 function startGuessWordRound() {
   state.guessWord.words = shuffle(guessWordPool).slice(0, Number(guessWordTargetCountEl.value) || 5);
@@ -2824,9 +2855,11 @@ function startGuessWordRound() {
   guessWordReviewEl.hidden = true;
   guessWordReviewEl.innerHTML = "";
   guessWordAnswerEl.value = "";
+  clearGuessWordInputError();
   renderGuessWordTask();
   setGuessWordStage("task");
   guessWordAnswerEl.focus();
+  syncGuessWordSubmitState();
 }
 
 function renderGuessWordTask() {
@@ -2834,6 +2867,7 @@ function renderGuessWordTask() {
   guessWordValueEl.textContent = word;
   guessWordMaskEl.style.setProperty("--guess-word-hidden", `${Number(guessWordPercentEl.value) || 80}%`);
   guessWordCountEl.textContent = `Слово: ${state.guessWord.index + 1}/${state.guessWord.words.length}`;
+  guessWordSubmitBtn.textContent = state.guessWord.index === state.guessWord.words.length - 1 ? "Проверить" : "Дальше";
 }
 
 function stopGuessWordExercise() {
@@ -2852,7 +2886,9 @@ function resetGuessWordExercise() {
   guessWordReviewEl.hidden = true;
   guessWordReviewEl.innerHTML = "";
   guessWordAnswerEl.value = "";
+  clearGuessWordInputError();
   setGuessWordStage("prep");
+  syncGuessWordSubmitState();
 }
 
 function renderGuessWordReview() {
@@ -2884,6 +2920,26 @@ function updateGuessWordPreview() {
     item.appendChild(mask);
     return item;
   }));
+}
+
+async function loadGuessWordPoolFromCsv() {
+  try {
+    const response = await fetch("./data/guess-word.csv", { cache: "no-store" });
+    if (!response.ok) throw new Error(`Не удалось загрузить CSV: ${response.status}`);
+    const words = (await response.text())
+      .replace(/^\uFEFF/, "")
+      .split(/\r?\n/)
+      .slice(1)
+      .map((row) => row.trim().toLowerCase())
+      .filter((word) => /^[а-яё]+$/i.test(word));
+    const uniqueWords = [...new Set(words)];
+    if (uniqueWords.length >= 10) {
+      guessWordPool = uniqueWords;
+      updateGuessWordPreview();
+    }
+  } catch (error) {
+    console.warn("Не удалось загрузить слова для упражнения «Угадай слово?», используются встроенные данные.", error);
+  }
 }
 
 updateGuessWordPreview();
@@ -3015,7 +3071,7 @@ function finishWhatWordExercise() {
   state.whatWord.startedAt = null;
   applyModeResult("what-word", success, { span: state.whatWord.correct, timeSec: tookSec });
   const bestTimeSec = state.progress["what-word"].bestTimeSec;
-  whatWordFeedbackEl.innerHTML = `<span class="math-result-title">${success ? "Верно!" : "Неверно"}</span><span class="math-result-answer">Правильных слов: ${state.whatWord.correct}/${total}</span><span class="math-result-details"><span class="math-result-stat math-result-time"><span>Время</span><strong>${formatSeconds(tookSec)}</strong></span><span class="math-result-stat math-result-record"><span>Рекорд</span><strong>${formatSeconds(bestTimeSec)}</strong></span></span>`;
+  whatWordFeedbackEl.innerHTML = `<span class="math-result-title">${success ? "Верно!" : "Неверно"}</span><span class="math-result-answer">Правильных слов: ${state.whatWord.correct}/${total}</span>${success ? `<span class="math-result-details"><span class="math-result-stat math-result-time"><span>Время</span><strong>${formatSeconds(tookSec)}</strong></span><span class="math-result-stat math-result-record"><span>Рекорд</span><strong>${formatSeconds(bestTimeSec)}</strong></span></span>` : ""}`;
   whatWordFeedbackEl.className = `feedback ${success ? "ok" : "bad"}`;
   renderWhatWordReview(state.whatWord.reviewRows);
   state.whatWord.active = false;
@@ -3460,10 +3516,10 @@ function finishBaldaGame() {
   baldaResultFeedbackEl.innerHTML = `
     <span class="math-result-title">${success ? "Верно!" : "Неверно"}</span>
     <span class="math-result-answer">Угаданных слов: ${correctCount}/${total}</span>
-    <span class="math-result-details">
+    ${success ? `<span class="math-result-details">
       <span class="math-result-stat math-result-time"><span>Время</span><strong>${formatSeconds(tookSec)}</strong></span>
       <span class="math-result-stat math-result-record"><span>Рекорд</span><strong>${formatSeconds(bestTimeSec)}</strong></span>
-    </span>
+    </span>` : ""}
   `;
   baldaResultFeedbackEl.className = `feedback ${success ? "ok" : "bad"}`;
   renderBaldaReview(state.balda.reviewRows);
@@ -3813,7 +3869,7 @@ async function compareAttentionAnswer() {
     attentionFeedbackEl.innerHTML = `
       <span class="math-result-title">${success ? "Верно!" : "Неверно"}</span>
       <span class="math-result-answer">Внимательность: ${rememberedDetails} из ${totalDetails} деталей</span>
-      <span class="math-result-details">
+      ${success ? `<span class="math-result-details">
         <span class="math-result-stat math-result-time">
           <span>Время</span>
           <strong>${formatSeconds(tookSec)}</strong>
@@ -3822,7 +3878,7 @@ async function compareAttentionAnswer() {
           <span>Лучший результат</span>
           <strong>${attentionRecord}</strong>
         </span>
-      </span>`;
+      </span>` : ""}`;
     attentionFeedbackEl.className = `feedback ${success ? "ok" : "bad"}`;
     setAttentionStage("result");
   } catch (error) {
@@ -4146,7 +4202,7 @@ function finishSchulteRound() {
     <span class="math-result-answer">${success
       ? "Таблица пройдена без ошибок"
       : `Таблица пройдена с ${state.schulte.errors} ${formatSchulteErrorWord(state.schulte.errors)}`}</span>
-    <span class="math-result-details">
+    ${success ? `<span class="math-result-details">
       <span class="math-result-stat math-result-time">
         <span>Время</span>
         <strong>${formatSeconds(tookSec)}</strong>
@@ -4155,7 +4211,7 @@ function finishSchulteRound() {
         <span>Рекорд</span>
         <strong>${formatSeconds(bestTimeSec)}</strong>
       </span>
-    </span>
+    </span>` : ""}
   `;
   schulteFeedbackEl.className = `feedback ${success ? "ok" : "bad"}`;
   setSchulteStage("result");
@@ -4303,6 +4359,7 @@ document.getElementById("reset-progress").addEventListener("click", async () => 
 document.getElementById("progress-mode").addEventListener("change", renderProgress);
 
 function applyModeResult(mode, success, extra = {}) {
+  if (mode === "words" && wordLevelEl.value === "easiest") return;
   addResultToProgress(state.progress, mode, success, extra, new Date().toISOString());
 
   persist();
@@ -4319,6 +4376,7 @@ function recordStoppedExercise(mode) {
 }
 
 function addResultToProgress(progress, mode, success, extra = {}, at = new Date().toISOString()) {
+  if (mode === "words" && (extra.difficulty === "easiest" || extra.privateTest)) return;
   const bucket = progress[mode];
   bucket.attempts += 1;
   if (success) {
@@ -4356,7 +4414,7 @@ function addResultToProgress(progress, mode, success, extra = {}, at = new Date(
     const prev = bucket.bestTimeSec ?? Number.POSITIVE_INFINITY;
     bucket.bestTimeSec = Math.min(prev, extra.timeSec);
   }
-  if (mode === "what-word" && extra.timeSec) {
+  if (mode === "what-word" && success && extra.timeSec) {
     const prev = bucket.bestTimeSec ?? Number.POSITIVE_INFINITY;
     bucket.bestTimeSec = Math.min(prev, extra.timeSec);
   }
@@ -4364,7 +4422,7 @@ function addResultToProgress(progress, mode, success, extra = {}, at = new Date(
     const prev = bucket.bestTimeSec ?? Number.POSITIVE_INFINITY;
     bucket.bestTimeSec = Math.min(prev, extra.timeSec);
   }
-  if (mode === "attention" && extra.timeSec) {
+  if (mode === "attention" && success && extra.timeSec) {
     const count = extra.count || 0;
     const total = extra.total || 0;
     const isBetterScore = count > (bucket.bestCount || 0);
@@ -4403,9 +4461,31 @@ async function saveRemoteAttempt(mode, success, score) {
     user_id: user.id,
     exercise: mode,
     success,
-    score,
+    score: { ...(score && typeof score === "object" ? score : {}), difficulty: getExerciseDifficulty(mode) },
   });
   if (error) console.error("Не удалось сохранить попытку:", error.message);
+}
+
+function getExerciseDifficulty(mode) {
+  const ids = { math: "math-difficulty", numbers: "num-difficulty", words: "word-level", "guess-word": "guess-word-percent", "what-word": "what-word-difficulty", balda: "balda-difficulty", attention: "attention-difficulty", schulte: "schulte-difficulty" };
+  const value = document.getElementById(ids[mode])?.value;
+  if (!value) return "unknown";
+  if (mode === "guess-word") return Number(value) <= 65 ? "easy" : Number(value) <= 70 ? "medium" : Number(value) <= 75 ? "hard" : "expert";
+  if (mode === "math") return ({ easy: "easy", hard: "medium", medium: "hard", expert: "expert" })[value] || "unknown";
+  if (mode === "words" && value === "easiest") return "easiest";
+  return value;
+}
+
+function syncPrivateTestMode() {
+  const option = wordLevelEl.querySelector('option[value="easiest"]');
+  const email = window.mnemonicAuth?.getUser()?.email?.toLowerCase();
+  const allowed = email === PRIVATE_TESTER_EMAIL;
+  option.hidden = !allowed;
+  option.disabled = !allowed;
+  if (!allowed && wordLevelEl.value === "easiest") {
+    wordLevelEl.value = "easy";
+    updateWordDifficultyPreview();
+  }
 }
 
 async function deleteRemoteProgress() {
@@ -4429,6 +4509,7 @@ async function syncProgressForUser(user) {
   let { data: rows, error } = await auth.client
     .from("attempts")
     .select("exercise, success, score, created_at")
+    .eq("user_id", user.id)
     .order("created_at", { ascending: true });
 
   if (error) {
@@ -4473,8 +4554,73 @@ function refreshProgressUi() {
   renderProgress();
 }
 
+async function loadLeaderboard() {
+  const statusEl = document.getElementById("leaderboard-status");
+  const listEl = document.getElementById("leaderboard-list");
+  statusEl.textContent = "Загружаю рейтинг…";
+  listEl.replaceChildren();
+  const auth = window.mnemonicAuth;
+  if (!auth || !auth.getUser()) {
+    statusEl.textContent = "Рейтинг будет доступен после подключения аккаунтов.";
+    return;
+  }
+  let [profilesResult, attemptsResult] = await Promise.all([
+    auth.client.from("profiles").select("id, display_name, email"),
+    auth.client.from("attempts").select("user_id, success, score, created_at"),
+  ]);
+  if (!attemptsResult.error && !(attemptsResult.data || []).length) {
+    await new Promise((resolve) => setTimeout(resolve, 700));
+    [profilesResult, attemptsResult] = await Promise.all([
+      auth.client.from("profiles").select("id, display_name, email"),
+      auth.client.from("attempts").select("user_id, success, score, created_at"),
+    ]);
+  }
+  if (profilesResult.error || attemptsResult.error) {
+    statusEl.textContent = "Не удалось загрузить рейтинг. Войди в аккаунт и попробуй ещё раз.";
+    return;
+  }
+  const names = new Map((profilesResult.data || []).map((profile) => [profile.id, profile.display_name || profile.email?.split("@")[0] || "Участник"]));
+  const exerciseFilter = document.getElementById("leaderboard-exercise")?.value || "all";
+  const difficultyFilter = document.getElementById("leaderboard-difficulty")?.value || "all";
+  const ranking = new Map();
+  (attemptsResult.data || []).forEach((attempt) => {
+    const score = normalizeAttemptScore(attempt.score);
+    const difficulty = score.difficulty || attempt.difficulty || "unknown";
+    if (exerciseFilter !== "all" && attempt.exercise !== exerciseFilter) return;
+    if (difficultyFilter !== "all" && difficulty !== difficultyFilter) return;
+    const row = ranking.get(attempt.user_id) || { points: 0, wins: 0 };
+    if (attempt.success) row.wins += 1;
+    row.points += attempt.success ? 10 : 0;
+    row.bestTime = Math.min(row.bestTime ?? Infinity, attempt.success && Number(score.timeSec) > 0 ? Number(score.timeSec) : Infinity);
+    ranking.set(attempt.user_id, row);
+  });
+  const rows = [...ranking.entries()].sort((a, b) => b[1].points - a[1].points || b[1].wins - a[1].wins || (a[1].bestTime ?? Infinity) - (b[1].bestTime ?? Infinity)).slice(0, 20);
+  statusEl.textContent = rows.length ? "" : "Пока никто не завершил тренировку.";
+  rows.forEach(([userId, row], index) => {
+    const item = document.createElement("li");
+    const rank = document.createElement("span"); rank.className = "leaderboard-rank"; rank.textContent = index + 1;
+    const name = document.createElement("span"); name.className = "leaderboard-name"; name.textContent = names.get(userId) || "Участник";
+    const score = document.createElement("span"); score.className = "leaderboard-score"; score.textContent = `${row.points} очк. · ${row.wins} успешн.`;
+    item.append(rank, name, score);
+    listEl.appendChild(item);
+  });
+}
+
+function normalizeAttemptScore(rawScore) {
+  if (rawScore && typeof rawScore === "object") return rawScore;
+  if (typeof rawScore === "string") {
+    try { return JSON.parse(rawScore) || {}; } catch { return {}; }
+  }
+  return {};
+}
+
+document.getElementById("leaderboard-exercise")?.addEventListener("change", loadLeaderboard);
+document.getElementById("leaderboard-difficulty")?.addEventListener("change", loadLeaderboard);
+
 window.addEventListener("mnemonic-auth-changed", (event) => {
+  syncPrivateTestMode();
   syncProgressForUser(event.detail?.user || null);
+  if (window.location.hash === "#leaderboard") loadLeaderboard();
 });
 
 function renderProgress() {
@@ -4498,7 +4644,7 @@ function renderProgress() {
       recordValue: formatSeconds(math.bestTimeSec),
       metrics: [
         ["Серия", math.streak || 0],
-        ["Лучшая серия", math.bestStreak || 0],
+        ["Текущая серия", math.streak || 0],
         ["Рекорд", formatSeconds(math.bestTimeSec)],
         ["Попытки", math.attempts],
       ],
@@ -4542,7 +4688,7 @@ function renderProgress() {
       recordLabel: "Рекорд",
       recordValue: formatSeconds(guessWord.bestTimeSec),
       metrics: [
-        ["Лучшая серия", guessWord.bestStreak || 0],
+        ["Текущая серия", guessWord.streak || 0],
         ["Рекорд", formatSeconds(guessWord.bestTimeSec)],
       ],
     },
@@ -4556,7 +4702,7 @@ function renderProgress() {
       recordValue: formatSeconds(whatWord.bestTimeSec),
       metrics: [
         ["Серия", whatWord.streak || 0],
-        ["Лучшая серия", whatWord.bestStreak || 0],
+        ["Текущая серия", whatWord.streak || 0],
         ["Рекорд", formatSeconds(whatWord.bestTimeSec)],
         ["Попытки", whatWord.attempts],
       ],
@@ -4568,7 +4714,7 @@ function renderProgress() {
       recordLabel: "Рекорд",
       recordValue: formatSeconds(balda.bestTimeSec),
       metrics: [
-        ["Лучшая серия", balda.bestStreak || 0],
+        ["Текущая серия", balda.streak || 0],
         ["Рекорд", formatSeconds(balda.bestTimeSec)],
       ],
     },
@@ -4579,7 +4725,7 @@ function renderProgress() {
       recordValue: formatAttentionRecord(attention),
       recordLabel: "Лучший результат",
       metrics: [
-        ["Лучшая серия", attention.bestStreak || 0],
+        ["Текущая серия", attention.streak || 0],
         ["Лучший результат", formatAttentionRecord(attention)],
       ],
     },
@@ -4593,7 +4739,7 @@ function renderProgress() {
       recordValue: formatSeconds(schulte.bestTimeSec),
       metrics: [
         ["Пройдено", schulte.correct || 0],
-        ["Лучшая серия", schulte.bestStreak || 0],
+        ["Текущая серия", schulte.streak || 0],
         ["Размер", schulte.bestSize ? `${schulte.bestSize}x${schulte.bestSize}` : "--"],
         ["Рекорд", formatSeconds(schulte.bestTimeSec)],
       ],
@@ -4601,7 +4747,7 @@ function renderProgress() {
   };
   Object.entries(modeMap).forEach(([mode, item]) => {
     item.stopped = state.progress[mode].stopped || 0;
-    item.bestStreak = state.progress[mode].bestStreak || 0;
+    item.currentStreak = state.progress[mode].streak || 0;
   });
   const modeOrder = ["numbers", "words", "guess-word", "what-word", "math", "balda", "attention", "schulte"];
   const allAttempts = modeOrder.reduce((sum, mode) => sum + modeMap[mode].attempts, 0);
@@ -4613,7 +4759,6 @@ function renderProgress() {
     .filter((entry) => selectedMode === "all" || entry.mode === selectedMode)
     .sort((a, b) => new Date(b.at) - new Date(a.at));
   const lastAttempt = recentEntries[0];
-  const currentStreak = countSuccessStreak(recentEntries);
   const selected = selectedMode === "all"
     ? {
         label: "Все упражнения",
@@ -4624,26 +4769,25 @@ function renderProgress() {
           ["Верно законченных упражнений", allCorrect],
           ["Неверно законченных упражнений", allAttempts - allCorrect],
           ["Кол-во остановленных упражнений", allStopped],
-          ["Упражнений подряд без ошибок", currentStreak],
         ],
       }
     : modeMap[selectedMode];
   if (selectedMode !== "all") {
     selected.metrics = [
-      ["Упражнений подряд без ошибок", currentStreak],
       ["Верно законченных упражнений", selected.correct],
       ["Неверно законченных упражнений", selected.attempts - selected.correct],
       ["Кол-во остановленных упражнений", selected.stopped],
     ];
   }
   const selectedAcc = percentage(selected.correct, selected.attempts);
+  if (selectedMode !== "all") selected.bestStreak = state.progress[selectedMode].bestStreak || 0;
 
   document.getElementById("progress-main-value").textContent = `${selectedAcc}%`;
   document.getElementById("progress-main-label").textContent =
     selectedMode === "all" ? "общая точность" : "точность упражнения";
-  document.getElementById("progress-summary-note").textContent = selected.attempts
-    ? `${selected.correct} верных из ${selected.attempts} попыток`
-    : "Пока нет завершённых раундов";
+  document.getElementById("progress-summary-note").textContent = selectedMode === "all"
+    ? (selected.attempts ? `${selected.correct} верных из ${selected.attempts} попыток` : "Пока нет завершённых раундов")
+    : `Рекорд: ${selected.recordValue} · Лучшая серия: ${selected.bestStreak || 0}`;
   document.getElementById("progress-bar-label").textContent = "Верно законченных упражнений";
   document.getElementById("progress-bar-value").textContent = `${selected.correct} из ${selected.attempts}`;
   const progressFill = document.getElementById("progress-bar-fill");
@@ -4685,7 +4829,7 @@ function renderProgress() {
       record.textContent = `Рекорд: ${item.recordValue}`;
       const streak = document.createElement("span");
       streak.className = "exercise-row-streak";
-      streak.textContent = `Лучшая серия: ${item.bestStreak}`;
+      streak.textContent = `Текущая серия: ${item.currentStreak}`;
       stats.append(record, streak);
       const bar = document.createElement("div");
       bar.className = "exercise-row-bar";
@@ -4939,6 +5083,7 @@ function escapeHtml(value) {
 }
 
 loadWordPoolsFromCsv();
+loadGuessWordPoolFromCsv();
 loadBaldaChainsFromCsv();
 setMathTaskPlaceholder("Нажми «Решать»");
 state.numbers.totalRounds = getNumberSeriesConfig().totalRounds;
@@ -4958,8 +5103,10 @@ syncMathControls();
 syncNumberControls();
 syncExamControls();
 syncWordControls();
+syncGuessWordSubmitState();
 syncAttentionDescribeAvailability();
 resetSchulteExercise();
 memoryRender();
 memoryResetTrainerState();
 renderProgress();
+syncPrivateTestMode();
