@@ -2898,11 +2898,12 @@ function renderGuessWordReview() {
       <div class="word-review-row ${row.correct ? "is-ok" : "is-bad"}">
         <div class="word-review-index">${row.index}</div>
         <div class="word-review-columns">
-          <div class="word-review-col"><span class="word-review-label">Правильный ответ</span><span class="word-chip expected">${escapeHtml(row.expected)}</span></div>
-          <div class="word-review-col"><span class="word-review-label">Твой ответ</span><span class="word-chip actual ${row.correct ? "ok" : "bad"}">${escapeHtml(row.actual)}</span></div>
+          <div class="word-review-col"><span class="word-review-label">Правильный ответ</span><span class="word-chip expected word-chip--word">${escapeHtml(row.expected)}</span></div>
+          <div class="word-review-col"><span class="word-review-label">Твой ответ</span><span class="word-chip actual ${row.correct ? "ok" : "bad"}">${escapeHtml(formatReviewAnswer(row.actual))}</span></div>
         </div>
       </div>`).join("")}</div>`;
   guessWordReviewEl.hidden = false;
+  fitReviewExpectedChips(guessWordReviewEl);
 }
 
 function updateGuessWordPreview() {
@@ -3060,8 +3061,9 @@ function renderWhatWordReview(rows) {
     const length = String(value || "").length;
     return length >= 24 ? " is-extra-compact" : length >= 16 ? " is-compact" : "";
   };
-  whatWordReviewEl.innerHTML = `<div class="word-review-head"><strong>Разбор упражнения</strong></div><div class="word-review-grid">${rows.map((row, index) => `<div class="word-review-row ${row.correct ? "is-ok" : "is-bad"}"><div class="word-review-index">${index + 1}</div><div class="word-review-columns"><div class="word-review-col"><span class="word-review-label">Правильный ответ</span><span class="word-chip expected${chipSizeClass(row.expected)}">${row.expected}</span></div><div class="word-review-col"><span class="word-review-label">Твой ответ</span><span class="word-chip actual ${row.correct ? "ok" : "bad"}${chipSizeClass(row.actual)}">${row.actual || "Пропуск"}</span></div></div></div>`).join("")}</div>`;
+  whatWordReviewEl.innerHTML = `<div class="word-review-head"><strong>Разбор упражнения</strong></div><div class="word-review-grid">${rows.map((row, index) => `<div class="word-review-row ${row.correct ? "is-ok" : "is-bad"}"><div class="word-review-index">${index + 1}</div><div class="word-review-columns"><div class="word-review-col"><span class="word-review-label">Правильный ответ</span><span class="word-chip expected word-chip--word${chipSizeClass(row.expected)}">${row.expected}</span></div><div class="word-review-col"><span class="word-review-label">Твой ответ</span><span class="word-chip actual ${row.correct ? "ok" : "bad"}${chipSizeClass(row.actual)}">${formatReviewAnswer(row.actual)}</span></div></div></div>`).join("")}</div>`;
   whatWordReviewEl.hidden = false;
+  fitReviewExpectedChips(whatWordReviewEl);
 }
 
 function finishWhatWordExercise() {
@@ -3164,13 +3166,13 @@ function renderWordReview(inputWords, originalWords) {
         <div class="word-review-columns">
           <div class="word-review-col">
             <span class="word-review-label">Правильный ответ</span>
-            <span class="word-chip expected">${expectedRaw}</span>
+            <span class="word-chip expected word-chip--word">${expectedRaw}</span>
           </div>
           <div class="word-review-col">
             <span class="word-review-label">Твой ответ</span>
             ${isMatch
-              ? `<span class="word-chip actual ok">${actualRaw || expectedRaw}</span>`
-              : `<span class="word-chip actual bad">${actualRaw || "Пропуск"}</span>`}
+              ? `<span class="word-chip actual ok">${formatReviewAnswer(actualRaw || expectedRaw)}</span>`
+              : `<span class="word-chip actual bad">${formatReviewAnswer(actualRaw)}</span>`}
           </div>
         </div>
       </div>
@@ -3202,6 +3204,7 @@ function renderWordReview(inputWords, originalWords) {
     <div class="word-review-grid">${rows.join("")}</div>
   `;
   wordReviewEl.hidden = false;
+  fitReviewExpectedChips(wordReviewEl);
 }
 
 function setWordTaskPlaceholder() {
@@ -3527,9 +3530,36 @@ function finishBaldaGame() {
 }
 
 function renderBaldaReview(rows) {
-  baldaReviewEl.innerHTML = `<div class="word-review-head"><strong>Разбор упражнения</strong></div><div class="word-review-grid">${rows.map((row) => `<div class="word-review-row ${row.correct ? "is-ok" : "is-bad"}"><div class="word-review-index">${row.index}</div><div class="word-review-columns"><div class="word-review-col"><span class="word-review-label">Правильный ответ</span><span class="word-chip expected">${row.expected}</span></div><div class="word-review-col"><span class="word-review-label">Твой ответ</span><span class="word-chip actual ${row.correct ? "ok" : "bad"}">${row.actual}</span></div></div></div>`).join("")}</div>`;
+  baldaReviewEl.innerHTML = `<div class="word-review-head"><strong>Разбор упражнения</strong></div><div class="word-review-grid">${rows.map((row) => `<div class="word-review-row ${row.correct ? "is-ok" : "is-bad"}"><div class="word-review-index">${row.index}</div><div class="word-review-columns"><div class="word-review-col"><span class="word-review-label">Правильный ответ</span><span class="word-chip expected word-chip--word">${row.expected}</span></div><div class="word-review-col"><span class="word-review-label">Твой ответ</span><span class="word-chip actual ${row.correct ? "ok" : "bad"}">${formatReviewAnswer(row.actual)}</span></div></div></div>`).join("")}</div>`;
   baldaReviewEl.hidden = false;
+  fitReviewExpectedChips(baldaReviewEl);
 }
+
+function formatReviewAnswer(value) {
+  return String(value || "пропуск").toLocaleLowerCase("ru-RU");
+}
+
+function fitReviewExpectedChips(reviewEl) {
+  requestAnimationFrame(() => {
+    reviewEl.querySelectorAll(".word-chip.expected.word-chip--word").forEach((chip) => {
+      chip.style.fontSize = "";
+      const initialSize = Number.parseFloat(window.getComputedStyle(chip).fontSize);
+      const minSize = 9;
+      let fontSize = initialSize;
+
+      while (chip.scrollWidth > chip.clientWidth + 1 && fontSize > minSize) {
+        fontSize = Math.max(minSize, fontSize - 0.25);
+        chip.style.fontSize = `${fontSize}px`;
+      }
+    });
+  });
+}
+
+window.addEventListener("resize", () => {
+  [wordReviewEl, guessWordReviewEl, whatWordReviewEl, baldaReviewEl].forEach((reviewEl) => {
+    if (reviewEl && !reviewEl.hidden) fitReviewExpectedChips(reviewEl);
+  });
+});
 
 function stopBaldaGame() {
   const wasActive = state.balda.active;
