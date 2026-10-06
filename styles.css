@@ -3485,6 +3485,11 @@ textarea[aria-invalid="true"] {
   font-weight: 700;
 }
 
+.num-review-row .num-review-index {
+  align-self: start;
+  margin-top: 1.1rem;
+}
+
 .num-review-row-title {
   font-weight: 700;
   color: rgba(32, 26, 23, 0.82);
