@@ -1504,6 +1504,16 @@ label {
   color: rgba(37, 82, 74, 0.92);
 }
 
+.what-word-preview-examples .what-word-preview-long {
+  grid-column: 1 / -1;
+  justify-self: center;
+  width: min(100%, 230px);
+  white-space: nowrap;
+  overflow-wrap: normal;
+  word-break: normal;
+  text-align: center;
+}
+
 .what-word-start-row {
   display: flex;
   justify-content: center;
@@ -3375,6 +3385,11 @@ textarea[aria-invalid="true"] {
 
 .word-review-row.word-review-long .word-review-index {
   align-self: start;
+}
+
+.word-review-row .word-review-index {
+  align-self: start;
+  margin-top: 1.1rem;
 }
 
 .word-review-label {

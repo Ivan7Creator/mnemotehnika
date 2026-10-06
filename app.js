@@ -423,23 +423,27 @@ function getMathTaskConfig() {
   }
 
   const difficulty = mathDifficultyEl.value;
-  const operations = difficulty === "hard" || difficulty === "expert"
+  const operations = difficulty === "medium" || difficulty === "expert"
     ? ["mul"]
-    : difficulty === "medium"
+    : difficulty === "hard"
       ? ["add", "sub"]
       : ["add", "sub", "mul"];
   const operation = operations[randomInt(0, operations.length - 1)];
 
-  if (difficulty === "easy" || difficulty === "medium") {
+  if (difficulty === "easy") {
     return { operation, bounds: { min: 1, max: 9 } };
   }
 
   if (difficulty === "hard") {
-    return { operation, bounds: { min: 1, max: 9 } };
+    return { operation, bounds: { min: 10, max: 99 } };
+  }
+
+  if (difficulty === "medium") {
+    return { operation, bounds: { min: 10, max: 50 } };
   }
 
   if (difficulty === "expert") {
-    return { operation, bounds: { min: 10, max: 99 } };
+    return { operation, bounds: { min: 50, max: 99 } };
   }
 
   return { operation, bounds: { min: 10, max: 99 } };
@@ -469,23 +473,23 @@ const mathDifficultyPreviews = {
     numberType: "Однозначные",
     examples: ["7 + 4", "9 − 3", "6 × 8"],
   },
-  medium: {
-    tags: ["Сложение", "Вычитание"],
-    ranges: ["1–9"],
-    numberType: "Однозначные",
-    examples: ["7 + 4", "9 − 3", "8 + 6"],
-  },
   hard: {
+    tags: ["Сложение", "Вычитание"],
+    ranges: ["10–99"],
+    numberType: "Двузначные",
+    examples: ["27 + 14", "86 − 32", "45 + 38"],
+  },
+  medium: {
     tags: ["Умножение"],
-    ranges: ["До 10"],
-    numberType: "Однозначные",
-    examples: ["7 × 4", "9 × 3", "6 × 8"],
+    ranges: ["10–50"],
+    numberType: "Двузначные до 50",
+    examples: ["12 × 24", "37 × 16", "48 × 29"],
   },
   expert: {
     tags: ["Умножение"],
-    ranges: ["До 100"],
-    numberType: "Двузначные",
-    examples: ["24 × 36", "57 × 42", "83 × 69"],
+    ranges: ["50–99"],
+    numberType: "Двузначные от 50",
+    examples: ["54 × 72", "86 × 59", "93 × 67"],
   },
 };
 
@@ -2542,7 +2546,7 @@ function getWordConfig() {
     easy: { targetCount: 10, revealSeconds: 5, isComplex: false },
     medium: { targetCount: 20, revealSeconds: 4, isComplex: false },
     hard: { targetCount: 10, revealSeconds: 3, isComplex: true },
-    expert: { targetCount: 10, revealSeconds: 2, isComplex: true },
+    expert: { targetCount: 20, revealSeconds: 2, isComplex: true },
   };
   return presets[wordLevelEl.value] || presets.easy;
 }
@@ -2590,7 +2594,7 @@ const wordDifficultyPreviews = {
     en: ["labyrinth", "constellation", "equilibrium"],
   },
   expert: {
-    count: "10",
+    count: "20",
     type: "Сложные",
     duration: "2 сек.",
     ru: ["метаморфоза", "противоречие", "воображение"],
@@ -2981,7 +2985,9 @@ function updateWhatWordPreview() {
   whatWordPreviewCountEl.textContent = whatWordCountEl.value;
   whatWordPreviewExamplesEl.replaceChildren(...whatWordPools[level].slice(0, 3).map((word) => {
     const example = document.createElement("span");
-    example.textContent = consonantsOnly(word);
+    const consonants = consonantsOnly(word);
+    example.textContent = consonants;
+    if (consonants.length >= 11) example.classList.add("what-word-preview-long");
     return example;
   }));
 }
@@ -3532,7 +3538,7 @@ function formatReviewAnswer(value) {
 }
 
 function isLongReviewWord(...values) {
-  return values.some((value) => String(value || "").trim().length >= 13);
+  return values.some((value) => String(value || "").trim().length >= 12);
 }
 
 function stopBaldaGame() {
