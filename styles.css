@@ -3360,6 +3360,19 @@ textarea[aria-invalid="true"] {
   gap: 0.35rem;
 }
 
+.word-review-row.word-review-long .word-review-columns {
+  grid-template-columns: 1fr;
+  gap: 0.35rem;
+}
+
+.word-review-row.word-review-long .word-review-col:first-child {
+  order: 2;
+}
+
+.word-review-row.word-review-long .word-review-col:last-child {
+  order: 1;
+}
+
 .word-review-label {
   color: rgba(32, 26, 23, 0.62);
   font-size: 0.9rem;
@@ -3904,15 +3917,27 @@ textarea[aria-invalid="true"] {
   width: 10px;
   height: 10px;
   border-radius: 50%;
-  background: var(--progress-warm);
+  background: #a0332f;
 }
 
 .attempt-dot.ok {
-  background: var(--progress-cool);
+  background: #24594f;
 }
 
 .attempt-name {
-  font-weight: 700;
+  font-weight: 400;
+}
+
+.attempt-status {
+  font-weight: 400;
+}
+
+.attempt-status.ok {
+  color: #24594f;
+}
+
+.attempt-status.bad {
+  color: #a0332f;
 }
 
 .attempt-time {
