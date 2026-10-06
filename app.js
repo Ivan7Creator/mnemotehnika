@@ -2895,7 +2895,7 @@ function renderGuessWordReview() {
   guessWordReviewEl.innerHTML = `
     <div class="word-review-head"><strong>Разбор упражнения</strong></div>
     <div class="word-review-grid">${state.guessWord.reviewRows.map((row) => `
-      <div class="word-review-row ${row.correct ? "is-ok" : "is-bad"}${isLongReviewWord(row.expected) ? " word-review-long" : ""}">
+      <div class="word-review-row ${row.correct ? "is-ok" : "is-bad"}${isLongReviewWord(row.expected, row.actual) ? " word-review-long" : ""}">
         <div class="word-review-index">${row.index}</div>
         <div class="word-review-columns">
           <div class="word-review-col"><span class="word-review-label">Правильный ответ</span><span class="word-chip expected word-chip--word">${escapeHtml(row.expected)}</span></div>
@@ -3056,7 +3056,7 @@ function startWhatWordExercise() {
 }
 
 function renderWhatWordReview(rows) {
-  whatWordReviewEl.innerHTML = `<div class="word-review-head"><strong>Разбор упражнения</strong></div><div class="word-review-grid">${rows.map((row, index) => `<div class="word-review-row ${row.correct ? "is-ok" : "is-bad"}${isLongReviewWord(row.expected) ? " word-review-long" : ""}"><div class="word-review-index">${index + 1}</div><div class="word-review-columns"><div class="word-review-col"><span class="word-review-label">Правильный ответ</span><span class="word-chip expected word-chip--word">${row.expected}</span></div><div class="word-review-col"><span class="word-review-label">Твой ответ</span><span class="word-chip actual ${row.correct ? "ok" : "bad"}">${formatReviewAnswer(row.actual)}</span></div></div></div>`).join("")}</div>`;
+  whatWordReviewEl.innerHTML = `<div class="word-review-head"><strong>Разбор упражнения</strong></div><div class="word-review-grid">${rows.map((row, index) => `<div class="word-review-row ${row.correct ? "is-ok" : "is-bad"}${isLongReviewWord(row.expected, row.actual) ? " word-review-long" : ""}"><div class="word-review-index">${index + 1}</div><div class="word-review-columns"><div class="word-review-col"><span class="word-review-label">Правильный ответ</span><span class="word-chip expected word-chip--word">${row.expected}</span></div><div class="word-review-col"><span class="word-review-label">Твой ответ</span><span class="word-chip actual ${row.correct ? "ok" : "bad"}">${formatReviewAnswer(row.actual)}</span></div></div></div>`).join("")}</div>`;
   whatWordReviewEl.hidden = false;
 }
 
@@ -3155,7 +3155,7 @@ function renderWordReview(inputWords, originalWords) {
     const actualRaw = inputWords[index] || "";
     const isMatch = actualRaw === expected;
     rows.push(`
-      <div class="word-review-row ${isMatch ? "is-ok" : "is-bad"}${isLongReviewWord(expectedRaw) ? " word-review-long" : ""}">
+      <div class="word-review-row ${isMatch ? "is-ok" : "is-bad"}${isLongReviewWord(expectedRaw, actualRaw) ? " word-review-long" : ""}">
         <div class="word-review-index">${index + 1}</div>
         <div class="word-review-columns">
           <div class="word-review-col">
@@ -3523,7 +3523,7 @@ function finishBaldaGame() {
 }
 
 function renderBaldaReview(rows) {
-  baldaReviewEl.innerHTML = `<div class="word-review-head"><strong>Разбор упражнения</strong></div><div class="word-review-grid">${rows.map((row) => `<div class="word-review-row ${row.correct ? "is-ok" : "is-bad"}${isLongReviewWord(row.expected) ? " word-review-long" : ""}"><div class="word-review-index">${row.index}</div><div class="word-review-columns"><div class="word-review-col"><span class="word-review-label">Правильный ответ</span><span class="word-chip expected word-chip--word">${row.expected}</span></div><div class="word-review-col"><span class="word-review-label">Твой ответ</span><span class="word-chip actual ${row.correct ? "ok" : "bad"}">${formatReviewAnswer(row.actual)}</span></div></div></div>`).join("")}</div>`;
+  baldaReviewEl.innerHTML = `<div class="word-review-head"><strong>Разбор упражнения</strong></div><div class="word-review-grid">${rows.map((row) => `<div class="word-review-row ${row.correct ? "is-ok" : "is-bad"}${isLongReviewWord(row.expected, row.actual) ? " word-review-long" : ""}"><div class="word-review-index">${row.index}</div><div class="word-review-columns"><div class="word-review-col"><span class="word-review-label">Правильный ответ</span><span class="word-chip expected word-chip--word">${row.expected}</span></div><div class="word-review-col"><span class="word-review-label">Твой ответ</span><span class="word-chip actual ${row.correct ? "ok" : "bad"}">${formatReviewAnswer(row.actual)}</span></div></div></div>`).join("")}</div>`;
   baldaReviewEl.hidden = false;
 }
 
@@ -3531,8 +3531,8 @@ function formatReviewAnswer(value) {
   return String(value || "пропуск").toLocaleLowerCase("ru-RU");
 }
 
-function isLongReviewWord(value) {
-  return String(value || "").trim().length >= 16;
+function isLongReviewWord(...values) {
+  return values.some((value) => String(value || "").trim().length >= 13);
 }
 
 function stopBaldaGame() {

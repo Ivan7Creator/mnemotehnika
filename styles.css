@@ -3373,6 +3373,10 @@ textarea[aria-invalid="true"] {
   order: 1;
 }
 
+.word-review-row.word-review-long .word-review-index {
+  align-self: start;
+}
+
 .word-review-label {
   color: rgba(32, 26, 23, 0.62);
   font-size: 0.9rem;
