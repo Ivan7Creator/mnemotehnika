@@ -729,7 +729,7 @@ body.trainer-home .trainer-breadcrumbs {
   border-radius: 11px;
   color: rgba(32, 26, 23, 0.82);
   background: transparent;
-  font-weight: 500;
+  font-weight: 700;
   text-align: left;
   cursor: pointer;
 }
@@ -1442,6 +1442,7 @@ label {
 }
 
 #number-series-panel.num-stage-prep .metrics-row,
+#number-series-panel.num-stage-prep #num-series-progress,
 #number-series-panel.num-stage-prep #num-task,
 #number-series-panel.num-stage-prep #num-form,
 #number-series-panel.num-stage-prep #num-stop,
@@ -1459,6 +1460,7 @@ label {
 #number-series-panel.num-stage-result .num-action-controls,
 #number-series-panel.num-stage-result .num-help,
 #number-series-panel.num-stage-result .metrics-row,
+#number-series-panel.num-stage-result #num-series-progress,
 #number-series-panel.num-stage-result #num-task,
 #number-series-panel.num-stage-result #num-form,
 #number-series-panel.num-stage-result #num-stop {
@@ -1466,7 +1468,14 @@ label {
 }
 
 #number-series-panel #num-task {
-  margin: 0 0 0.75rem;
+  margin: 1rem 0 0.75rem;
+}
+
+#num-series-progress {
+  margin: 0.5rem 0;
+  color: rgba(32, 26, 23, 0.68);
+  text-align: center;
+  font-weight: 700;
 }
 
 .what-word-controls {
@@ -1521,6 +1530,10 @@ label {
   border-top: 1px solid var(--line);
 }
 
+.what-word-start-row .btn {
+  min-width: 150px;
+}
+
 .what-word-task {
   margin: 1rem 0;
 }
@@ -1534,7 +1547,7 @@ label {
 
 .what-word-challenge {
   font-size: clamp(1.15rem, 2.4vw, 1.6rem);
-  font-weight: 700;
+  font-weight: 500;
   letter-spacing: 0.13em;
   overflow-wrap: anywhere;
 }
@@ -2006,19 +2019,23 @@ label {
 .guess-word-mask {
   position: relative;
   display: grid;
-  place-items: start center;
+  place-items: center;
   width: min(620px, 100%);
-  min-height: 132px;
+  min-height: 72px;
   overflow: hidden;
   border: 1px dashed rgba(32, 26, 23, 0.25);
   border-radius: 18px;
   background: #fffefb;
   font-family: "Space Grotesk", sans-serif;
-  font-size: clamp(2.2rem, 9vw, 4.8rem);
+  font-size: clamp(1.8rem, 6vw, 3.2rem);
   font-weight: 700;
   letter-spacing: 0.04em;
-  padding-top: 1.1rem;
+  padding: 0 1rem;
   box-sizing: border-box;
+}
+
+#exam-panel.exam-mode-what-word .exam-task {
+  font-weight: 500;
 }
 
 .guess-word-mask #guess-word-value {
@@ -2034,6 +2051,16 @@ label {
   content: "";
   background: #fffefb;
   z-index: 1;
+}
+
+/* В рабочем задании «Угадай слово» используем тот же вид, что и в экзамене. */
+#guess-word-panel.guess-word-stage-task .guess-word-mask {
+  min-height: 60px;
+  padding: 0.8rem 1rem;
+  font-size: clamp(1.15rem, 2.4vw, 1.6rem);
+  font-weight: 700;
+  letter-spacing: 0.13em;
+  box-sizing: border-box;
 }
 
 /* Компактная копия маски задания для трёх примеров на этапе подготовки. */
@@ -2442,6 +2469,7 @@ label {
 /* Экзамен использует те же три экрана, что и остальные тренажёры:
    настройка, выполнение и результат. */
 #exam-panel.exam-stage-prep #exam-progress,
+#exam-panel.exam-stage-prep #exam-current-exercise,
 #exam-panel.exam-stage-prep #exam-task,
 #exam-panel.exam-stage-prep #exam-form,
 #exam-panel.exam-stage-prep #exam-feedback,
@@ -2457,7 +2485,9 @@ label {
 #exam-panel.exam-stage-task #exam-review,
 #exam-panel.exam-stage-result .exam-help,
 #exam-panel.exam-stage-result .exam-level-status,
+#exam-panel.exam-stage-result .exam-mode-row,
 #exam-panel.exam-stage-result #exam-progress,
+#exam-panel.exam-stage-result #exam-current-exercise,
 #exam-panel.exam-stage-result #exam-task,
 #exam-panel.exam-stage-result #exam-form,
 #exam-panel.exam-stage-result #exam-feedback,
@@ -2466,7 +2496,7 @@ label {
 }
 
 #exam-panel.exam-is-transitioning #exam-task {
-  visibility: hidden;
+  visibility: visible;
 }
 
 #exam-panel #exam-result-metrics {
@@ -2482,6 +2512,22 @@ label {
   gap: 0.8rem;
   margin: 0.9rem 0 0.75rem;
   padding: 0 1rem;
+}
+
+#exam-panel.exam-stage-result .exam-action-controls {
+  order: 10;
+  margin: 1.25rem 0 0;
+  padding: 1.2rem 0 0;
+  border-top: 1px solid var(--line);
+}
+
+#exam-panel.exam-stage-result .exam-start-row {
+  padding-top: 0;
+  border-top: 0;
+}
+
+#exam-panel.exam-stage-result .exam-start-row .btn {
+  width: 100%;
 }
 
 .exam-mode-row {
@@ -2505,6 +2551,12 @@ label {
 .controls.exam-mode-row select {
   width: 100%;
   min-width: 0;
+}
+
+.exam-word-show-all-toggle {
+  justify-self: center;
+  width: min(100%, 520px);
+  box-sizing: border-box;
 }
 
 .exam-level-status .meta-chip {
@@ -2532,7 +2584,8 @@ label {
   margin: 0;
 }
 
-.exam-level-status .meta-chip.is-unlocked { color: #2f6559; background: #e7f1e8; }
+.exam-level-status .meta-chip.is-completed { color: #2f6559; background: #e7f1e8; }
+.exam-level-status .meta-chip.is-available { color: rgba(32, 26, 23, 0.72); background: rgba(255, 255, 255, 0.72); }
 .exam-level-status .meta-chip.is-locked { opacity: 0.6; }
 
 .exam-review-head {
@@ -2553,7 +2606,23 @@ label {
 
 .exam-review-grid {
   display: grid;
-  gap: 0.9rem;
+  gap: 0.65rem;
+}
+
+.exam-exercise-result {
+  margin: 0;
+  padding: 1rem;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: rgba(255, 252, 246, 0.68);
+}
+
+.exam-exercise-result > h3 {
+  margin: 0 0 1rem;
+  color: var(--ink);
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 1.25rem;
+  font-weight: 700;
 }
 
 .exam-review-card {
@@ -2726,6 +2795,97 @@ textarea {
   line-height: 1.5;
 }
 
+#exam-panel.exam-stage-result .exam-summary {
+  display: grid;
+  gap: 0.8rem;
+  min-height: 0;
+  margin: 0;
+  padding: 1.25rem;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: linear-gradient(135deg, rgba(255, 246, 224, 0.9), rgba(255, 252, 246, 0.92));
+}
+
+.exam-summary-overview {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  font-family: "Space Grotesk", sans-serif;
+  color: var(--ink);
+}
+
+.exam-summary-overview span {
+  color: rgba(32, 26, 23, 0.65);
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.exam-summary-overview strong {
+  font-size: clamp(1.45rem, 4.6vw, 2rem);
+  line-height: 1;
+}
+
+.exam-summary-status {
+  justify-self: start;
+  padding: 0.32rem 0.65rem;
+  border-radius: 999px;
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 0.8rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.exam-summary-status.is-passed {
+  color: #24594f;
+  background: rgba(47, 101, 89, 0.12);
+}
+
+.exam-summary-status.is-failed {
+  color: #a0332f;
+  background: rgba(181, 51, 47, 0.1);
+}
+
+.exam-summary-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0;
+}
+
+.exam-summary-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: center;
+  padding: 0.45rem 0;
+  color: rgba(32, 26, 23, 0.72);
+  font-size: 0.92rem;
+  font-weight: 700;
+}
+
+.exam-summary-row strong {
+  min-width: 7.5rem;
+  padding-left: 1rem;
+  border-left: 1px solid currentColor;
+  color: inherit;
+  font-family: "Space Grotesk", sans-serif;
+}
+
+.exam-summary-row.is-ok { color: #2f6559; }
+.exam-summary-row.is-bad { color: #a0332f; }
+.exam-summary-row.is-skipped { color: #936d37; }
+
+.exam-summary-row::before {
+  width: 0.5rem;
+  height: 0.5rem;
+  flex: 0 0 auto;
+  border-radius: 999px;
+  background: currentColor;
+  content: "";
+}
+
+.exam-summary-row span { margin-right: auto; }
+
 .exam-task {
   text-align: center;
   justify-items: center;
@@ -2741,6 +2901,7 @@ textarea {
 
 .exam-balda-task {
   display: block;
+  width: 100%;
   min-height: 0;
   padding: 0;
   border: 0;
@@ -2749,17 +2910,22 @@ textarea {
 
 .exam-balda-start-word {
   margin: 0 0 0.75rem;
+  width: 100%;
   padding: 1rem;
   border: 1px dashed rgba(126, 111, 90, 0.36);
   border-radius: 16px;
   background: rgba(255, 252, 246, 0.7);
   font-family: "Space Grotesk", sans-serif;
   font-size: 1.1rem;
-  font-weight: 600;
+  font-weight: 400;
+  text-align: center;
+  box-sizing: border-box;
 }
 
 .exam-balda-ladder {
   margin: 0;
+  width: 100%;
+  box-sizing: border-box;
   text-align: left;
 }
 
@@ -2781,6 +2947,169 @@ textarea {
 .exam-actions .btn {
   width: 100%;
 }
+
+.exam-actions .exam-skip-exercise {
+  grid-column: 1 / -1;
+}
+
+.exam-actions #exam-skip-round[hidden] + .exam-skip-exercise {
+  grid-column: auto;
+}
+
+#exam-form {
+  gap: 1rem;
+}
+
+#exam-form.is-math-task {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+#exam-form.is-math-task .exam-actions {
+  grid-column: 1 / -1;
+}
+
+#exam-form.is-math-task #exam-answer,
+#exam-form.is-math-task .field-validation {
+  grid-column: 1 / -1;
+}
+
+#exam-panel.exam-mode-math #exam-progress {
+  margin: 0 0 1rem;
+  font-weight: 700;
+}
+
+#exam-panel.exam-mode-math .exam-task {
+  min-height: 60px;
+  margin: 1rem 0;
+}
+
+#exam-panel.exam-mode-numbers .exam-task {
+  min-height: 60px;
+  margin: 1rem 0;
+}
+
+#exam-panel.exam-mode-words .exam-task {
+  min-height: 60px;
+  margin: 1rem 0;
+}
+
+#exam-panel.exam-mode-words #exam-words-answer {
+  min-height: 132px;
+  resize: vertical;
+}
+
+#exam-panel.exam-mode-schulte #exam-answer,
+#exam-panel.exam-mode-schulte #exam-words-answer,
+#exam-panel.exam-mode-schulte #exam-submit {
+  display: none;
+}
+
+#exam-panel.exam-mode-schulte .exam-actions {
+  grid-template-columns: 1fr;
+}
+
+.exam-schulte-next {
+  margin: 0 0 1rem;
+  color: rgba(32, 26, 23, 0.68);
+  font-size: clamp(1.1rem, 2.4vw, 1.55rem);
+  font-weight: 700;
+  text-align: center;
+}
+
+#exam-panel.exam-mode-guess-word .exam-task,
+#exam-panel.exam-mode-what-word .exam-task {
+  min-height: 60px;
+  margin: 1rem 0;
+  font-size: clamp(1.15rem, 2.4vw, 1.6rem);
+  font-weight: 700;
+  letter-spacing: 0.13em;
+  overflow-wrap: anywhere;
+  padding: 0.8rem 1rem;
+  box-sizing: border-box;
+}
+
+#exam-panel.exam-mode-what-word .exam-task {
+  font-weight: 500;
+}
+
+.exam-guess-word-value {
+  position: relative;
+  z-index: 0;
+  font: inherit;
+  line-height: 1;
+}
+
+.exam-guess-word-value::after {
+  position: absolute;
+  inset: 0 0 auto;
+  z-index: 1;
+  height: var(--guess-word-hidden, 70%);
+  content: "";
+  background: #fffefb;
+}
+
+#exam-panel .btn-stop {
+  position: relative;
+  margin-top: 2rem;
+}
+
+#exam-panel .btn-stop::before {
+  position: absolute;
+  top: -1rem;
+  right: 0;
+  left: 0;
+  height: 1px;
+  content: "";
+  background: var(--line);
+}
+
+.exam-current-exercise {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  width: 100%;
+  box-sizing: border-box;
+  margin: 1rem 0 2rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid rgba(196, 75, 50, 0.18);
+  border-radius: 14px;
+  background: linear-gradient(135deg, rgba(255, 242, 213, 0.9), rgba(255, 255, 255, 0.72));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.86);
+  color: rgba(32, 26, 23, 0.58);
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 0.95rem;
+  font-weight: 700;
+  white-space: nowrap;
+  position: relative;
+}
+
+.exam-current-exercise::after {
+  position: absolute;
+  right: 0;
+  bottom: -1rem;
+  left: 0;
+  height: 1px;
+  content: "";
+  background: var(--line);
+}
+
+#exam-panel #exam-progress {
+  margin: 0 0 1rem;
+}
+
+.exam-current-exercise strong {
+  color: rgba(32, 26, 23, 0.72);
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+#exam-panel.exam-stage-task #exam-feedback:empty {
+  display: none;
+}
+
 
 .exam-schulte-board {
   width: min(100%, 560px);
@@ -3555,6 +3884,10 @@ textarea[aria-invalid="true"] {
   color: #b5332f;
 }
 
+.feedback.skipped {
+  color: #936d37;
+}
+
 .math-result {
   display: grid;
   gap: 1.25rem;
@@ -3568,6 +3901,42 @@ textarea[aria-invalid="true"] {
   font-family: "IBM Plex Sans", sans-serif;
   font-size: clamp(1rem, 2.5vw, 1.25rem);
   font-weight: 400;
+}
+
+/* Заголовок каждого блока разбора повторяет стиль «Разбор упражнения». */
+#exam-review .exam-exercise-result > h3 {
+  margin: 0 0 0.65rem;
+  padding: 0;
+  border: 0;
+  color: var(--ink);
+  font-family: "IBM Plex Sans", sans-serif;
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+#exam-review .exam-exercise-result {
+  gap: 0.85rem;
+  padding: 0.85rem;
+}
+
+#exam-review .math-result-card {
+  padding: clamp(1rem, 3vw, 1.25rem);
+}
+
+#exam-review .word-review,
+#exam-review .num-review {
+  margin-top: 0.65rem;
+  padding: 0.85rem;
+}
+
+#exam-review .word-review-head,
+#exam-review .num-review-head {
+  margin-bottom: 0.65rem;
+}
+
+#exam-review .word-review-grid,
+#exam-review .num-review-grid {
+  gap: 0.55rem;
 }
 
 .math-result-card {

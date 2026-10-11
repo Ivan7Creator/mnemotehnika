@@ -1127,18 +1127,26 @@ function buildNumberSeriesTask(config = getNumberSeriesTaskConfig()) {
   };
 }
 
+const examPanelEl = document.getElementById("exam-panel");
+const examActionControlsEl = document.querySelector("#exam-panel .exam-action-controls");
 const examTaskEl = document.getElementById("exam-task");
 const examForm = document.getElementById("exam-form");
 const examAnswer = document.getElementById("exam-answer");
+const examWordsAnswer = document.getElementById("exam-words-answer");
 const examFeedback = document.getElementById("exam-feedback");
 const examSummaryEl = document.getElementById("exam-summary");
 const examReviewEl = document.getElementById("exam-review");
 const examSubmitBtn = document.getElementById("exam-submit");
+const examSkipRoundBtn = document.getElementById("exam-skip-round");
 const examSkipBtn = document.getElementById("exam-skip");
 const examDifficultyEl = document.getElementById("exam-difficulty");
+const examWordShowAllEl = document.getElementById("exam-word-show-all");
+const examWordShowAllWrapEl = document.getElementById("exam-word-show-all-wrap");
+let examWordShowAllPreference = false;
 const examStartBtn = document.getElementById("exam-start");
 const examStopBtn = document.getElementById("exam-stop");
 const examProgressEl = document.getElementById("exam-progress");
+const examCurrentExerciseEl = document.getElementById("exam-current-exercise");
 const examTimerEl = document.getElementById("exam-timer");
 const examBestTimeEl = document.getElementById("exam-best-time");
 const examResultMetricsEl = document.getElementById("exam-result-metrics");
@@ -1160,18 +1168,38 @@ function syncExamLevelOptions() {
   if (!isExamLevelUnlocked(examDifficultyEl.value)) examDifficultyEl.value = "easy";
   const unlocked = examLevelOrder.filter(isExamLevelUnlocked).length;
   examLevelStatusEl.innerHTML = examLevelOrder.map((level) => {
-    const unlocked = isExamLevelUnlocked(level);
-    return `<span class="meta-chip ${unlocked ? "is-unlocked" : "is-locked"}">${unlocked ? "✓" : "🔒"} ${examLevelLabels[level]}</span>`;
+    const available = isExamLevelUnlocked(level);
+    const completed = Boolean(state.progress.exam.levels?.[level]);
+    const statusClass = completed ? "is-completed" : available ? "is-available" : "is-locked";
+    const icon = completed ? "✓" : available ? "○" : "🔒";
+    return `<span class="meta-chip ${statusClass}">${icon} ${examLevelLabels[level]}</span>`;
   }).join("");
   examLevelStatusEl.setAttribute("aria-label", `Открыто уровней: ${unlocked} из ${examLevelOrder.length}`);
 }
 
 examStartBtn.addEventListener("click", startExam);
+examSkipRoundBtn.addEventListener("click", skipExamRound);
 examSkipBtn.addEventListener("click", skipExamTask);
 examStopBtn.addEventListener("click", stopExamExercise);
-examAnswer.addEventListener("input", () => {
+function getExamAnswerField() {
+  return state.exam.currentTask?.kind === "words" ? examWordsAnswer : examAnswer;
+}
+
+function handleExamAnswerInput() {
   clearExamInputError();
   syncExamControls();
+}
+
+examAnswer.addEventListener("input", handleExamAnswerInput);
+examWordsAnswer.addEventListener("input", handleExamAnswerInput);
+examWordShowAllEl.addEventListener("change", () => {
+  const task = state.exam.currentTask;
+  if (!task || task.kind !== "words" || !state.exam.active) return;
+  examWordShowAllPreference = examWordShowAllEl.checked;
+  task.showAll = examWordShowAllEl.checked;
+  state.exam.phase = "showing";
+  state.exam.revealToken += 1;
+  presentExamWordsTask(task);
 });
 examTaskEl.addEventListener("input", (event) => {
   const input = event.target.closest(".exam-balda-word-input");
@@ -1189,7 +1217,7 @@ examForm.addEventListener("submit", async (event) => {
   if (!state.exam.active || state.exam.phase !== "answering" || !state.exam.currentTask) return;
 
   const task = state.exam.currentTask;
-  const rawValue = (examAnswer.value || "").trim();
+  const rawValue = (getExamAnswerField().value || "").trim();
   let correct = false;
   let expected = "";
   let actual = rawValue;
@@ -1221,15 +1249,7 @@ examForm.addEventListener("submit", async (event) => {
       return;
     }
 
-    correct = task.answers.every((answer) => answer.correct);
-    expected = task.answers.map((answer) => `${answer.expression} = ${answer.expected}`).join(" / ");
-    actual = task.answers.map((answer) => `${answer.expression} = ${answer.actual}`).join(" / ");
-    reviewRows = task.answers.map((answer, index) => ({
-      index: index + 1,
-      expected: `${answer.expression} = ${answer.expected}`,
-      actual: answer.actual,
-      correct: answer.correct,
-    }));
+    return finishExamRoundTask(task);
   } else if (task.kind === "numbers") {
     const expectedRow = task.values[task.roundIndex];
     const actualRow = (rawValue.match(/\d+/) || [""])[0];
@@ -1248,15 +1268,7 @@ examForm.addEventListener("submit", async (event) => {
       return;
     }
 
-    correct = task.answers.every((answer) => answer.correct);
-    expected = task.answers.map((answer) => answer.expected).join(" / ");
-    actual = task.answers.map((answer) => answer.actual).join(" / ");
-    reviewRows = task.answers.map((answer, index) => ({
-      index: index + 1,
-      expected: answer.expected,
-      actual: answer.actual,
-      correct: answer.correct,
-    }));
+    return finishExamRoundTask(task);
   } else if (task.kind === "words") {
     const actualWords = normalizeWords(rawValue);
     const expectedWords = task.words.map(normalizeWordToken);
@@ -1269,6 +1281,26 @@ examForm.addEventListener("submit", async (event) => {
       actual: actualWords[index] || "Пропущено",
       correct: actualWords[index] === expectedWords[index],
     }));
+  } else if (task.kind === "guess-word" || task.kind === "what-word") {
+    const expectedWord = task.words[task.roundIndex] || "";
+    const actualWord = normalizeWordToken(rawValue);
+    const roundCorrect = actualWord === normalizeWordToken(expectedWord);
+    task.answers.push({ expected: expectedWord, actual: actualWord || "Пропущено", correct: roundCorrect });
+
+    if (task.roundIndex < task.words.length - 1) {
+      task.roundIndex += 1;
+      state.exam.phase = "answering";
+      examFeedback.textContent = "";
+      examFeedback.className = "feedback";
+      examForm.reset();
+      if (task.kind === "guess-word") presentExamGuessWordTask(task);
+      else presentExamWhatWordTask(task);
+      updateExamStats();
+      syncExamControls();
+      return;
+    }
+
+    return finishExamRoundTask(task);
   } else if (task.kind === "balda") {
     const nextIndex = task.stepIndex + 1;
     const input = examTaskEl.querySelector(`[data-exam-balda-step="${nextIndex}"]`);
@@ -1318,15 +1350,43 @@ examForm.addEventListener("submit", async (event) => {
   examFeedback.className = "feedback";
   examForm.reset();
   state.exam.phase = "transition";
-  setExamStage("transition");
-  setExamTaskPlaceholder("");
   updateExamStats();
-  syncExamControls();
-
-  await sleep(800);
-  if (!state.exam.active || state.exam.currentTask !== task) return;
   runNextExamTask();
 });
+
+function finishExamRoundTask(task) {
+  const correct = task.answers.every((answer) => answer.correct);
+  const isMath = task.kind === "math";
+  const expected = task.answers
+    .map((answer) => isMath ? `${answer.expression} = ${answer.expected}` : answer.expected)
+    .join(" / ");
+  const actual = task.answers
+    .map((answer) => isMath ? `${answer.expression} = ${answer.actual}` : answer.actual)
+    .join(" / ");
+  const reviewRows = task.answers.map((answer, index) => ({
+    ...answer,
+    index: index + 1,
+    expected: answer.expected,
+  }));
+
+  state.exam.results.push({
+    index: state.exam.results.length + 1,
+    kind: task.kind,
+    prompt: getExamTaskPrompt(task),
+    expected,
+    actual,
+    correct,
+    reviewRows,
+  });
+  if (correct) state.exam.correctCount += 1;
+
+  examFeedback.textContent = "";
+  examFeedback.className = "feedback";
+  examForm.reset();
+  state.exam.phase = "transition";
+  updateExamStats();
+  runNextExamTask();
+}
 
 function buildExamQueue() {
   const difficulty = examDifficultyEl.value;
@@ -1348,7 +1408,7 @@ function buildExamQueue() {
     expert: { totalRounds: 6, digitsPerRound: 6, showSeconds: 0.5 },
   };
   const wordPresets = {
-    easy: { count: 2, showSeconds: 2, isComplex: false },
+    easy: { count: 10, showSeconds: 5, isComplex: false },
     medium: { count: 20, showSeconds: 4, isComplex: false },
     hard: { count: 10, showSeconds: 3, isComplex: true },
     expert: { count: 20, showSeconds: 2, isComplex: true },
@@ -1356,7 +1416,9 @@ function buildExamQueue() {
   const numberConfig = numberPresets[difficulty] || numberPresets.easy;
   const wordConfig = wordPresets[difficulty] || wordPresets.easy;
   const wordPool = wordConfig.isComplex ? wordPoolRuComplex : wordPoolRuSimple;
-  const schulteSize = difficulty === "easy" ? 4 : difficulty === "medium" ? 5 : 6;
+  const guessWordHiddenPercent = { easy: 65, medium: 70, hard: 75, expert: 80 }[difficulty] || 70;
+  const schulteConfig = getSchulteConfig();
+  const schulteSize = schulteConfig.size;
   const baldaLength = difficulty === "easy" ? 3 : difficulty === "medium" ? 4 : 5;
   const baldaChains = getPlayableBaldaChains(baldaLength);
 
@@ -1384,13 +1446,31 @@ function buildExamQueue() {
       kind: "words",
       words: shuffle(wordPool).slice(0, wordConfig.count),
       showSeconds: wordConfig.showSeconds,
+      showAll: examWordShowAllPreference,
+    },
+    {
+      kind: "guess-word",
+      words: shuffle(wordPool).slice(0, 4),
+      hiddenPercent: guessWordHiddenPercent,
+      roundIndex: 0,
+      answers: [],
+    },
+    {
+      kind: "what-word",
+      words: shuffle(wordPool).slice(0, 4),
+      roundIndex: 0,
+      answers: [],
     },
     {
       kind: "schulte",
       size: schulteSize,
-      useLetters: difficulty === "hard" || difficulty === "expert",
+      // В экзамене таблица Шульте всегда смешанная: числа и буквы.
+      // Размер при этом берётся из настроек отдельного упражнения.
+      useLetters: true,
+      symbolMode: "mixed",
       values: shuffle(Array.from({ length: schulteSize * schulteSize }, (_, index) => index + 1)),
       nextValue: 1,
+      errors: 0,
     },
     {
       kind: "balda",
@@ -1422,6 +1502,7 @@ function startExam() {
   examFeedback.textContent = "";
   examFeedback.className = "feedback";
   examForm.reset();
+  examWordsAnswer.value = "";
   examTimerEl.textContent = "Таймер: 0.0с";
   startExamTimer();
   updateExamStats();
@@ -1440,20 +1521,25 @@ function runNextExamTask() {
 
   const task = state.exam.queue[state.exam.currentIndex];
   state.exam.currentTask = task;
+  examPanelEl.className = examPanelEl.className.replace(/\bexam-mode-\S+/g, "");
+  examPanelEl.classList.add(`exam-mode-${task.kind}`);
   state.exam.phase = task.kind === "math" || task.kind === "balda" ? "answering" : "showing";
   setExamStage(state.exam.phase);
   examFeedback.textContent = "";
   examFeedback.className = "feedback";
   examForm.reset();
+  examWordsAnswer.value = "";
   examForm.classList.toggle("is-balda-task", task.kind === "balda");
+  examForm.classList.toggle("is-math-task", task.kind === "math");
   examSummaryEl.hidden = true;
   examReviewEl.hidden = true;
-  setExamTaskPlaceholder("");
   updateExamStats();
 
   if (task.kind === "math") presentExamMathTask(task);
   if (task.kind === "numbers") presentExamNumberTask(task);
   if (task.kind === "words") presentExamWordsTask(task);
+  if (task.kind === "guess-word") presentExamGuessWordTask(task);
+  if (task.kind === "what-word") presentExamWhatWordTask(task);
   if (task.kind === "schulte") presentExamSchulteTask(task);
   if (task.kind === "balda") presentExamBaldaTask(task);
 
@@ -1462,20 +1548,20 @@ function runNextExamTask() {
 
 function presentExamMathTask(task) {
   clearExamInputError();
-  examTaskEl.classList.remove("exam-balda-task");
+  examTaskEl.classList.remove("exam-balda-task", "guess-word-mask");
   examTaskEl.textContent = task.rounds[task.roundIndex].expression.replace("*", "×");
   examTaskEl.classList.remove("challenge-hint", "mono", "words");
-  examAnswer.focus();
+  getExamAnswerField().focus();
 }
 
 async function presentExamNumberTask(task) {
   clearExamInputError();
-  examTaskEl.classList.remove("exam-balda-task");
+  examTaskEl.classList.remove("exam-balda-task", "guess-word-mask");
   const revealToken = state.exam.revealToken;
   const index = task.roundIndex;
   examTaskEl.classList.remove("challenge-hint");
   examTaskEl.classList.add("mono");
-  examTaskEl.textContent = `Ряд ${index + 1}/${task.values.length}: ${task.values[index]}`;
+  examTaskEl.textContent = task.values[index];
   syncExamControls();
 
   await sleep(task.showSeconds * 1000);
@@ -1484,19 +1570,22 @@ async function presentExamNumberTask(task) {
   examTaskEl.textContent = `Введи ${index + 1}-й ряд`;
   examTaskEl.classList.add("challenge-hint");
   examTaskEl.classList.remove("mono");
-  examAnswer.focus();
+  getExamAnswerField().focus();
   syncExamControls();
 }
 
 async function presentExamWordsTask(task) {
   clearExamInputError();
-  examTaskEl.classList.remove("exam-balda-task");
+  examTaskEl.classList.remove("exam-balda-task", "guess-word-mask");
   const revealToken = state.exam.revealToken;
   examTaskEl.classList.remove("challenge-hint", "mono");
   examTaskEl.classList.add("words");
   syncExamControls();
 
-  for (let index = 0; index < task.words.length; index += 1) {
+  if (task.showAll) {
+    examTaskEl.textContent = task.words.join(" • ");
+    await sleep(task.words.length * task.showSeconds * 1000);
+  } else for (let index = 0; index < task.words.length; index += 1) {
     if (!isCurrentExamReveal(task, revealToken)) return;
     examTaskEl.textContent = task.words.slice(0, index + 1).join(" • ");
     await sleep(task.showSeconds * 1000);
@@ -1504,10 +1593,35 @@ async function presentExamWordsTask(task) {
 
   if (!isCurrentExamReveal(task, revealToken)) return;
   state.exam.phase = "answering";
-  examTaskEl.textContent = "Введи слова по порядку";
-  examTaskEl.classList.add("challenge-hint");
+  examTaskEl.textContent = "Показ завершен";
   examTaskEl.classList.remove("words");
-  examAnswer.focus();
+  examTaskEl.classList.add("challenge-hint");
+  getExamAnswerField().focus();
+  syncExamControls();
+}
+
+function presentExamGuessWordTask(task) {
+  clearExamInputError();
+  const word = task.words[task.roundIndex] || "";
+  examTaskEl.classList.remove("exam-balda-task", "challenge-hint", "mono", "guess-word-mask");
+  examTaskEl.classList.add("guess-word-mask");
+  examTaskEl.innerHTML = `<span class="exam-guess-word-value">${escapeHtml(word)}</span>`;
+  examTaskEl.style.setProperty("--guess-word-hidden", `${task.hiddenPercent}%`);
+  examTaskEl.dataset.examExpected = word;
+  state.exam.phase = "answering";
+  getExamAnswerField().focus();
+  syncExamControls();
+}
+
+function presentExamWhatWordTask(task) {
+  clearExamInputError();
+  const word = task.words[task.roundIndex] || "";
+  examTaskEl.classList.remove("exam-balda-task", "challenge-hint", "mono", "guess-word-mask");
+  examTaskEl.classList.add("words");
+  examTaskEl.textContent = consonantsOnly(word);
+  examTaskEl.dataset.examExpected = word;
+  state.exam.phase = "answering";
+  getExamAnswerField().focus();
   syncExamControls();
 }
 
@@ -1567,10 +1681,10 @@ function validateExamTextInput(kind, value) {
       : { valid: false, message: "Используй только цифры от 0 до 9" };
   }
   if (kind === "words") {
-    const words = value.split(/\s+/).filter(Boolean);
-    return words.length && words.every((word) => /^[а-яё]+$/i.test(word))
+    const words = normalizeWords(value);
+    return words.length && /^[а-яё\s,;'-]+$/i.test(value)
       ? { valid: true, message: "" }
-      : { valid: false, message: "Используй только русские слова, разделяя их пробелом или новой строкой" };
+      : { valid: false, message: "Используй только русские слова, разделяя их пробелом, запятой или новой строкой" };
   }
   return { valid: true, message: "" };
 }
@@ -1578,20 +1692,27 @@ function validateExamTextInput(kind, value) {
 function showExamInputError(message) {
   examFeedback.textContent = message;
   examFeedback.className = "feedback bad";
-  examAnswer.classList.add("is-invalid");
-  examAnswer.focus();
+  const answerField = getExamAnswerField();
+  answerField.classList.add("is-invalid");
+  answerField.focus();
 }
 
 function clearExamInputError() {
   examFeedback.textContent = "";
   examFeedback.className = "feedback";
   examAnswer.classList.remove("is-invalid");
+  examWordsAnswer.classList.remove("is-invalid");
 }
 
 function presentExamSchulteTask(task) {
   state.exam.phase = "interacting";
   examTaskEl.classList.remove("challenge-hint", "mono", "words", "exam-balda-task");
   examTaskEl.innerHTML = "";
+
+  const next = document.createElement("div");
+  next.className = "exam-schulte-next";
+  next.textContent = `Следующий символ: ${formatExamSchulteValue(task.nextValue, task.useLetters, task.symbolMode)}`;
+  examTaskEl.appendChild(next);
 
   const board = document.createElement("div");
   board.className = "schulte-board exam-schulte-board";
@@ -1604,7 +1725,7 @@ function presentExamSchulteTask(task) {
     button.type = "button";
     button.className = "schulte-cell";
     button.dataset.value = String(value);
-    button.textContent = formatExamSchulteValue(value, task.useLetters);
+    button.textContent = formatExamSchulteValue(value, task.useLetters, task.symbolMode);
     button.addEventListener("click", () => handleExamSchulteClick(button, task));
     board.appendChild(button);
   });
@@ -1617,6 +1738,7 @@ function handleExamSchulteClick(button, task) {
   if (!state.exam.active || state.exam.currentTask !== task || state.exam.phase !== "interacting") return;
   const value = Number(button.dataset.value);
   if (value !== task.nextValue) {
+    task.errors += 1;
     button.classList.remove("is-wrong");
     void button.offsetWidth;
     button.classList.add("is-wrong");
@@ -1627,29 +1749,33 @@ function handleExamSchulteClick(button, task) {
   button.disabled = true;
   button.classList.add("is-found");
   task.nextValue += 1;
+  const next = examTaskEl.querySelector(".exam-schulte-next");
+  if (next) next.textContent = task.nextValue <= task.size * task.size
+    ? `Следующий символ: ${formatExamSchulteValue(task.nextValue, task.useLetters, task.symbolMode)}`
+    : "Таблица пройдена";
   if (task.nextValue <= task.size * task.size) return;
   completeExamSchulteTask(task);
 }
 
 async function completeExamSchulteTask(task) {
   if (!state.exam.active || state.exam.currentTask !== task) return;
+  const correct = task.errors === 0;
+  const completionText = correct
+    ? "Таблица пройдена без ошибок"
+    : `Таблица пройдена с ${task.errors} ${formatSchulteErrorWord(task.errors)}`;
   state.exam.results.push({
     index: state.exam.results.length + 1,
     kind: task.kind,
     prompt: getExamTaskPrompt(task),
-    expected: "Таблица пройдена",
-    actual: "Таблица пройдена",
-    correct: true,
-    reviewRows: [{ index: 1, expected: "Таблица пройдена", actual: "Таблица пройдена", correct: true }],
+    expected: "Таблица пройдена без ошибок",
+    actual: completionText,
+    correct,
+    errors: task.errors,
+    reviewRows: [{ index: 1, expected: "Таблица пройдена без ошибок", actual: completionText, correct }],
   });
-  state.exam.correctCount += 1;
+  if (correct) state.exam.correctCount += 1;
   state.exam.phase = "transition";
-  setExamStage("transition");
-  setExamTaskPlaceholder("");
   updateExamStats();
-  syncExamControls();
-  await sleep(650);
-  if (!state.exam.active || state.exam.currentTask !== task) return;
   runNextExamTask();
 }
 
@@ -1658,21 +1784,94 @@ function skipExamTask() {
   state.exam.revealToken += 1;
   const skippedTask = state.exam.currentTask;
   if (!skippedTask) return;
+  const reviewRows = getSkippedExamReviewRows(skippedTask);
   state.exam.results.push({
     index: state.exam.results.length + 1,
     kind: skippedTask.kind,
     prompt: getExamTaskPrompt(skippedTask),
-    expected: "",
+    expected: reviewRows[0]?.expected || "",
     actual: "Пропущено",
     correct: false,
     skipped: true,
-    reviewRows: [{ index: 1, expected: "—", actual: "Пропущено", correct: false }],
+    reviewRows,
   });
   state.exam.currentTask = null;
   state.exam.phase = "transition";
   examForm.reset();
-  setExamTaskPlaceholder("");
   runNextExamTask();
+}
+
+function skipExamRound() {
+  if (!state.exam.active || !state.exam.currentTask || state.exam.phase === "transition") return;
+  const task = state.exam.currentTask;
+  if (!["math", "numbers", "guess-word", "what-word"].includes(task.kind)) return;
+  state.exam.revealToken += 1;
+  skipExamCurrentRound(task);
+}
+
+function skipExamCurrentRound(task) {
+  const roundIndex = task.roundIndex;
+  let answer = { actual: "Пропущено", correct: false };
+
+  if (task.kind === "math") {
+    const round = task.rounds[roundIndex];
+    answer = {
+      ...answer,
+      expression: round.expression.replace("*", "×"),
+      expected: String(round.answer),
+    };
+  } else if (task.kind === "numbers") {
+    answer = { ...answer, expected: task.values[roundIndex] };
+  } else {
+    answer = { ...answer, expected: task.words[roundIndex] || "" };
+  }
+  task.answers.push(answer);
+
+  const totalRounds = task.kind === "math"
+    ? task.rounds.length
+    : task.kind === "numbers"
+      ? task.values.length
+      : task.words.length;
+
+  if (roundIndex >= totalRounds - 1) {
+    finishExamRoundTask(task);
+    return;
+  }
+
+  task.roundIndex += 1;
+  examFeedback.textContent = "";
+  examFeedback.className = "feedback";
+  examForm.reset();
+  state.exam.phase = task.kind === "numbers" ? "showing" : "answering";
+  if (task.kind === "math") presentExamMathTask(task);
+  if (task.kind === "numbers") presentExamNumberTask(task);
+  if (task.kind === "guess-word") presentExamGuessWordTask(task);
+  if (task.kind === "what-word") presentExamWhatWordTask(task);
+  updateExamStats();
+  syncExamControls();
+}
+
+function getSkippedExamReviewRows(task) {
+  const skipped = (expected, index, extra = {}) => ({
+    index: index + 1,
+    expected,
+    actual: "Пропущено",
+    correct: false,
+    ...extra,
+  });
+
+  if (task.kind === "math") {
+    return task.rounds.map((round, index) => skipped(String(round.answer), index, {
+      expression: round.expression.replace("*", "×"),
+    }));
+  }
+  if (task.kind === "numbers") return task.values.map((value, index) => skipped(value, index));
+  if (["words", "guess-word", "what-word"].includes(task.kind)) {
+    return task.words.map((word, index) => skipped(word, index));
+  }
+  if (task.kind === "balda") return task.chain.slice(1).map((word, index) => skipped(word, index));
+  if (task.kind === "schulte") return [{ index: 1, expected: "Таблица пройдена", actual: "Пропущено", correct: false }];
+  return [{ index: 1, expected: "—", actual: "Пропущено", correct: false }];
 }
 
 function isCurrentExamReveal(task, revealToken) {
@@ -1681,9 +1880,10 @@ function isCurrentExamReveal(task, revealToken) {
     && state.exam.revealToken === revealToken;
 }
 
-function formatExamSchulteValue(value, useLetters) {
+function formatExamSchulteValue(value, useLetters, symbolMode = useLetters ? "mixed" : "numbers") {
   if (!useLetters) return String(value);
   const russianAlphabet = "АБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ";
+  if (symbolMode === "letters") return russianAlphabet[value - 1] || String(value);
   if (value % 2 === 1) return String(Math.ceil(value / 2));
   return russianAlphabet[value / 2 - 1] || String(value);
 }
@@ -1731,17 +1931,23 @@ function finishExam() {
     math: "Счет в уме",
     numbers: "Числовой ряд",
     words: "Запоминание слов",
+    "guess-word": "Угадай слово",
+    "what-word": "Что за слово?",
     schulte: "Таблицы Шульте",
     balda: "Балда",
   };
+  const isPassed = totalTasks === state.exam.queue.length && state.exam.correctCount === totalTasks;
   const modeSummary = state.exam.results
-    .map((result) => `${modeLabels[result.kind] || "Упражнение"}: ${result.correct ? "1/1" : "0/1"}`)
-    .join("<br />");
+    .map((result) => {
+      const rowClass = result.skipped ? "is-skipped" : result.correct ? "is-ok" : "is-bad";
+      return `<div class="exam-summary-row ${rowClass}"><span>${modeLabels[result.kind] || "Упражнение"}</span><strong>${getExamSummaryStatus(result)}</strong></div>`;
+    })
+    .join("");
 
   const prevBest = state.progress.exam.bestTimeSec ?? Number.POSITIVE_INFINITY;
   state.progress.exam.bestTimeSec = Math.min(prevBest, tookSec);
   const difficulty = examDifficultyEl.value;
-  if (totalTasks === 5 && state.exam.correctCount === 5) {
+  if (isPassed) {
     state.progress.exam.levels = { ...(state.progress.exam.levels || {}), [difficulty]: true };
   }
   persist();
@@ -1751,14 +1957,17 @@ function finishExam() {
   state.exam.active = false;
   state.exam.currentTask = null;
   state.exam.phase = "done";
+  examStartBtn.textContent = "Начать заново";
+  examPanelEl.insertBefore(examActionControlsEl, examStopBtn);
   examForm.classList.remove("is-balda-task");
   setExamStage("done");
   examTaskEl.textContent = "Экзамен завершен";
   examTaskEl.classList.add("challenge-hint");
   examTaskEl.classList.remove("mono");
   examSummaryEl.innerHTML = `
-    <strong>Итог: ${state.exam.correctCount}/${totalTasks}</strong><br />
-    ${modeSummary}
+    <div class="exam-summary-status ${isPassed ? "is-passed" : "is-failed"}">${isPassed ? "Экзамен сдан" : "Экзамен не сдан"}</div>
+    <div class="exam-summary-overview"><span>Итог экзамена</span><strong>${state.exam.correctCount}/${totalTasks}</strong></div>
+    <div class="exam-summary-grid">${modeSummary}</div>
   `;
   examSummaryEl.hidden = false;
   renderExamReview(state.exam.results);
@@ -1778,6 +1987,8 @@ function stopExamExercise(options = {}) {
   state.exam.currentIndex = -1;
   state.exam.currentTask = null;
   state.exam.phase = "idle";
+  examStartBtn.textContent = "Начать экзамен";
+  examPanelEl.insertBefore(examActionControlsEl, examCurrentExerciseEl);
   setExamStage("idle");
   state.exam.correctCount = 0;
   state.exam.results = [];
@@ -1799,7 +2010,7 @@ function stopExamExercise(options = {}) {
 }
 
 function updateExamStats() {
-  const defaultTotal = 5;
+  const defaultTotal = 7;
   const totalTasks = state.exam.queue.length || defaultTotal;
   const currentTaskNumber = state.exam.currentTask
     ? state.exam.currentIndex + 1
@@ -1810,10 +2021,30 @@ function updateExamStats() {
     math: "Счёт в уме",
     numbers: "Числовой ряд",
     words: "Запоминание слов",
+    "guess-word": "Угадай слово",
+    "what-word": "Что за слово?",
     schulte: "Таблицы Шульте",
     balda: "Балда",
   };
   const modeLabel = modeLabels[state.exam.currentTask?.kind] || "Упражнение";
+  examCurrentExerciseEl.innerHTML = state.exam.currentTask
+    ? `<span>Упражнение ${currentTaskNumber} из ${totalTasks} — ${modeLabel}</span>`
+    : "";
+  examProgressEl.hidden = !["math", "numbers"].includes(state.exam.currentTask?.kind);
+  if (state.exam.currentTask?.kind === "math") {
+    examProgressEl.textContent = `Пример: ${state.exam.currentTask.roundIndex + 1}/${state.exam.currentTask.rounds.length}`;
+    return;
+  }
+  if (state.exam.currentTask?.kind === "numbers") {
+    examProgressEl.textContent = `Ряд: ${state.exam.currentTask.roundIndex + 1}/${state.exam.currentTask.values.length}`;
+    return;
+  }
+  if (state.exam.currentTask?.kind === "guess-word" || state.exam.currentTask?.kind === "what-word") {
+    examProgressEl.hidden = false;
+    const progressLabel = "Слово";
+    examProgressEl.textContent = `${progressLabel}: ${state.exam.currentTask.roundIndex + 1}/${state.exam.currentTask.words.length}`;
+    return;
+  }
   const mathRound = state.exam.currentTask?.kind === "math"
     ? ` (пример ${state.exam.currentTask.roundIndex + 1}/${state.exam.currentTask.rounds.length})`
     : state.exam.currentTask?.kind === "numbers"
@@ -1831,16 +2062,30 @@ function syncExamControls() {
   examStartBtn.disabled = state.exam.active;
   examDifficultyEl.disabled = state.exam.active;
   const taskKind = state.exam.currentTask?.kind;
+  const isWordsTask = taskKind === "words";
+  const canSkipRound = ["math", "numbers", "guess-word", "what-word"].includes(taskKind);
+  examSubmitBtn.textContent = taskKind === "balda" ? "Проверить" : "Дальше";
+  examSkipRoundBtn.hidden = !canSkipRound;
+  examSkipRoundBtn.textContent = "Пропустить";
+  examWordShowAllWrapEl.hidden = !isWordsTask;
+  examWordShowAllEl.disabled = !state.exam.active || !isWordsTask || state.exam.phase !== "showing";
   const baldaInput = examTaskEl.querySelector(".exam-balda-word-input:not(:disabled)");
-  const hasAnswer = taskKind === "balda" ? Boolean(baldaInput?.value.trim()) : Boolean(examAnswer.value.trim());
+  const hasAnswer = taskKind === "balda" ? Boolean(baldaInput?.value.trim()) : Boolean(getExamAnswerField().value.trim());
   examSubmitBtn.disabled = !readyForAnswer || !hasAnswer;
   examSkipBtn.disabled = !state.exam.active
     || !state.exam.currentTask
     || state.exam.phase === "transition";
+  examSkipRoundBtn.disabled = !state.exam.active
+    || !canSkipRound
+    || state.exam.phase === "transition";
   examStopBtn.disabled = !state.exam.active && !state.exam.startedAt;
-  examAnswer.disabled = !readyForAnswer;
+  examAnswer.hidden = isWordsTask;
+  examWordsAnswer.hidden = !isWordsTask;
+  examAnswer.disabled = !readyForAnswer || isWordsTask;
+  examWordsAnswer.disabled = !readyForAnswer || !isWordsTask;
+  examAnswer.inputMode = taskKind === "math" ? "numeric" : "text";
   examAnswer.placeholder = taskKind === "numbers"
-    ? "Введи показанный ряд"
+    ? "Введи ряд"
     : taskKind === "words"
       ? "Введи слова по порядку через пробел или с новой строки"
       : "Введи ответ";
@@ -1849,7 +2094,7 @@ function syncExamControls() {
 function setExamTaskPlaceholder(text) {
   examTaskEl.textContent = text;
   examTaskEl.classList.add("challenge-hint");
-  examTaskEl.classList.remove("mono", "words", "exam-balda-task");
+  examTaskEl.classList.remove("mono", "words", "exam-balda-task", "guess-word-mask");
 }
 
 function updateExamBestTime() {
@@ -1864,49 +2109,85 @@ function renderExamReview(results) {
     math: "Счет в уме",
     numbers: "Числовой ряд",
     words: "Запоминание слов",
+    "guess-word": "Угадай слово",
+    "what-word": "Что за слово?",
     schulte: "Таблицы Шульте",
     balda: "Балда",
   };
-  const cards = results.map((row) => {
-    const actual = row.actual || "Пропущено";
-    const modeLabel = modeLabels[row.kind] || "Упражнение";
-    const status = row.correct ? "Верно!" : "Неверно";
-    const reviewRows = row.reviewRows?.length
-      ? row.reviewRows
-      : [{ index: 1, expected: row.expected || "—", actual, correct: row.correct }];
-    return `
-      <article class="exam-review-card ${row.correct ? "is-ok" : "is-bad"}">
-        <header class="exam-review-card-head">
-          <h3>${modeLabel}</h3>
-          <span class="exam-review-status">${status}</span>
-        </header>
-        ${row.kind === "schulte" ? "" : `<div class="word-review-grid exam-review-rows">${reviewRows.map((reviewRow) => `
-          <div class="word-review-row ${reviewRow.correct ? "is-ok" : "is-bad"}">
-            <div class="word-review-index">${reviewRow.index}</div>
-            <div class="word-review-columns">
-              <div class="word-review-col">
-                <span class="word-review-label">Правильный ответ</span>
-                <span class="word-chip expected">${escapeHtml(reviewRow.expected)}</span>
-              </div>
-              <div class="word-review-col">
-                <span class="word-review-label">Твой ответ</span>
-                <span class="word-chip actual ${reviewRow.correct ? "ok" : "bad"}">${escapeHtml(reviewRow.actual)}</span>
-              </div>
-            </div>
-          </div>
-        `).join("")}</div>`}
-      </article>
-    `;
-  });
+  const sections = results.map((result) => renderExamExerciseReview(result, modeLabels[result.kind] || "Упражнение"));
 
-  examReviewEl.innerHTML = `
-    <div class="exam-review-head">
-      <strong>Разбор экзамена</strong>
-      <span>Каждое упражнение — в отдельной карточке с результатом и ответами.</span>
-    </div>
-    <div class="exam-review-grid">${cards.join("")}</div>
-  `;
+  examReviewEl.innerHTML = `<div class="exam-review-grid">${sections.join("")}</div>`;
   examReviewEl.hidden = false;
+}
+
+function renderExamExerciseReview(result, label) {
+  const rows = result.reviewRows?.length
+    ? result.reviewRows
+    : [{ index: 1, expected: result.expected || "—", actual: result.actual || "Пропущено", correct: result.correct }];
+  const correctCount = rows.filter((row) => row.correct).length;
+  const total = rows.length;
+  const feedbackClass = result.skipped ? "skipped" : result.correct ? "ok" : "bad";
+  const statusText = result.skipped ? "Пропуск упражнения" : result.correct ? "Верно!" : "Неверно";
+  const resultLabel = result.skipped ? "" : getExamReviewResultLabel(result, correctCount, total);
+
+  return `
+    <section class="math-result exam-exercise-result" aria-label="Разбор: ${escapeHtml(label)}">
+      <h3>${escapeHtml(label)}</h3>
+      <div class="math-result-card">
+        <p class="feedback ${feedbackClass}">
+          <span class="math-result-title">${statusText}</span>
+          ${resultLabel ? `<span class="math-result-answer">${escapeHtml(resultLabel)}</span>` : ""}
+        </p>
+      </div>
+      ${result.skipped ? "" : renderExamReviewRows(result.kind, rows)}
+    </section>
+  `;
+}
+
+function getExamReviewResultLabel(result, correctCount, total) {
+  const { kind } = result;
+  if (kind === "schulte") return result.correct
+    ? "Таблица пройдена без ошибок"
+    : `Таблица пройдена с ${result.errors || 0} ${formatSchulteErrorWord(result.errors || 0)}`;
+  if (kind === "numbers") return `Правильных рядов: ${correctCount}/${total}`;
+  if (kind === "guess-word") return `Угадано слов: ${correctCount}/${total}`;
+  if (kind === "balda") return `Угаданных слов: ${correctCount}/${total}`;
+  return `Правильных ${kind === "math" ? "ответов" : "слов"}: ${correctCount}/${total}`;
+}
+
+function getExamSummaryStatus(result) {
+  if (result.skipped) return "Пропуск";
+  const rows = result.reviewRows || [];
+  if (rows.length > 1) return `${rows.filter((row) => row.correct).length}/${rows.length}`;
+  return result.correct ? "Верно" : "Неверно";
+}
+
+function renderExamReviewRows(kind, rows) {
+  if (kind === "schulte") return "";
+  if (kind === "numbers") {
+    return `<div class="num-review"><div class="num-review-head"><strong>Разбор упражнения</strong></div><div class="num-review-grid">${rows.map((row) => `
+      <div class="num-review-row ${row.correct ? "is-ok" : "is-bad"}">
+        <div class="num-review-index">${row.index}</div>
+        <div class="num-review-columns">
+          <div class="num-review-col"><span class="num-review-label">Правильный ответ</span><span class="num-chip expected">${escapeHtml(row.expected)}</span></div>
+          <div class="num-review-col"><span class="num-review-label">Твой ответ</span><span class="num-chip actual ${row.correct ? "ok" : "bad"}">${escapeHtml(row.actual || "Пропуск")}</span></div>
+        </div>
+      </div>`).join("")}</div></div>`;
+  }
+
+  const isWordReview = ["words", "guess-word", "what-word", "balda"].includes(kind);
+  return `<div class="word-review"><div class="word-review-head"><strong>Разбор упражнения</strong></div><div class="word-review-grid">${rows.map((row) => {
+    const expected = kind === "math" ? `${row.expression || ""} = ${row.expected}` : row.expected;
+    const actual = isWordReview ? formatReviewAnswer(row.actual) : (row.actual || "Пропущено");
+    const long = isWordReview && isLongReviewWord(row.expected, row.actual) ? " word-review-long" : "";
+    return `<div class="word-review-row ${row.correct ? "is-ok" : "is-bad"}${long}">
+      <div class="word-review-index">${row.index}</div>
+      <div class="word-review-columns">
+        <div class="word-review-col"><span class="word-review-label">Правильный ответ</span><span class="word-chip expected${isWordReview ? " word-chip--word" : ""}">${escapeHtml(expected)}</span></div>
+        <div class="word-review-col"><span class="word-review-label">Твой ответ</span><span class="word-chip actual ${row.correct ? "ok" : "bad"}">${escapeHtml(actual)}</span></div>
+      </div>
+    </div>`;
+  }).join("")}</div></div>`;
 }
 
 const memoryCardForm = document.getElementById("memory-card-form");
@@ -2977,7 +3258,7 @@ const whatWordReviewEl = document.getElementById("what-word-review");
 const whatWordSkipBtn = document.getElementById("what-word-skip");
 
 function consonantsOnly(word) {
-  return word.replace(/[аеёиоуыэюя]/gi, "");
+  return word.replace(/[аеёиоуыэюяь]/gi, "");
 }
 
 function updateWhatWordPreview() {
@@ -2995,7 +3276,7 @@ function updateWhatWordPreview() {
 function renderWhatWordTask() {
   const word = state.whatWord.words[state.whatWord.index] || "";
   whatWordConsonantsEl.textContent = consonantsOnly(word);
-  whatWordProgressEl.textContent = `Слово ${state.whatWord.index + 1} из ${state.whatWord.words.length}`;
+  whatWordProgressEl.textContent = `Слово: ${state.whatWord.index + 1}/${state.whatWord.words.length}`;
   whatWordAnswerEl.value = "";
   whatWordValidationEl.textContent = "";
   whatWordSubmitBtn.textContent = state.whatWord.index === state.whatWord.words.length - 1 ? "Проверить" : "Дальше";

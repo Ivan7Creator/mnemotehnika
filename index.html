@@ -422,10 +422,10 @@
           <button type="button" id="num-next" class="btn btn-ghost" disabled hidden>Следующий ряд</button>
         </div>
         <div class="metrics-row">
-          <span id="num-series-progress" class="meta-chip num-series-progress-chip" hidden>Ряд: 0/6</span>
           <span id="num-timer" class="meta-chip" hidden>Таймер: 0.0с</span>
           <span id="num-best-time" class="meta-chip" hidden>Рекорд: --</span>
         </div>
+        <div id="num-series-progress" class="series-progress" hidden>Ряд: 0/6</div>
         <div class="challenge mono" id="num-task" hidden></div>
         <form id="num-form" class="answer-form">
           <input
@@ -747,7 +747,7 @@
           </details>
           <div class="what-word-start-row"><button type="button" id="what-word-start" class="btn">Решать</button></div>
         </div>
-        <div class="what-word-task" id="what-word-task"><div id="what-word-progress" class="what-word-series-progress">Слово 1 из 5</div><div id="what-word-consonants" class="challenge what-word-challenge">крндш</div></div>
+        <div class="what-word-task" id="what-word-task"><div id="what-word-progress" class="what-word-series-progress">Слово: 1/5</div><div id="what-word-consonants" class="challenge what-word-challenge">крндш</div></div>
         <form id="what-word-form" class="answer-form" novalidate><input id="what-word-answer" type="text" autocomplete="off" placeholder="Введи слово" /><p id="what-word-validation" class="field-validation" aria-live="polite"></p><button id="what-word-submit" class="btn" type="submit">Дальше</button><button type="button" id="what-word-skip" class="btn btn-ghost">Пропустить</button></form>
         <button type="button" id="what-word-stop" class="btn btn-stop">Закончить упражнение</button>
         <div id="what-word-result" class="math-result"><h3>Тренировка завершена</h3><div class="math-result-card"><p id="what-word-feedback" class="feedback" aria-live="polite"></p></div><div id="what-word-review" class="word-review" hidden></div><button type="button" id="what-word-again" class="btn math-again-btn">Ещё упражнение</button></div>
@@ -912,7 +912,7 @@
         </div>
       </section>
 
-      <section class="panel exam-stage-prep" id="exam-panel">
+        <section class="panel exam-stage-prep" id="exam-panel">
         <div class="panel-head">
           <h2>Экзамен</h2>
           <p>Проверь свои навыки, решая примеры всех упражнений.</p>
@@ -920,16 +920,19 @@
         <details class="exercise-help exam-help" id="exam-help" open>
           <summary>Как проходит экзамен</summary>
           <ol>
-            <li>Выбери уровень: следующий откроется после полного прохождения предыдущего.</li>
+            <li>Выбери уровень сложности экзамена. Следующий откроется после полного прохождения предыдущего.</li>
             <li>
-              Пройди пять заданий подряд:<br />
+              Пройди следующие упражнения подряд:<br />
               — Счет в уме (4 примера)<br />
               — Числовой ряд<br />
               — Запоминание слов<br />
+              — Угадай слово (4 слова)<br />
+              — Что за слово? (4 слова)<br />
               — Балда<br />
               — Таблицы Шульте
             </li>
             <li>Можно пропустить задание — оно будет отмечено как невыполненное. В конце появятся итог и разбор ответов.</li>
+            <li>Рекомендуется сначала пройти задания по отдельности для лучшего понимания как они проходят.</li>
           </ol>
         </details>
         <div class="exam-action-controls">
@@ -949,20 +952,37 @@
             <button type="button" id="exam-start" class="btn">Начать экзамен</button>
           </div>
         </div>
-        <div id="exam-progress" class="series-progress exam-series-progress">Упражнение №0/5</div>
+        <div id="exam-current-exercise" class="exam-current-exercise" aria-live="polite"></div>
+        <label class="word-show-all-toggle exam-word-show-all-toggle" id="exam-word-show-all-wrap" for="exam-word-show-all" hidden>
+          <input type="checkbox" id="exam-word-show-all" />
+          <span class="word-show-all-switch" aria-hidden="true"></span>
+          <span class="word-show-all-copy"><strong>Показать все слова сразу</strong><small>Для этого задания</small></span>
+        </label>
+        <div id="exam-progress" class="series-progress exam-series-progress">Упражнение №0/7</div>
         <div class="challenge challenge-hint exam-task" id="exam-task">Нажми «Начать экзамен»</div>
         <form id="exam-form" class="answer-form">
-          <textarea
+          <input
             id="exam-answer"
-            rows="3"
+            type="text"
+            inputmode="numeric"
             placeholder="Ответ появится после старта"
             autocomplete="off"
             required
             disabled
+          />
+          <textarea
+            id="exam-words-answer"
+            rows="4"
+            placeholder="Введи слова по порядку через пробел, запятую или с новой строки"
+            autocomplete="off"
+            required
+            disabled
+            hidden
           ></textarea>
           <div class="exam-actions">
             <button id="exam-submit" class="btn" type="submit">Дальше</button>
-            <button id="exam-skip" class="btn btn-ghost" type="button">Пропустить</button>
+            <button id="exam-skip-round" class="btn btn-ghost" type="button" hidden>Пропустить</button>
+            <button id="exam-skip" class="btn btn-ghost exam-skip-exercise" type="button">Пропустить упражнение</button>
           </div>
         </form>
         <p id="exam-feedback" class="feedback"></p>
