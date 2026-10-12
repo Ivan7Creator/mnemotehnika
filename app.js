@@ -1355,7 +1355,8 @@ examForm.addEventListener("submit", async (event) => {
 });
 
 function finishExamRoundTask(task) {
-  const correct = task.answers.every((answer) => answer.correct);
+  const skipped = task.answers.length > 0 && task.answers.every((answer) => answer.actual === "Пропущено");
+  const correct = !skipped && task.answers.every((answer) => answer.correct);
   const isMath = task.kind === "math";
   const expected = task.answers
     .map((answer) => isMath ? `${answer.expression} = ${answer.expected}` : answer.expected)
@@ -1376,6 +1377,7 @@ function finishExamRoundTask(task) {
     expected,
     actual,
     correct,
+    skipped,
     reviewRows,
   });
   if (correct) state.exam.correctCount += 1;
@@ -2067,6 +2069,7 @@ function syncExamControls() {
   examSubmitBtn.textContent = taskKind === "balda" ? "Проверить" : "Дальше";
   examSkipRoundBtn.hidden = !canSkipRound;
   examSkipRoundBtn.textContent = "Пропустить";
+  examSkipBtn.textContent = canSkipRound ? "Пропустить упражнение" : "Пропустить";
   examWordShowAllWrapEl.hidden = !isWordsTask;
   examWordShowAllEl.disabled = !state.exam.active || !isWordsTask || state.exam.phase !== "showing";
   const baldaInput = examTaskEl.querySelector(".exam-balda-word-input:not(:disabled)");
