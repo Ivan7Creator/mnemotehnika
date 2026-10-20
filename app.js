@@ -5047,6 +5047,9 @@ function renderProgress() {
   const allAttempts = modeOrder.reduce((sum, mode) => sum + modeMap[mode].attempts, 0);
   const allCorrect = modeOrder.reduce((sum, mode) => sum + modeMap[mode].correct, 0);
   const allStopped = modeOrder.reduce((sum, mode) => sum + modeMap[mode].stopped, 0);
+  const bestMode = modeOrder.reduce((best, mode) => (
+    modeMap[mode].correct > (best ? modeMap[best].correct : 0) ? mode : best
+  ), null);
   const selectedMode = document.getElementById("progress-mode").value;
   const recentEntries = state.progress.sessions
     .filter((entry) => modeOrder.includes(entry.mode))
@@ -5080,7 +5083,7 @@ function renderProgress() {
   document.getElementById("progress-main-label").textContent =
     selectedMode === "all" ? "общая точность" : "точность упражнения";
   document.getElementById("progress-summary-note").textContent = selectedMode === "all"
-    ? (selected.attempts ? `${selected.correct} верных из ${selected.attempts} попыток` : "Пока нет завершённых раундов")
+    ? (bestMode ? `Лучшее упражнение — ${modeMap[bestMode].label}` : "Пока нет верных решений")
     : `Рекорд: ${selected.recordValue} · Лучшая серия: ${selected.bestStreak || 0}`;
   document.getElementById("progress-bar-label").textContent = "Верно законченных упражнений";
   document.getElementById("progress-bar-value").textContent = `${selected.correct} из ${selected.attempts}`;
