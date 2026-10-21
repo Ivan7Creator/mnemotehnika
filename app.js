@@ -588,20 +588,24 @@ function finishMathSeries() {
 function renderMathReview() {
   mathReviewEl.innerHTML = `
     <div class="word-review-head"><strong>Разбор упражнения</strong></div>
-    <div class="word-review-grid">${state.math.reviewRows.map((row) => `
-      <div class="word-review-row ${row.correct ? "is-ok" : "is-bad"}">
+    <div class="word-review-grid">${state.math.reviewRows.map((row) => {
+      const expectedAnswer = `${row.expression} = ${row.expected}`;
+      const longAnswerClass = expectedAnswer.length >= 12 ? " math-review-long" : "";
+      return `
+      <div class="word-review-row ${row.correct ? "is-ok" : "is-bad"}${longAnswerClass}">
         <div class="word-review-index">${row.index}</div>
         <div class="word-review-columns">
           <div class="word-review-col">
             <span class="word-review-label">Правильный ответ</span>
-            <span class="word-chip expected">${escapeHtml(row.expression)} = ${row.expected}</span>
+            <span class="word-chip expected">${escapeHtml(expectedAnswer)}</span>
           </div>
           <div class="word-review-col">
             <span class="word-review-label">Твой ответ</span>
             <span class="word-chip actual ${row.correct ? "ok" : "bad"}">${row.actual}</span>
           </div>
         </div>
-      </div>`).join("")}</div>`;
+      </div>`;
+    }).join("")}</div>`;
   mathReviewEl.hidden = false;
 }
 

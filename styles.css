@@ -4675,6 +4675,24 @@ textarea[aria-invalid="true"] {
     gap: 0.4rem;
   }
 
+  /* Длинный пример не ломает овальный блок с ответом: он уходит на следующую строку. */
+  .word-review-row.math-review-long .word-review-columns {
+    grid-template-columns: 1fr;
+    gap: 0.45rem;
+  }
+
+  .word-review-row.math-review-long .word-review-col:first-child {
+    order: 1;
+  }
+
+  .word-review-row.math-review-long .word-review-col:last-child {
+    order: 2;
+  }
+
+  .word-review-row.math-review-long .word-review-index {
+    align-self: start;
+  }
+
   .word-review {
     padding: 0.75rem;
   }
