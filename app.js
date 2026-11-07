@@ -737,7 +737,8 @@ numSkipBtn.addEventListener("click", () => {
   if (!state.numbers.seriesActive || !state.numbers.awaitingAnswer || !state.numbers.value) return;
   advanceNumberSeries("Пропуск");
 });
-  numAnswer.addEventListener("input", () => {
+numAnswer.addEventListener("input", () => {
+  limitNumberSeriesInput(numAnswer);
   clearNumberAnswerValidation();
   syncNumberControls();
 });
@@ -829,7 +830,15 @@ function validateNumberAnswer() {
   if (/\D/.test(value)) {
     return { valid: false, message: "Используй только цифры от 0 до 9" };
   }
+  if (value.length > 6) {
+    return { valid: false, message: "Можно ввести максимум 6 цифр" };
+  }
   return { valid: true, message: "" };
+}
+
+function limitNumberSeriesInput(input) {
+  const digits = input.value.replace(/\D/g, "").slice(0, 6);
+  if (input.value !== digits) input.value = digits;
 }
 
 function showNumberAnswerValidation(message) {
@@ -1190,6 +1199,7 @@ function getExamAnswerField() {
 }
 
 function handleExamAnswerInput() {
+  if (state.exam.currentTask?.kind === "numbers") limitNumberSeriesInput(examAnswer);
   clearExamInputError();
   syncExamControls();
 }
@@ -1682,9 +1692,11 @@ function showExamBaldaError(message, input) {
 function validateExamTextInput(kind, value) {
   if (!value) return { valid: false, message: "Введи ответ в поле ввода" };
   if (kind === "math" || kind === "numbers") {
-    return /^\d+$/.test(value)
-      ? { valid: true, message: "" }
-      : { valid: false, message: "Используй только цифры от 0 до 9" };
+    if (!/^\d+$/.test(value)) return { valid: false, message: "Используй только цифры от 0 до 9" };
+    if (kind === "numbers" && value.length > 6) {
+      return { valid: false, message: "Можно ввести максимум 6 цифр" };
+    }
+    return { valid: true, message: "" };
   }
   if (kind === "words") {
     const words = normalizeWords(value);
@@ -2090,7 +2102,9 @@ function syncExamControls() {
   examWordsAnswer.hidden = !isWordsTask;
   examAnswer.disabled = !readyForAnswer || isWordsTask;
   examWordsAnswer.disabled = !readyForAnswer || !isWordsTask;
-  examAnswer.inputMode = taskKind === "math" ? "numeric" : "text";
+  examAnswer.inputMode = ["math", "numbers"].includes(taskKind) ? "numeric" : "text";
+  if (taskKind === "numbers") examAnswer.maxLength = 6;
+  else examAnswer.removeAttribute("maxlength");
   examAnswer.placeholder = taskKind === "numbers"
     ? "Введи ряд"
     : taskKind === "words"
